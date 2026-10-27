@@ -130,13 +130,39 @@ export const PreFlightChecklist: React.FC<PreFlightChecklistProps> = ({
       (!isLong && sharpe <= -0.35) ||
       (absSharpe < 0.5 && passLocation); // Range fade at key location in low-Sharpe regime
 
-    // 4. Derivatives & Dealer Path Clear: Path to TP1 clear of opposing Call Wall / Put Wall
+    // 4. Derivatives & Dealer Path Clear: Path to TP1 clear of opposing Call Wall / Put Wall or S/R
+    const entry = calcResult.entryPrice || refPrice;
     const tp1 = calcResult.target1Price;
-    const callWall = optionsData.callWall || refPrice * 1.05;
-    const putWall = optionsData.putWall || refPrice * 0.95;
-    const pathClear = isLong
-      ? tp1 <= callWall * 1.003
-      : tp1 >= putWall * 0.997;
+    const callWall = optionsData.callWall || 0;
+    const putWall = optionsData.putWall || 0;
+    const srHigh = liquidity?.srHigh || 0;
+    const srLow = liquidity?.srLow || 0;
+
+    const isBarrierBlocking = (barrierPrice: number) => {
+      if (!barrierPrice || barrierPrice <= 0 || !entry || !tp1) return false;
+      if (isLong) {
+        return barrierPrice > entry * 1.001 && barrierPrice < tp1 * 0.999;
+      } else {
+        return barrierPrice < entry * 0.999 && barrierPrice > tp1 * 1.001;
+      }
+    };
+
+    const callWallBlocks = isLong && isBarrierBlocking(callWall);
+    const srHighBlocks = isLong && isBarrierBlocking(srHigh);
+    const putWallBlocks = !isLong && isBarrierBlocking(putWall);
+    const srLowBlocks = !isLong && isBarrierBlocking(srLow);
+
+    const pathClear = !(callWallBlocks || srHighBlocks || putWallBlocks || srLowBlocks);
+
+    const blockingBarrierText = callWallBlocks
+      ? `Call Wall ($${formatP(callWall)})`
+      : srHighBlocks
+      ? `S/R Resistance ($${formatP(srHigh)})`
+      : putWallBlocks
+      ? `Put Wall ($${formatP(putWall)})`
+      : srLowBlocks
+      ? `S/R Support ($${formatP(srLow)})`
+      : '';
 
     // 5. Minimum Effective Net R:R + MTF Alignment
     const mtfRow = matrix[0];
@@ -190,8 +216,12 @@ export const PreFlightChecklist: React.FC<PreFlightChecklistProps> = ({
         title: '4. Derivatives & Dealer Path Clear',
         passed: pathClear,
         detail: pathClear
-          ? `Path to TP1 ($${formatP(tp1)}) is clear of opposing ${isLong ? `Call Wall ($${formatP(callWall)})` : `Put Wall ($${formatP(putWall)})`}.`
-          : `Warning: Opposing ${isLong ? `Call Wall ($${formatP(callWall)})` : `Put Wall ($${formatP(putWall)})`} sits before TP1 ($${formatP(tp1)}).`,
+          ? `Path from Entry ($${formatP(entry)}) to TP1 ($${formatP(tp1)}) is clear of opposing ${
+              isLong
+                ? `Call Wall ($${formatP(callWall || refPrice * 1.05)}) & S/R Resistance`
+                : `Put Wall ($${formatP(putWall || refPrice * 0.95)}) & S/R Support`
+            }.`
+          : `Warning: Opposing ${blockingBarrierText} sits between Entry ($${formatP(entry)}) and TP1 ($${formatP(tp1)}).`,
       },
       {
         id: 'rr_mtf',

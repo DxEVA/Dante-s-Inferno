@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   KlineData,
@@ -26,6 +26,11 @@ import { SpeculationBrief } from './SpeculationBrief';
 import { ExecutionHelper } from './ExecutionHelper';
 import { InfoTooltip } from './InfoTooltip';
 import { PreFlightChecklist, PaperTradeEntry } from './PreFlightChecklist';
+import { ReverseAcademyDeck } from './ReverseAcademyDeck';
+import { loadAcademyProgress, AcademyProgressState } from '../utils/reverseAcademyEngine';
+
+export type TacticalDeckMode = 'LENSES' | 'MTF_RADAR' | 'PREFLIGHT_SIZER' | 'REVERSE_ACADEMY';
+type LensSubView = 'DIAGNOSTICS' | 'SETUP';
 
 interface StrategyTabsProps {
   currentPrice: number;
@@ -61,10 +66,8 @@ interface StrategyTabsProps {
   onRemovePaperTrade?: (id: string) => void;
   activeTab?: 1 | 2 | 3 | 4 | 5;
   onTabChange?: (tab: 1 | 2 | 3 | 4 | 5) => void;
+  externalDeckRequest?: { deck: TacticalDeckMode; ts: number } | null;
 }
-
-type TacticalDeckMode = 'LENSES' | 'MTF_RADAR' | 'PREFLIGHT_SIZER';
-type LensSubView = 'DIAGNOSTICS' | 'SETUP';
 
 export const StrategyTabs: React.FC<StrategyTabsProps> = ({
   currentPrice,
@@ -99,6 +102,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
   onRemovePaperTrade = () => {},
   activeTab: controlledActiveTab,
   onTabChange,
+  externalDeckRequest,
 }) => {
   const [internalActiveTab, setInternalActiveTab] = useState<1 | 2 | 3 | 4 | 5>(1);
   const activeTab = controlledActiveTab !== undefined ? controlledActiveTab : internalActiveTab;
@@ -106,6 +110,15 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
   const [activeDeck, setActiveDeck] = useState<TacticalDeckMode>('LENSES');
   const [lensSubView, setLensSubView] = useState<LensSubView>('DIAGNOSTICS');
   const [filterOnlyKeyLevels, setFilterOnlyKeyLevels] = useState<boolean>(false);
+  const [academyProgress, setAcademyProgress] = useState<AcademyProgressState>(() =>
+    loadAcademyProgress()
+  );
+
+  useEffect(() => {
+    if (externalDeckRequest?.deck) {
+      setActiveDeck(externalDeckRequest.deck);
+    }
+  }, [externalDeckRequest]);
 
   const handleTabSelect = (tabId: 1 | 2 | 3 | 4 | 5) => {
     setInternalActiveTab(tabId);
@@ -179,10 +192,25 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
       (!isLong && sharpe <= -0.35) ||
       (absSharpe < 0.5 && passLocation);
 
+    const entry = calcResult.entryPrice || refPrice;
     const tp1 = calcResult.target1Price;
-    const callWall = optionsData.callWall || refPrice * 1.05;
-    const putWall = optionsData.putWall || refPrice * 0.95;
-    const pathClear = isLong ? tp1 <= callWall * 1.003 : tp1 >= putWall * 0.997;
+    const callWall = optionsData.callWall || 0;
+    const putWall = optionsData.putWall || 0;
+    const srHigh = liquidity?.srHigh || 0;
+    const srLow = liquidity?.srLow || 0;
+
+    const isBarrierBlocking = (barrierPrice: number) => {
+      if (!barrierPrice || barrierPrice <= 0 || !entry || !tp1) return false;
+      if (isLong) {
+        return barrierPrice > entry * 1.001 && barrierPrice < tp1 * 0.999;
+      } else {
+        return barrierPrice < entry * 0.999 && barrierPrice > tp1 * 1.001;
+      }
+    };
+
+    const pathClear = isLong
+      ? !isBarrierBlocking(callWall) && !isBarrierBlocking(srHigh)
+      : !isBarrierBlocking(putWall) && !isBarrierBlocking(srLow);
 
     const mtfRow = matrix[0];
     const mtfCells = mtfRow ? [mtfRow.tf15m, mtfRow.tf1h, mtfRow.tf4h, mtfRow.tf1d] : [];
@@ -626,14 +654,14 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
   return (
     <div className="flex flex-col w-full bg-[#10131a]">
       {/* =========================================================================== */}
-      {/* TOP CYBER-BRUTALIST 3-DECK COMMAND SWITCHER BAR                             */}
+      {/* TOP CYBER-BRUTALIST 4-DECK COMMAND SWITCHER BAR                             */}
       {/* =========================================================================== */}
-      <div className="sticky top-0 z-30 grid grid-cols-1 sm:grid-cols-3 bg-[#0b0e14] border-b border-[#1e2433]">
+      <div className="sticky top-0 z-30 bg-[#0b0e14]/95 backdrop-blur-md border-b border-[#1e2433] grid grid-cols-2 xl:grid-cols-4">
         {/* DECK 1: SYS.01 // STRATEGY LENSES (5) */}
         <button
           type="button"
           onClick={() => setActiveDeck('LENSES')}
-          className={`flex items-center justify-between px-3 py-2.5 font-mono text-[10px] uppercase tracking-wider border-b sm:border-b-0 sm:border-r border-[#1e2433] transition-colors cursor-pointer ${
+          className={`flex items-center justify-between gap-1 px-2.5 py-2.5 font-mono text-[10px] uppercase tracking-wider border-b xl:border-b-0 border-r border-[#1e2433] transition-colors cursor-pointer ${
             activeDeck === 'LENSES'
               ? 'bg-[#141821] text-[#00f0ff] border-l-2 border-l-[#00f0ff] font-bold'
               : 'bg-[#0b0e14] text-[#849495] hover:text-[#e1e2eb] hover:bg-[#10131a]'
@@ -657,13 +685,13 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
         <button
           type="button"
           onClick={() => setActiveDeck('MTF_RADAR')}
-          className={`flex items-center justify-between px-3 py-2.5 font-mono text-[10px] uppercase tracking-wider border-b sm:border-b-0 sm:border-r border-[#1e2433] transition-colors cursor-pointer ${
+          className={`flex items-center justify-between gap-1 px-2.5 py-2.5 font-mono text-[10px] uppercase tracking-wider border-b xl:border-b-0 xl:border-r border-[#1e2433] transition-colors cursor-pointer ${
             activeDeck === 'MTF_RADAR'
               ? 'bg-[#141821] text-[#00f0ff] border-l-2 border-l-[#00f0ff] font-bold'
               : 'bg-[#0b0e14] text-[#849495] hover:text-[#e1e2eb] hover:bg-[#10131a]'
           }`}
         >
-          <span className="truncate">[ SYS.02 // MTF &amp; AI BRIEF ]</span>
+          <span className="truncate">[ SYS.02 // MTF &amp; AI ]</span>
           <span
             className={`px-1.5 py-0.5 text-[9px] font-bold border tabular-nums shrink-0 ${
               confluence.score >= 65
@@ -673,7 +701,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                 : 'bg-[#00f0ff]/15 text-[#00f0ff] border-[#00f0ff]/40'
             }`}
           >
-            {confluence.score}% CONF
+            {confluence.score}%
           </span>
         </button>
 
@@ -681,13 +709,13 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
         <button
           type="button"
           onClick={() => setActiveDeck('PREFLIGHT_SIZER')}
-          className={`flex items-center justify-between px-3 py-2.5 font-mono text-[10px] uppercase tracking-wider transition-colors cursor-pointer ${
+          className={`flex items-center justify-between gap-1 px-2.5 py-2.5 font-mono text-[10px] uppercase tracking-wider border-r border-[#1e2433] transition-colors cursor-pointer ${
             activeDeck === 'PREFLIGHT_SIZER'
               ? 'bg-[#141821] text-[#00f0ff] border-l-2 border-l-[#00f0ff] font-bold'
               : 'bg-[#0b0e14] text-[#849495] hover:text-[#e1e2eb] hover:bg-[#10131a]'
           }`}
         >
-          <span className="truncate">[ SYS.03 // PRE-FLIGHT &amp; SIZER ]</span>
+          <span className="truncate">[ SYS.03 // SIZER ]</span>
           <div className="flex items-center gap-1 shrink-0 tabular-nums">
             <span
               className={`px-1.5 py-0.5 text-[9px] font-bold border ${
@@ -701,6 +729,23 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
               {preFlightSummary.passedCount}/5 PASS
             </span>
           </div>
+        </button>
+
+        {/* DECK 4: SYS.04 // REVERSE ACADEMY */}
+        <button
+          type="button"
+          onClick={() => setActiveDeck('REVERSE_ACADEMY')}
+          className={`flex items-center justify-between gap-1 px-2.5 py-2.5 font-mono text-[10px] uppercase tracking-wider transition-colors cursor-pointer ${
+            activeDeck === 'REVERSE_ACADEMY'
+              ? 'bg-[#141821] text-[#fcd34d] border-l-2 border-l-[#fcd34d] font-bold'
+              : 'bg-[#0b0e14] text-[#849495] hover:text-[#e1e2eb] hover:bg-[#10131a]'
+          }`}
+        >
+          <span className="truncate">[ SYS.04 // REVERSE ACADEMY ]</span>
+          <span className="px-1.5 py-0.5 text-[9px] font-bold border bg-[#f59e0b]/15 text-[#fcd34d] border-[#f59e0b]/40 tabular-nums shrink-0">
+            LVL {Math.max(1, academyProgress.completedLevels.length)}/5 •{' '}
+            {Math.round((academyProgress.completedLevels.length / 5) * 100)}%
+          </span>
         </button>
       </div>
 
@@ -1759,6 +1804,39 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
               onEntryChange={onEntryChange}
               onStopChange={onStopChange}
               onCopyText={onCopyText}
+            />
+          </motion.div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* DECK 4: [ SYS.04 // REVERSE ACADEMY ]                                     */}
+        {/* ========================================================================= */}
+        {activeDeck === 'REVERSE_ACADEMY' && (
+          <motion.div
+            key="deck-reverse-academy"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.14, ease: 'easeOut' }}
+            className="flex flex-col w-full"
+          >
+            <ReverseAcademyDeck
+              symbol={symbol}
+              currentPrice={currentPrice}
+              telemetry={telemetry}
+              volumeProfile={volumeProfile}
+              bullOB={bullOB}
+              bearOB={bearOB}
+              optionsData={optionsData}
+              liquidity={liquidity}
+              candlestickResult={candlestickResult}
+              maResult={maResult}
+              amdPhase={amdPhase}
+              calcResult={calcResult}
+              sharpeSortino={sharpeSortino}
+              confluence={confluence}
+              onProgressChange={setAcademyProgress}
+              focusXRaySignal={externalDeckRequest?.ts}
             />
           </motion.div>
         )}

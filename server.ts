@@ -18,7 +18,14 @@ const isProd = process.env.NODE_ENV === 'production';
 app.use(express.json());
 
 // Initialize Google GenAI
-const ai = new GoogleGenAI();
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY,
+  httpOptions: {
+    headers: {
+      'User-Agent': 'aistudio-build',
+    },
+  },
+});
 
 // Endpoint: AI Quant Objective Speculation Analysis
 app.post('/api/run-quant', async (req, res) => {
@@ -61,7 +68,7 @@ Respond with a JSON object with EXACT keys:
 }`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.8-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',

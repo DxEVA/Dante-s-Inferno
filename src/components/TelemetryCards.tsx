@@ -1,6 +1,7 @@
 import React from 'react';
 import { TelemetryMetrics } from '../types';
 import { InfoTooltip } from './InfoTooltip';
+import { getRookieMentorGuide } from '../utils/metricBenchmarks';
 
 interface TelemetryCardsProps {
   metrics: TelemetryMetrics;
@@ -52,6 +53,50 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
     </div>
   );
 
+  const renderRookieCardFooter = (metricKey: string) => {
+    if (experienceMode !== 'rookie') return null;
+    const mentor = getRookieMentorGuide(metricKey, symbol);
+    const primaryResource = mentor.resources[0];
+    const videoResource = mentor.resources.find((r) => r.type === 'VIDEO') || mentor.resources[1];
+
+    return (
+      <div className="flex flex-col gap-1.5 pt-2 mt-1 border-t border-[#1e2433] text-left">
+        <p className="font-sans text-[9.5px] text-[#b9cacb] leading-snug line-clamp-2">
+          <strong className="text-[#fcd34d] font-mono">🔗 Bridge:</strong> {mentor.familiarBridge}
+        </p>
+        <div className="font-mono text-[8.5px] text-[#00f0ff] bg-[#0b0e14] px-1.5 py-0.5 rounded border border-[#1e2433] truncate">
+          Normal: {mentor.standardRangeGuide.normal}
+        </div>
+        <div className="flex items-center gap-1 flex-wrap pt-0.5">
+          {primaryResource && (
+            <a
+              href={primaryResource.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="px-1.5 py-0.5 rounded bg-[#00f0ff]/10 hover:bg-[#00f0ff]/25 text-[#00f0ff] border border-[#00f0ff]/30 font-mono text-[8px] font-bold transition-colors"
+              title={primaryResource.title}
+            >
+              📖 READ GUIDE ↗
+            </a>
+          )}
+          {videoResource && (
+            <a
+              href={videoResource.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="px-1.5 py-0.5 rounded bg-[#f59e0b]/10 hover:bg-[#f59e0b]/25 text-[#fcd34d] border border-[#f59e0b]/30 font-mono text-[8px] font-bold transition-colors"
+              title={videoResource.title}
+            >
+              ▶ WATCH VIDEO ↗
+            </a>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col px-3 py-3 gap-2.5 bg-[#10131a] border-b border-[#272a31]">
       {/* Section Header */}
@@ -68,6 +113,7 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
           <InfoTooltip
             content={{
               title: 'TELEMETRY & DERIVATIVES ENGINE',
+              metricKey: 'funding_rate',
               symbol,
               categoryBadge: 'QUANTITATIVE OVERVIEW',
               badgeColor: '#00f0ff',
@@ -102,6 +148,7 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
         <InfoTooltip
           content={{
             title: 'PERPETUAL FUNDING RATE',
+            metricKey: 'funding_rate',
             symbol,
             categoryBadge: 'DERIVATIVES FLOW',
             badgeColor: '#4edea3',
@@ -147,6 +194,8 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
                 </span>
               )}
             </div>
+
+            {renderRookieCardFooter('funding_rate')}
           </div>
         </InfoTooltip>
 
@@ -154,6 +203,7 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
         <InfoTooltip
           content={{
             title: '4-HOUR OPEN INTEREST DELTA',
+            metricKey: 'oi_delta',
             symbol,
             categoryBadge: 'LEVERAGE FLOW',
             badgeColor: '#4edea3',
@@ -213,6 +263,8 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
                 </span>
               )}
             </div>
+
+            {renderRookieCardFooter('oi_delta')}
           </div>
         </InfoTooltip>
 
@@ -220,6 +272,7 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
         <InfoTooltip
           content={{
             title: 'ROLLING SHARPE & SORTINO RATIO',
+            metricKey: 'sharpe_sortino',
             symbol,
             categoryBadge: 'QUANTITATIVE RISK',
             badgeColor: '#00f0ff',
@@ -271,6 +324,8 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
                 {regime.split('(')[0].trim()}
               </span>
             </div>
+
+            {renderRookieCardFooter('sharpe_sortino')}
           </div>
         </InfoTooltip>
 
@@ -278,6 +333,7 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
         <InfoTooltip
           content={{
             title: 'STATISTICAL Z-SCORE (50-VWMA)',
+            metricKey: 'z_score',
             symbol,
             categoryBadge: 'STATISTICAL ARBITRAGE',
             badgeColor: '#f59e0b',
@@ -323,6 +379,8 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
                 {metrics.zScoreBias}
               </span>
             </div>
+
+            {renderRookieCardFooter('z_score')}
           </div>
         </InfoTooltip>
 
@@ -330,6 +388,7 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
         <InfoTooltip
           content={{
             title: 'MOMENTUM & CVD DIVERGENCE',
+            metricKey: 'cvd_delta',
             symbol,
             categoryBadge: 'ORDERFLOW MOMENTUM',
             badgeColor: '#4edea3',
@@ -373,6 +432,8 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
                 {metrics.divergenceBias}
               </span>
             </div>
+
+            {renderRookieCardFooter('cvd_delta')}
           </div>
         </InfoTooltip>
 
@@ -380,6 +441,7 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
         <InfoTooltip
           content={{
             title: 'OPTIONS DEALER GAMMA REGIME (NET GEX)',
+            metricKey: 'gex_gamma',
             symbol,
             categoryBadge: 'OPTIONS MARKET MAKING',
             badgeColor: '#ddb7ff',
@@ -416,6 +478,8 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
                 {metrics.gexBias}
               </span>
             </div>
+
+            {renderRookieCardFooter('gex_gamma')}
           </div>
         </InfoTooltip>
 
@@ -423,6 +487,7 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
         <InfoTooltip
           content={{
             title: 'OPTIONS SKEW & PUT/CALL RATIO',
+            metricKey: 'options_skew',
             symbol,
             categoryBadge: 'DERIBIT OPTIONS FLOW',
             badgeColor: '#842bd2',
@@ -460,6 +525,8 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
                 {metrics.skewBias}
               </span>
             </div>
+
+            {renderRookieCardFooter('options_skew')}
           </div>
         </InfoTooltip>
 
@@ -467,6 +534,7 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
         <InfoTooltip
           content={{
             title: 'BLACK-SCHOLES ZERO-GAMMA FLIP & SPOT/PERP BASIS',
+            metricKey: 'session_rvol',
             symbol,
             categoryBadge: 'GAMMA & BASIS MICROSTRUCTURE',
             badgeColor: '#00f0ff',
@@ -512,9 +580,12 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
                 {metrics.spotPerpDivergence?.headline || 'Spot/Perp Sync'}
               </span>
             </div>
+
+            {renderRookieCardFooter('session_rvol')}
           </div>
         </InfoTooltip>
       </div>
     </div>
   );
 };
+

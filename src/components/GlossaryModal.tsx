@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { getRookieMentorGuide } from '../utils/metricBenchmarks';
 
 export interface GlossaryTerm {
   id: string;
@@ -335,6 +336,17 @@ export const GlossaryModal: React.FC<GlossaryModalProps> = ({ isOpen, onClose, i
     });
   }, [search, selectedCategory]);
 
+  const selectedMentor = useMemo(
+    () =>
+      getRookieMentorGuide(
+        selectedTerm.id || selectedTerm.term,
+        'BTCUSDT',
+        '',
+        selectedTerm.plainEnglish
+      ),
+    [selectedTerm]
+  );
+
   if (!isOpen) return null;
 
   const handleCopyRule = (term: GlossaryTerm) => {
@@ -356,14 +368,14 @@ export const GlossaryModal: React.FC<GlossaryModalProps> = ({ isOpen, onClose, i
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-mono text-[15px] font-bold text-[#dbfcff]">
-                  INSTITUTIONAL QUANT & SMC GLOSSARY
+                  INSTITUTIONAL QUANT &amp; SMC GLOSSARY
                 </h3>
                 <span className="px-2 py-0.5 rounded bg-[#00f0ff]/10 border border-[#00f0ff]/30 text-[#00f0ff] font-mono text-[10px] font-semibold">
-                  25+ ROOKIE-FRIENDLY TERMS
+                  25+ ROOKIE-FRIENDLY TERMS + ONLINE GUIDES
                 </span>
               </div>
               <p className="font-mono text-[10px] text-[#849495]">
-                Plain-English institutional definitions, smart-money edge & actionable trading execution rules
+                Plain-English institutional definitions, familiar indicator bridges, range cheat sheets &amp; trusted online study links
               </p>
             </div>
           </div>
@@ -410,7 +422,7 @@ export const GlossaryModal: React.FC<GlossaryModalProps> = ({ isOpen, onClose, i
         {/* Modal Main Content: Split Pane on Desktop (Terms List on Left, Deep Dive on Right) */}
         <div className="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-12 divide-y md:divide-y-0 md:divide-x divide-[#1e2433]">
           {/* Left Column: Term Cards */}
-          <div className="md:col-span-5 overflow-y-auto no-scrollbar divide-y divide-[#191c22]/80 max-h-[40vh] md:max-h-none">
+          <div className="md:col-span-5 overflow-y-auto no-scrollbar divide-y divide-[#191c22]/80 max-h-[38vh] md:max-h-none">
             {filteredTerms.length === 0 ? (
               <div className="p-6 text-center font-mono text-[12px] text-[#849495]">
                 No terms found matching &quot;{search}&quot;
@@ -460,7 +472,7 @@ export const GlossaryModal: React.FC<GlossaryModalProps> = ({ isOpen, onClose, i
           </div>
 
           {/* Right Column: Deep-Dive Card */}
-          <div className="md:col-span-7 p-4 sm:p-5 overflow-y-auto no-scrollbar flex flex-col gap-4 bg-[#0d1017]">
+          <div className="md:col-span-7 p-4 sm:p-5 overflow-y-auto no-scrollbar flex flex-col gap-3.5 bg-[#0d1017]">
             {/* Term Title & Badges */}
             <div className="flex flex-col gap-2 pb-3 border-b border-[#1e2433]">
               <div className="flex items-center justify-between flex-wrap gap-2">
@@ -496,30 +508,56 @@ export const GlossaryModal: React.FC<GlossaryModalProps> = ({ isOpen, onClose, i
             <div className="flex flex-col gap-1.5 p-3.5 rounded-lg bg-[#141821] border border-[#272a31]">
               <div className="flex items-center gap-2 text-[#00f0ff] font-mono text-[11px] font-bold">
                 <span className="material-symbols-outlined text-[16px]">school</span>
-                <span>WHAT IT MEANS IN PLAIN ENGLISH</span>
+                <span>1. WHAT IT MEANS IN PLAIN ENGLISH</span>
               </div>
               <p className="font-sans text-[12px] sm:text-[13px] text-[#e1e2eb] leading-relaxed">
                 {selectedTerm.plainEnglish}
               </p>
             </div>
 
-            {/* Row 2: Institutional Edge (Why hedge funds & market makers use it) */}
+            {/* Row 2: Familiar Basic Indicator Bridge & Cheat Sheet */}
+            <div className="flex flex-col gap-2 p-3.5 rounded-lg bg-[#141821] border border-[#272a31]">
+              <div className="flex items-center justify-between flex-wrap gap-1">
+                <div className="flex items-center gap-2 text-[#fcd34d] font-mono text-[11px] font-bold">
+                  <span>🔗</span>
+                  <span>2. FAMILIAR BASIC INDICATOR BRIDGE &amp; RANGE CHEAT SHEET</span>
+                </div>
+                <span className="font-mono text-[9px] text-[#00f0ff] bg-[#0b0e14] px-2 py-0.5 rounded border border-[#1e2433]">
+                  Normal: {selectedMentor.standardRangeGuide.normal}
+                </span>
+              </div>
+              <p className="font-sans text-[12px] text-[#dbfcff] leading-relaxed">
+                {selectedMentor.familiarBridge}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 font-mono text-[10px]">
+                <div className="p-2 rounded bg-[#0b0e14] border border-[#1e2433] text-[#fcd34d]">
+                  <strong className="block text-[9px] uppercase">HIGH / BULL EXTREME:</strong>
+                  {selectedMentor.standardRangeGuide.tooHigh}
+                </div>
+                <div className="p-2 rounded bg-[#0b0e14] border border-[#1e2433] text-[#ffb4ab]">
+                  <strong className="block text-[9px] uppercase">LOW / BEAR EXTREME:</strong>
+                  {selectedMentor.standardRangeGuide.tooLow}
+                </div>
+              </div>
+            </div>
+
+            {/* Row 3: Institutional Edge (Why hedge funds & market makers use it) */}
             <div className="flex flex-col gap-1.5 p-3.5 rounded-lg bg-[#141821] border border-[#272a31]">
               <div className="flex items-center gap-2 text-[#f59e0b] font-mono text-[11px] font-bold">
                 <span className="material-symbols-outlined text-[16px]">analytics</span>
-                <span>THE INSTITUTIONAL EDGE</span>
+                <span>3. THE INSTITUTIONAL EDGE</span>
               </div>
               <p className="font-sans text-[12px] sm:text-[13px] text-[#cbd5e1] leading-relaxed">
                 {selectedTerm.institutionalEdge}
               </p>
             </div>
 
-            {/* Row 3: Actionable Trading Execution Rule */}
+            {/* Row 4: Actionable Trading Execution Rule + Do/Avoid */}
             <div className="flex flex-col gap-2 p-3.5 rounded-lg bg-[#141821] border border-[#4edea3]/30 shadow-[0_0_12px_rgba(78,222,163,0.1)]">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-[#4edea3] font-mono text-[11px] font-bold">
                   <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                  <span>ACTIONABLE EXECUTION RULE</span>
+                  <span>4. ACTIONABLE EXECUTION RULE</span>
                 </div>
                 <button
                   onClick={() => handleCopyRule(selectedTerm)}
@@ -534,7 +572,57 @@ export const GlossaryModal: React.FC<GlossaryModalProps> = ({ isOpen, onClose, i
               <p className="font-mono text-[12px] sm:text-[12.5px] text-[#4edea3] leading-relaxed bg-[#0b0e14] p-2.5 rounded border border-[#4edea3]/20">
                 {selectedTerm.actionableRule}
               </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                <div className="p-2 rounded bg-[#4edea3]/10 border border-[#4edea3]/30 text-[#4edea3]">
+                  <strong className="font-mono text-[9px] uppercase block">✓ DO THIS:</strong>
+                  {selectedMentor.rookieActionRule.doThis}
+                </div>
+                <div className="p-2 rounded bg-[#f43f5e]/10 border border-[#f43f5e]/30 text-[#ffb4ab]">
+                  <strong className="font-mono text-[9px] uppercase block">✕ AVOID TRAP:</strong>
+                  {selectedMentor.rookieActionRule.avoidTrap}
+                </div>
+              </div>
             </div>
+
+            {/* Row 5: Direct Clickable Online Learning Resources */}
+            {selectedMentor.resources.length > 0 && (
+              <div className="flex flex-col gap-2 p-3.5 rounded-lg bg-[#141821] border border-[#00f0ff]/30">
+                <div className="flex items-center gap-2 text-[#00f0ff] font-mono text-[11px] font-bold">
+                  <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+                  <span>5. DIRECT ONLINE LEARNING RESOURCES (CLICK TO STUDY)</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {selectedMentor.resources.map((res, idx) => (
+                    <a
+                      key={idx}
+                      href={res.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2.5 rounded-lg bg-[#0b0e14] hover:bg-[#191c22] border border-[#1e2433] hover:border-[#00f0ff] transition-all flex flex-col justify-between gap-1.5 group"
+                    >
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="px-1.5 py-0.5 rounded bg-[#00f0ff]/15 text-[#00f0ff] font-mono text-[8px] font-bold">
+                          {res.type === 'VIDEO'
+                            ? '▶ WATCH VIDEO'
+                            : res.type === 'INTERACTIVE'
+                            ? '⚡ INTERACTIVE'
+                            : '📖 READ GUIDE'}
+                        </span>
+                        <span className="font-mono text-[8px] text-[#849495]">
+                          {res.sourceName} ↗
+                        </span>
+                      </div>
+                      <span className="font-mono text-[10.5px] font-semibold text-[#e1e2eb] group-hover:text-[#00f0ff] leading-snug">
+                        {res.title}
+                      </span>
+                      <span className="font-mono text-[8.5px] text-[#849495]">
+                        {res.durationOrLevel}
+                      </span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

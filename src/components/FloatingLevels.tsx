@@ -66,6 +66,7 @@ export const FloatingLevels: React.FC<FloatingLevelsProps> = ({
           <InfoTooltip
             content={{
               title: 'VAH (Value Area High)',
+              metricKey: 'volume_profile',
               symbol,
               categoryBadge: 'VOLUME PROFILE',
               badgeColor: '#00f0ff',
@@ -94,6 +95,7 @@ export const FloatingLevels: React.FC<FloatingLevelsProps> = ({
           <InfoTooltip
             content={{
               title: 'POC (Point of Control)',
+              metricKey: 'volume_profile',
               symbol,
               categoryBadge: 'VOLUME PROFILE',
               badgeColor: '#f59e0b',
@@ -121,6 +123,7 @@ export const FloatingLevels: React.FC<FloatingLevelsProps> = ({
           <InfoTooltip
             content={{
               title: 'VAL (Value Area Low)',
+              metricKey: 'volume_profile',
               symbol,
               categoryBadge: 'VOLUME PROFILE',
               badgeColor: '#00f0ff',
@@ -152,6 +155,7 @@ export const FloatingLevels: React.FC<FloatingLevelsProps> = ({
         <InfoTooltip
           content={{
             title: `BULLISH OB [${bullOB.status || 'UNMITIGATED'} • Q:${bullOB.qualityScore ?? 80}/100]`,
+            metricKey: 'order_blocks',
             symbol,
             categoryBadge: 'SMART MONEY CONCEPTS',
             badgeColor: '#4edea3',
@@ -183,6 +187,7 @@ export const FloatingLevels: React.FC<FloatingLevelsProps> = ({
         <InfoTooltip
           content={{
             title: `BEARISH OB [${bearOB.status || 'UNMITIGATED'} • Q:${bearOB.qualityScore ?? 80}/100]`,
+            metricKey: 'order_blocks',
             symbol,
             categoryBadge: 'SMART MONEY CONCEPTS',
             badgeColor: '#ffb4ab',
@@ -215,6 +220,7 @@ export const FloatingLevels: React.FC<FloatingLevelsProps> = ({
         <InfoTooltip
           content={{
             title: 'RESISTANCE / ORDERBOOK ASKS',
+            metricKey: 'cvd_divergence',
             symbol,
             categoryBadge: 'DEPTH ORDERBOOK',
             badgeColor: '#ffb4ab',
@@ -239,6 +245,7 @@ export const FloatingLevels: React.FC<FloatingLevelsProps> = ({
         <InfoTooltip
           content={{
             title: 'SUPPORT / ORDERBOOK BIDS',
+            metricKey: 'cvd_divergence',
             symbol,
             categoryBadge: 'DEPTH ORDERBOOK',
             badgeColor: '#4edea3',
@@ -267,6 +274,7 @@ export const FloatingLevels: React.FC<FloatingLevelsProps> = ({
             <InfoTooltip
               content={{
                 title: 'ZERO-GAMMA FLIP (0-Γ)',
+                metricKey: 'zero_gamma_basis',
                 symbol,
                 categoryBadge: 'BLACK-SCHOLES GEX',
                 badgeColor: '#00f0ff',
@@ -296,6 +304,7 @@ export const FloatingLevels: React.FC<FloatingLevelsProps> = ({
           <InfoTooltip
             content={{
               title: 'MAX PAIN STRIKE',
+              metricKey: 'net_gex',
               symbol,
               categoryBadge: 'DERIBIT OPTIONS',
               badgeColor: '#ddb7ff',
@@ -321,6 +330,7 @@ export const FloatingLevels: React.FC<FloatingLevelsProps> = ({
           <InfoTooltip
             content={{
               title: 'CALL WALL STRIKE',
+              metricKey: 'net_gex',
               symbol,
               categoryBadge: 'DERIBIT OPTIONS',
               badgeColor: '#ffb4ab',
@@ -344,6 +354,7 @@ export const FloatingLevels: React.FC<FloatingLevelsProps> = ({
           <InfoTooltip
             content={{
               title: 'PUT WALL STRIKE',
+              metricKey: 'net_gex',
               symbol,
               categoryBadge: 'DERIBIT OPTIONS',
               badgeColor: '#4edea3',

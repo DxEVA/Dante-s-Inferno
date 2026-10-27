@@ -53,7 +53,7 @@ import { TickerBar } from './components/TickerBar';
 import { FloatingLevels } from './components/FloatingLevels';
 import { QuantChart, ChartLayers, DEFAULT_CHART_LAYERS } from './components/QuantChart';
 import { TrafficLightBanner } from './components/TrafficLightBanner';
-import { StrategyTabs } from './components/StrategyTabs';
+import { StrategyTabs, TacticalDeckMode } from './components/StrategyTabs';
 import { PaperTradeEntry } from './components/PreFlightChecklist';
 import { AssetSelectorScreen } from './components/AssetSelectorScreen';
 import { Footer } from './components/Footer';
@@ -78,6 +78,18 @@ export default function App() {
 
   // Global Rookie Guide vs Pro Terminal Experience Mode (default 'rookie')
   const [experienceMode, setExperienceMode] = useState<'rookie' | 'pro'>('rookie');
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('vertex_experience_mode', experienceMode);
+      window.dispatchEvent(
+        new CustomEvent('vertex:experience-mode-change', { detail: experienceMode })
+      );
+    } catch {
+      // ignore storage errors
+    }
+  }, [experienceMode]);
+
   const [showSetupOnChart, setShowSetupOnChart] = useState<boolean>(true);
   const [highlightedLevel, setHighlightedLevel] = useState<{ label: string; price: number } | null>(null);
   const [showGlossaryModal, setShowGlossaryModal] = useState<boolean>(false);
@@ -85,6 +97,10 @@ export default function App() {
   const [paperTradesList, setPaperTradesList] = useState<PaperTrade[]>(() => loadPaperTrades());
   const [chartLayers, setChartLayers] = useState<ChartLayers>(DEFAULT_CHART_LAYERS);
   const [activeStrategyTab, setActiveStrategyTab] = useState<1 | 2 | 3 | 4 | 5>(1);
+  const [externalDeckRequest, setExternalDeckRequest] = useState<{
+    deck: TacticalDeckMode;
+    ts: number;
+  } | null>(null);
 
   const openTradesCount = useMemo(
     () => paperTradesList.filter((t) => t.status === 'OPEN' || t.status === 'PENDING').length,
@@ -1084,6 +1100,10 @@ export default function App() {
                   experienceMode={experienceMode}
                   showGlossaryModal={showGlossaryModal}
                   onToggleGlossaryModal={setShowGlossaryModal}
+                  onDeconstructSignal={() => {
+                    setExternalDeckRequest({ deck: 'REVERSE_ACADEMY', ts: Date.now() });
+                    showToast(`🔬 REVERSE SIGNAL X-RAY OPENED FOR ${activePair.symbol} (SYS.04)`);
+                  }}
                 />
               </div>
 
@@ -1128,6 +1148,7 @@ export default function App() {
                   experienceMode={experienceMode}
                   activeTab={activeStrategyTab}
                   onTabChange={setActiveStrategyTab}
+                  externalDeckRequest={externalDeckRequest}
                   paperTrades={paperTradesList as any}
                   onAddPaperTrade={(trade) => {
                     const isLimitOrder =

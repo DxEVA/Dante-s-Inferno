@@ -14,6 +14,7 @@ import {
   ConfluenceOverview,
 } from '../types';
 import { calculateStrategyConfidence } from '../utils/quantEngine';
+import { getRookieMentorGuide } from '../utils/metricBenchmarks';
 
 interface TrafficLightBannerProps {
   symbol: string;
@@ -34,6 +35,7 @@ interface TrafficLightBannerProps {
   experienceMode: 'rookie' | 'pro';
   showGlossaryModal: boolean;
   onToggleGlossaryModal: (open: boolean) => void;
+  onDeconstructSignal?: () => void;
 }
 
 export const TrafficLightBanner: React.FC<TrafficLightBannerProps> = ({
@@ -55,6 +57,7 @@ export const TrafficLightBanner: React.FC<TrafficLightBannerProps> = ({
   experienceMode,
   showGlossaryModal,
   onToggleGlossaryModal,
+  onDeconstructSignal,
 }) => {
   const [showWhatIf, setShowWhatIf] = useState(false);
   const [whatIfOffsetPct, setWhatIfOffsetPct] = useState<number>(0);
@@ -338,8 +341,8 @@ export const TrafficLightBanner: React.FC<TrafficLightBannerProps> = ({
           </div>
         </div>
 
-        {/* Right Quick Summary Pill */}
-        <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
+        {/* Right Quick Summary Pill & Deconstruct Signal Button */}
+        <div className="flex items-center gap-2 flex-wrap shrink-0 self-end md:self-center">
           <div className="flex flex-col items-end px-2.5 py-1.5 rounded-lg bg-[#0b0e14]/90 border border-white/[0.07] font-mono">
             <span className="text-[9px] text-[#849495] uppercase">NEAREST KEY LEVEL</span>
             <span className="text-[12px] font-bold text-[#00f0ff] tabular-nums">
@@ -349,6 +352,17 @@ export const TrafficLightBanner: React.FC<TrafficLightBannerProps> = ({
               {trafficState.nearestLevel.distPct.toFixed(2)}% away
             </span>
           </div>
+
+          {onDeconstructSignal && (
+            <button
+              type="button"
+              onClick={onDeconstructSignal}
+              className="px-3 py-2 rounded-none bg-[#00f0ff]/15 hover:bg-[#00f0ff]/25 text-[#00f0ff] border border-[#00f0ff] font-mono text-[10px] font-bold uppercase tracking-wider transition-all shadow-[0_0_12px_rgba(0,240,255,0.2)] cursor-pointer whitespace-nowrap shrink-0"
+              title="Open Reverse Signal X-Ray & 5-Level Live Curriculum in SYS.04"
+            >
+              [ 🔍 DECONSTRUCT THIS SIGNAL ]
+            </button>
+          )}
 
           {experienceMode === 'pro' && (
             <button
@@ -465,59 +479,86 @@ export const TrafficLightBanner: React.FC<TrafficLightBannerProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               {[
                 {
+                  key: 'volume_profile',
                   term: 'POC (Point of Control)',
                   live: `$${formatP(volumeProfile.poc)}`,
                   meaning:
                     'The single price level with the most traded volume. Acts like a giant magnet pulling price back toward fair value.',
                 },
                 {
+                  key: 'volume_profile',
                   term: 'VAH & VAL (Value Area High / Low)',
                   live: `$${formatP(volumeProfile.vah)} / $${formatP(volumeProfile.val)}`,
                   meaning:
                     'The upper and lower boundaries where 70% of volume took place. Institutions buy near VAL and take profit near VAH.',
                 },
                 {
+                  key: 'order_block',
                   term: 'Order Block (Bull OB / Bear OB)',
                   live: bullOB ? `Bull OB $${formatP(bullOB.midpoint)}` : 'Scanning...',
                   meaning:
                     'Footprint zones where institutional whales placed massive buy or sell orders before a big move. Price often bounces when revisiting them.',
                 },
                 {
+                  key: 'session_rvol',
                   term: '💧 VDU (Volume Dry-Up)',
                   live: 'RVOL ≤ 0.45x',
                   meaning:
                     'When volume drops below 45% of average during a pullback, it means sellers are exhausted—setting up a spring-loaded bounce.',
                 },
                 {
+                  key: 'sharpe_sortino',
                   term: 'Rolling Sharpe & Sortino Ratio',
                   live: `${sharpeSortino.sharpeRatio.toFixed(2)} / ${sharpeSortino.sortinoRatio.toFixed(2)}`,
                   meaning:
                     'Measures return vs. volatility. Sharpe ≥ 1.0 means clean trend; Sharpe near 0 means noisy chop where breakouts fail.',
                 },
                 {
+                  key: 'gex_gamma',
                   term: 'Net GEX & Max Pain (Options)',
                   live: `${telemetry.netGex >= 0 ? '+' : ''}$${telemetry.netGex}M / MP $${formatP(optionsData.maxPain)}`,
                   meaning:
                     'Positive GEX means options dealers dampen volatility and pin price toward Max Pain. Negative GEX means explosive moves.',
                 },
-              ].map((item) => (
-                <div
-                  key={item.term}
-                  className="p-3 rounded-xl bg-[#191c22] border border-[#272a31] flex flex-col gap-1"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-[11px] font-bold text-[#00f0ff]">
-                      {item.term}
-                    </span>
-                    <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-[#0b0e14] text-[#4edea3] border border-[#272a31] tabular-nums">
-                      {symbol}: {item.live}
-                    </span>
+              ].map((item) => {
+                const mentor = getRookieMentorGuide(item.key, symbol);
+                return (
+                  <div
+                    key={item.term}
+                    className="p-3 rounded-xl bg-[#191c22] border border-[#272a31] flex flex-col justify-between gap-1.5"
+                  >
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-[11px] font-bold text-[#00f0ff]">
+                          {item.term}
+                        </span>
+                        <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-[#0b0e14] text-[#4edea3] border border-[#272a31] tabular-nums">
+                          {symbol}: {item.live}
+                        </span>
+                      </div>
+                      <p className="font-sans text-[11px] text-[#b9cacb] leading-relaxed">
+                        {item.meaning}
+                      </p>
+                      <p className="font-sans text-[10px] text-[#fcd34d] leading-snug">
+                        <strong>🔗 Bridge:</strong> {mentor.familiarBridge}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-wrap pt-1 border-t border-[#272a31]">
+                      {mentor.resources.slice(0, 2).map((res, rIdx) => (
+                        <a
+                          key={rIdx}
+                          href={res.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2 py-0.5 rounded bg-[#0b0e14] hover:bg-[#141821] text-[#00f0ff] border border-[#00f0ff]/30 font-mono text-[8.5px] font-bold transition-colors"
+                        >
+                          {res.type === 'VIDEO' ? '▶ WATCH VIDEO' : '📖 READ GUIDE'} ({res.sourceName}) ↗
+                        </a>
+                      ))}
+                    </div>
                   </div>
-                  <p className="font-sans text-[11px] text-[#b9cacb] leading-relaxed">
-                    {item.meaning}
-                  </p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>

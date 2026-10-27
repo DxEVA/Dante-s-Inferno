@@ -1,5 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import {
+  getRookieMentorGuide,
+  getMetricLearningResources,
+  RookieMentorGuide,
+  ExternalLearningLink,
+} from '../utils/metricBenchmarks';
 
 export interface InfoExplainerContent {
   title: string;
@@ -9,6 +15,10 @@ export interface InfoExplainerContent {
   actionability: string;
   categoryBadge?: string;
   badgeColor?: string; // hex or tailwind text color
+  metricKey?: string;
+  rookieMentor?: RookieMentorGuide;
+  resources?: ExternalLearningLink[];
+  experienceMode?: 'rookie' | 'pro';
 }
 
 interface InfoTooltipProps {
@@ -17,6 +27,7 @@ interface InfoTooltipProps {
   inlineBadgeText?: string;
   className?: string;
   placement?: 'top' | 'bottom' | 'auto';
+  experienceMode?: 'rookie' | 'pro';
 }
 
 export const InfoTooltip: React.FC<InfoTooltipProps> = ({
@@ -25,13 +36,22 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
   inlineBadgeText,
   className = '',
   placement = 'auto',
+  experienceMode: propExperienceMode,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [syncedMode, setSyncedMode] = useState<'rookie' | 'pro'>(() => {
+    try {
+      const saved = localStorage.getItem('vertex_experience_mode');
+      return saved === 'pro' ? 'pro' : 'rookie';
+    } catch {
+      return 'rookie';
+    }
+  });
   const [coords, setCoords] = useState<{ top: number; left: number; width: number; placeAbove: boolean }>({
     top: 0,
     left: 0,
-    width: 320,
+    width: 390,
     placeAbove: true,
   });
 
@@ -43,16 +63,29 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 640);
     };
+    const handleModeChange = (e: Event) => {
+      const detail = (e as CustomEvent<'rookie' | 'pro'>).detail;
+      if (detail === 'rookie' || detail === 'pro') {
+        setSyncedMode(detail);
+      }
+    };
     checkMobile();
     window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    window.addEventListener('vertex:experience-mode-change', handleModeChange);
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+      window.removeEventListener('vertex:experience-mode-change', handleModeChange);
+    };
   }, []);
+
+  const activeExperienceMode: 'rookie' | 'pro' =
+    propExperienceMode || content.experienceMode || syncedMode;
 
   const updateCoordinates = useCallback(() => {
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
-    const tooltipWidth = Math.min(340, window.innerWidth - 24);
-    const tooltipHeight = 240; // estimated max height
+    const tooltipWidth = Math.min(400, window.innerWidth - 24);
+    const tooltipHeight = activeExperienceMode === 'rookie' ? 380 : 240;
 
     let left = rect.left + rect.width / 2 - tooltipWidth / 2;
     // Clamp to viewport
@@ -66,7 +99,7 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
 
     let placeAbove = placement === 'top' || (placement === 'auto' && spaceAbove > tooltipHeight);
     if (placement === 'bottom') placeAbove = false;
-    if (placeAbove && spaceAbove < 180 && spaceBelow > spaceAbove) {
+    if (placeAbove && spaceAbove < 240 && spaceBelow > spaceAbove) {
       placeAbove = false;
     }
 
@@ -80,7 +113,7 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
       width: tooltipWidth,
       placeAbove,
     });
-  }, [placement]);
+  }, [placement, activeExperienceMode]);
 
   const handleMouseEnter = () => {
     if (isMobile) return;
@@ -96,7 +129,7 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     hoverTimeoutRef.current = setTimeout(() => {
       setIsOpen(false);
-    }, 150);
+    }, 220);
   };
 
   const handleClick = (e: React.MouseEvent) => {
@@ -139,6 +172,39 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
       window.removeEventListener('resize', handleScrollOrResize);
     };
   }, [isOpen, isMobile, updateCoordinates]);
+
+  const lookupKey = content.metricKey || content.title;
+  const resolvedMentor =
+    content.rookieMentor ||
+    getRookieMentorGuide(lookupKey, content.symbol, '', content.liveRead);
+  const resolvedResources =
+    content.resources || getMetricLearningResources(lookupKey, content.symbol);
+
+  const renderResourceBadge = (type: ExternalLearningLink['type']) => {
+    switch (type) {
+      case 'VIDEO':
+        return {
+          label: '▶ VIDEO',
+          className: 'bg-[#f59e0b]/15 text-[#fcd34d] border-[#f59e0b]/40',
+        };
+      case 'INTERACTIVE':
+        return {
+          label: '⚡ INTERACTIVE',
+          className: 'bg-[#4edea3]/15 text-[#4edea3] border-[#4edea3]/40',
+        };
+      case 'COURSE':
+        return {
+          label: '🎓 COURSE',
+          className: 'bg-[#c084fc]/15 text-[#e9d5ff] border-[#c084fc]/40',
+        };
+      case 'ARTICLE':
+      default:
+        return {
+          label: '📖 ARTICLE',
+          className: 'bg-[#00f0ff]/15 text-[#00f0ff] border-[#00f0ff]/40',
+        };
+    }
+  };
 
   const renderPopoverBody = () => (
     <div className="flex flex-col gap-2.5">
@@ -210,6 +276,88 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
           {content.actionability}
         </p>
       </div>
+
+      {/* ROOKIE MODE ONLY: Row 4 (Familiar Indicator Bridge) & Row 5 (Full Educational Resource Cards) */}
+      {activeExperienceMode === 'rookie' && (
+        <>
+          {/* Row 4: ROOKIE MENTOR BRIDGE (Familiar Indicator Comparison + Range Cheat Sheet) */}
+          <div className="flex flex-col gap-1.5 bg-[#141821] p-2.5 rounded-lg border border-[#1e2433]">
+            <div className="flex items-center gap-1">
+              <span className="text-[11px]">🔗</span>
+              <span className="font-mono text-[9px] uppercase font-bold tracking-wider text-[#fcd34d]">
+                4. FAMILIAR INDICATOR BRIDGE (ROOKIE CHEAT SHEET)
+              </span>
+            </div>
+            <p className="font-sans text-[10.5px] text-[#e1e2eb] leading-snug">
+              {resolvedMentor.familiarBridge}
+            </p>
+
+            {/* Normal / Too High / Too Low Strip */}
+            <div className="grid grid-cols-1 gap-1 pt-1 font-mono text-[9px] tabular-nums">
+              <div className="px-2 py-1 bg-[#0b0e14] border border-[#1e2433] text-[#00f0ff]">
+                <strong>NORMAL:</strong> {resolvedMentor.standardRangeGuide.normal}
+              </div>
+              <div className="px-2 py-1 bg-[#0b0e14] border border-[#1e2433] text-[#fcd34d]">
+                <strong>HIGH / BULL EXTREME:</strong> {resolvedMentor.standardRangeGuide.tooHigh}
+              </div>
+              <div className="px-2 py-1 bg-[#0b0e14] border border-[#1e2433] text-[#ffb4ab]">
+                <strong>LOW / BEAR EXTREME:</strong> {resolvedMentor.standardRangeGuide.tooLow}
+              </div>
+            </div>
+
+            {/* Do / Avoid Rules */}
+            <div className="grid grid-cols-1 gap-1 pt-0.5 font-sans text-[10px]">
+              <div className="px-2 py-1 bg-[#4edea3]/10 border border-[#4edea3]/30 text-[#4edea3]">
+                <strong>✓ DO:</strong> {resolvedMentor.rookieActionRule.doThis}
+              </div>
+              <div className="px-2 py-1 bg-[#f43f5e]/10 border border-[#f43f5e]/30 text-[#ffb4ab]">
+                <strong>✕ AVOID:</strong> {resolvedMentor.rookieActionRule.avoidTrap}
+              </div>
+            </div>
+          </div>
+
+          {/* Row 5: FULL RESOURCE CARDS (3-Link Triad: Article, Video, Interactive/Course) */}
+          {resolvedResources && resolvedResources.length > 0 && (
+            <div className="flex flex-col gap-1.5 pt-1.5 border-t border-[#272a31]">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[9px] uppercase font-bold tracking-wider text-[#00f0ff]">
+                  5. STUDY ONLINE (ARTICLE · VIDEO · INTERACTIVE)
+                </span>
+                <span className="font-mono text-[8px] text-[#849495]">OPENS IN NEW TAB ↗</span>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                {resolvedResources.map((link, idx) => {
+                  const badge = renderResourceBadge(link.type);
+                  return (
+                    <a
+                      key={idx}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex flex-col gap-1 p-2 rounded-lg bg-[#0b0e14] hover:bg-[#141821] border border-[#1e2433] hover:border-[#00f0ff]/60 transition-all group"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span
+                          className={`px-1.5 py-0.5 rounded border font-mono text-[8px] font-bold shrink-0 ${badge.className}`}
+                        >
+                          {badge.label}
+                        </span>
+                        <span className="font-mono text-[8.5px] text-[#849495] group-hover:text-[#00f0ff] shrink-0">
+                          {link.sourceName} · {link.durationOrLevel} ↗
+                        </span>
+                      </div>
+                      <span className="font-mono text-[10.5px] font-semibold text-[#dbfcff] group-hover:text-[#00f0ff] leading-snug">
+                        {link.title}
+                      </span>
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 
@@ -270,7 +418,7 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
                 width: `${coords.width}px`,
                 zIndex: 9999,
               }}
-              className="bg-[#0e121a]/95 border border-[#00f0ff]/40 rounded-xl p-3.5 shadow-[0_12px_36px_rgba(0,0,0,0.85)] backdrop-blur-xl animate-fadeIn transition-all"
+              className="bg-[#0e121a]/95 border border-[#00f0ff]/40 rounded-xl p-3.5 shadow-[0_12px_36px_rgba(0,0,0,0.85)] backdrop-blur-xl animate-fadeIn transition-all max-h-[82vh] overflow-y-auto no-scrollbar"
             >
               {renderPopoverBody()}
             </div>
@@ -280,3 +428,5 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
     </>
   );
 };
+
+

@@ -113,6 +113,9 @@ export const QuantChart: React.FC<QuantChartProps> = ({
   layersRef.current = layers;
 
   const [autoSyncTab, setAutoSyncTab] = useState<boolean>(false);
+  const [manualOptionsOverride, setManualOptionsOverride] = useState<boolean>(false);
+  const manualOptionsOverrideRef = useRef<boolean>(false);
+  manualOptionsOverrideRef.current = manualOptionsOverride;
 
   // Store R:R box and highlighted level in refs so updates never recreate chart instance
   const setupBoxRef = useRef({
@@ -444,8 +447,11 @@ export const QuantChart: React.FC<QuantChartProps> = ({
       }
     }
 
-    // 3b. Draw Zero-Gamma Flip Regime Band (Only if Options layer is active)
-    if (currentLayers.options && currentOptions && currentOptions.zeroGammaLevel && currentOptions.zeroGammaLevel > 0) {
+    // 3b. Draw Zero-Gamma Flip Regime Band (Only if Options layer is active and native Deribit or manually toggled)
+    const shouldDrawOptionsOverlay =
+      currentLayers.options &&
+      (currentOptions?.isDeribitNative !== false || manualOptionsOverrideRef.current);
+    if (shouldDrawOptionsOverlay && currentOptions && currentOptions.zeroGammaLevel && currentOptions.zeroGammaLevel > 0) {
       const yZeroGamma = series.priceToCoordinate(currentOptions.zeroGammaLevel);
       if (yZeroGamma !== null && yZeroGamma >= 10 && yZeroGamma <= h - 20) {
         ctx.fillStyle = 'rgba(0, 240, 255, 0.07)';
@@ -511,13 +517,13 @@ export const QuantChart: React.FC<QuantChartProps> = ({
           (k.close < k.open || upperWick >= 0.42);
         const hasAbsorption = isBullBidAbsorption || isBearAskAbsorption;
 
-        const isStatSignificant = deltaSigma >= 1.15 || absDelta >= meanAbs * 1.65;
-        const isTwoSigmaAnomaly = deltaSigma >= 2.0;
+        const isStatSignificant = deltaSigma >= 1.85;
+        const isTwoSigmaAnomaly = deltaSigma >= 2.2;
         const totalLiqUsd =
           (k.liquidationBuyUsd || (k as any).liquidationsBuy || (k as any).liqBuyUsd || 0) +
           (k.liquidationSellUsd || (k as any).liquidationsSell || (k as any).liqSellUsd || 0);
 
-        // Filter out routine low-sigma noise so >=1.2σ orderflow & absorption rings pop at 60 FPS
+        // Filter out routine low-sigma noise: ONLY draw when deltaSigma >= 1.85 OR hasAbsorption === true OR totalLiqUsd > 0
         if (!isStatSignificant && !hasAbsorption && totalLiqUsd <= 0) {
           continue;
         }
@@ -532,7 +538,7 @@ export const QuantChart: React.FC<QuantChartProps> = ({
         if (y === null || y < 0 || y > h) continue;
 
         const sigmaNormalized = Math.max(0.15, Math.min(1, (deltaSigma + 0.5) / 3.2));
-        const maxBubbleR = isMobile ? 12 : 19;
+        const maxBubbleR = isMobile ? 10 : 14;
         const minBubbleR = isMobile ? 4.5 : 6.5;
         const r = minBubbleR + sigmaNormalized * (maxBubbleR - minBubbleR);
 
@@ -540,14 +546,14 @@ export const QuantChart: React.FC<QuantChartProps> = ({
         ctx.arc(x, y, r, 0, Math.PI * 2);
 
         if (netDelta >= 0) {
-          ctx.fillStyle = isTwoSigmaAnomaly ? 'rgba(16, 185, 129, 0.46)' : 'rgba(16, 185, 129, 0.28)';
+          ctx.fillStyle = isTwoSigmaAnomaly ? 'rgba(16, 185, 129, 0.34)' : 'rgba(16, 185, 129, 0.22)';
           ctx.fill();
           ctx.strokeStyle = isTwoSigmaAnomaly ? '#6ffbbe' : '#10b981';
           ctx.lineWidth = isTwoSigmaAnomaly ? 2 : 1.25;
           ctx.setLineDash([]);
           ctx.stroke();
         } else {
-          ctx.fillStyle = isTwoSigmaAnomaly ? 'rgba(244, 63, 94, 0.46)' : 'rgba(244, 63, 94, 0.28)';
+          ctx.fillStyle = isTwoSigmaAnomaly ? 'rgba(244, 63, 94, 0.34)' : 'rgba(244, 63, 94, 0.22)';
           ctx.fill();
           ctx.strokeStyle = isTwoSigmaAnomaly ? '#ffb4ab' : '#f43f5e';
           ctx.lineWidth = isTwoSigmaAnomaly ? 2 : 1.25;
@@ -769,64 +775,76 @@ export const QuantChart: React.FC<QuantChartProps> = ({
       }
     }
 
+    const placedAxisPrices: number[] = [];
+
     const addLine = (price: number, title: string, color: string, style: LineStyle, width: 1 | 2 = 1) => {
       if (!price || price <= 0) return;
       if (price < minAllowed || price > maxAllowed) return;
+      const isTooClose = placedAxisPrices.some(
+        (existing) => Math.abs(price - existing) / price < 0.0028
+      );
+      const showAxisLabel = !isTooClose;
+      if (showAxisLabel) {
+        placedAxisPrices.push(price);
+      }
       try {
         const line = series.createPriceLine({
           price,
           color,
           lineWidth: width,
           lineStyle: style,
-          axisLabelVisible: true,
-          title,
+          axisLabelVisible: showAxisLabel,
+          title: showAxisLabel ? title : '',
         });
         priceLinesRef.current.push(line);
       } catch {}
     };
 
-    // S/R & Liquidity Price Lines
-    if (currentLayers.sr && currentLiquidity) {
-      if (currentLiquidity.askLiquidityPrice > 0) {
-        addLine(currentLiquidity.askLiquidityPrice, `ASK ${formatPriceShort(currentLiquidity.askLiquidityPrice)}`, '#ffb4ab', LineStyle.Dashed, 1);
-      }
-      if (currentLiquidity.srHigh > 0) {
-        addLine(currentLiquidity.srHigh, `RES ${formatPriceShort(currentLiquidity.srHigh)}`, '#ffb4ab', LineStyle.Dotted, 1);
-      }
-      if (currentLiquidity.bidLiquidityPrice > 0) {
-        addLine(currentLiquidity.bidLiquidityPrice, `BID ${formatPriceShort(currentLiquidity.bidLiquidityPrice)}`, '#4edea3', LineStyle.Dashed, 1);
-      }
-      if (currentLiquidity.srLow > 0) {
-        addLine(currentLiquidity.srLow, `SUP ${formatPriceShort(currentLiquidity.srLow)}`, '#4edea3', LineStyle.Dotted, 1);
-      }
-    }
-
-    // Volume Profile Price Lines (VAH, POC, VAL)
+    // 1. Volume Profile Price Lines (Prioritize POC first, then VAH & VAL)
     if (currentLayers.vp && currentVp) {
-      if (currentVp.vah) {
-        addLine(currentVp.vah, `VAH ${formatPriceShort(currentVp.vah)}`, '#00dbe9', LineStyle.Dashed);
-      }
       if (currentVp.poc) {
         addLine(currentVp.poc, `POC ${formatPriceShort(currentVp.poc)}`, '#f59e0b', LineStyle.Solid, 2);
+      }
+      if (currentVp.vah) {
+        addLine(currentVp.vah, `VAH ${formatPriceShort(currentVp.vah)}`, '#00dbe9', LineStyle.Dashed);
       }
       if (currentVp.val) {
         addLine(currentVp.val, `VAL ${formatPriceShort(currentVp.val)}`, '#00dbe9', LineStyle.Dashed);
       }
     }
 
-    // Options Price Lines (Call Wall, Zero-Gamma Flip, Max Pain, Put Wall)
-    if (currentLayers.options && currentOptions) {
-      if (currentOptions.callWall) {
-        addLine(currentOptions.callWall, `CW ${formatPriceShort(currentOptions.callWall)}`, '#842bd2', LineStyle.Dashed);
+    // 2. S/R & Liquidity Price Lines (Prioritize S/R pivots then Resting Depth Walls)
+    if (currentLayers.sr && currentLiquidity) {
+      if (currentLiquidity.srHigh > 0) {
+        addLine(currentLiquidity.srHigh, `RES ${formatPriceShort(currentLiquidity.srHigh)}`, '#ffb4ab', LineStyle.Dotted, 1);
       }
+      if (currentLiquidity.srLow > 0) {
+        addLine(currentLiquidity.srLow, `SUP ${formatPriceShort(currentLiquidity.srLow)}`, '#4edea3', LineStyle.Dotted, 1);
+      }
+      if (currentLiquidity.askLiquidityPrice > 0) {
+        addLine(currentLiquidity.askLiquidityPrice, `ASK ${formatPriceShort(currentLiquidity.askLiquidityPrice)}`, '#ffb4ab', LineStyle.Dashed, 1);
+      }
+      if (currentLiquidity.bidLiquidityPrice > 0) {
+        addLine(currentLiquidity.bidLiquidityPrice, `BID ${formatPriceShort(currentLiquidity.bidLiquidityPrice)}`, '#4edea3', LineStyle.Dashed, 1);
+      }
+    }
+
+    // 3. Options Price Lines (Prioritize 0-Γ first, then CW, PW, MP; skip synthetic non-Deribit unless manually clicked)
+    const shouldDrawOptionsLines =
+      currentLayers.options &&
+      (currentOptions?.isDeribitNative !== false || manualOptionsOverrideRef.current);
+    if (shouldDrawOptionsLines && currentOptions) {
       if (currentOptions.zeroGammaLevel && currentOptions.zeroGammaLevel > 0) {
         addLine(currentOptions.zeroGammaLevel, `0-Γ ${formatPriceShort(currentOptions.zeroGammaLevel)}`, '#00f0ff', LineStyle.Dashed, 2);
       }
-      if (currentOptions.maxPain) {
-        addLine(currentOptions.maxPain, `MP ${formatPriceShort(currentOptions.maxPain)}`, '#ddb7ff', LineStyle.Dotted);
+      if (currentOptions.callWall) {
+        addLine(currentOptions.callWall, `CW ${formatPriceShort(currentOptions.callWall)}`, '#842bd2', LineStyle.Dashed);
       }
       if (currentOptions.putWall) {
         addLine(currentOptions.putWall, `PW ${formatPriceShort(currentOptions.putWall)}`, '#4edea3', LineStyle.Dashed);
+      }
+      if (currentOptions.maxPain) {
+        addLine(currentOptions.maxPain, `MP ${formatPriceShort(currentOptions.maxPain)}`, '#ddb7ff', LineStyle.Dotted);
       }
     }
   }, []);
@@ -861,7 +879,16 @@ export const QuantChart: React.FC<QuantChartProps> = ({
   }, [activeStrategyTab, autoSyncTab, onLayersChange, syncPriceLines, drawOverlayCanvas]);
 
   const handleToggleLayer = (key: keyof ChartLayers) => {
-    const nextLayers = { ...layers, [key]: !layers[key] };
+    let nextLayers = { ...layers, [key]: !layers[key] };
+
+    if (key === 'options' && optionsData.isDeribitNative === false) {
+      const currentlyShowingSynthetic = layers.options && manualOptionsOverrideRef.current;
+      const nextShowSynthetic = !currentlyShowingSynthetic;
+      manualOptionsOverrideRef.current = nextShowSynthetic;
+      setManualOptionsOverride(nextShowSynthetic);
+      nextLayers = { ...layers, options: nextShowSynthetic };
+    }
+
     layersRef.current = nextLayers;
     setInternalLayers(nextLayers);
     onLayersChange?.(nextLayers);
@@ -1161,6 +1188,8 @@ export const QuantChart: React.FC<QuantChartProps> = ({
 
   // Recalibrate price scale & fit content immediately when symbol or timeframe changes
   useEffect(() => {
+    manualOptionsOverrideRef.current = false;
+    setManualOptionsOverride(false);
     candleSeriesRef.current?.priceScale().applyOptions({ autoScale: true });
     chartRef.current?.timeScale().fitContent();
   }, [symbol, timeframe]);
@@ -1266,7 +1295,7 @@ export const QuantChart: React.FC<QuantChartProps> = ({
             type="button"
             onClick={() => handleToggleLayer('options')}
             className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border transition-all cursor-pointer ${
-              layers.options
+              layers.options && (optionsData.isDeribitNative !== false || manualOptionsOverride)
                 ? 'bg-[#c084fc]/20 text-[#c084fc] border-[#c084fc]/50 shadow-[0_0_8px_rgba(192,132,252,0.2)]'
                 : 'bg-[#191c22] text-[#849495] border-[#272a31] hover:text-[#e1e2eb]'
             }`}
