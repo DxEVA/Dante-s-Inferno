@@ -44,6 +44,7 @@ export interface IndicatorThresholdScale {
   midLabel: string;
   maxLabel: string;
   currentZone: 'BEARISH_OR_DANGER' | 'NEUTRAL' | 'BULLISH_OR_EDGE';
+  activeBox?: 'A' | 'B' | 'C';
 }
 
 export interface CurriculumIndicatorItem {
@@ -188,7 +189,32 @@ export function deconstructLiveSignal(input: ReverseAcademyInput): ReverseSignal
       ? (Math.abs(currentPrice - volumeProfile.vah) / currentPrice) * 100
       : 1.5;
 
-  const minKeyDist = Math.min(Math.abs(pocDistPct), valDistPct, vahDistPct);
+  const levelCandidates: { name: string; price: number }[] = [
+    { name: 'POC', price: volumeProfile.poc },
+    { name: 'VAL', price: volumeProfile.val },
+    { name: 'VAH', price: volumeProfile.vah },
+  ];
+  if (bullOB && bullOB.midpoint > 0) {
+    levelCandidates.push({ name: 'Bull OB', price: bullOB.midpoint });
+  }
+  if (bearOB && bearOB.midpoint > 0) {
+    levelCandidates.push({ name: 'Bear OB', price: bearOB.midpoint });
+  }
+
+  let nearestNodeName = 'POC';
+  let nearestNodePrice = volumeProfile.poc || currentPrice;
+  let minKeyDist = 99;
+  for (const cand of levelCandidates) {
+    if (cand.price > 0 && currentPrice > 0) {
+      const dPct = (Math.abs(currentPrice - cand.price) / currentPrice) * 100;
+      if (dPct < minKeyDist) {
+        minKeyDist = dPct;
+        nearestNodeName = cand.name;
+        nearestNodePrice = cand.price;
+      }
+    }
+  }
+  if (minKeyDist === 99) minKeyDist = 0;
   const isAtKeyLevel = minKeyDist <= 1.2;
 
   const isHardGated =
@@ -196,64 +222,117 @@ export function deconstructLiveSignal(input: ReverseAcademyInput): ReverseSignal
     flowRegime === 'LEVERAGE_TRAP_SHORT' ||
     Math.abs(maResult.stretchScoreAtr) >= 2.5;
 
+  const isBullSetup = confScore >= 50;
+  const isSharpeAlignedWithBias = (isBullSetup && sharpe >= 0.65) || (!isBullSetup && sharpe <= -0.65);
+
   let lightStatus: 'GREEN' | 'YELLOW' | 'RED' = 'YELLOW';
   if (isHardGated || (Math.abs(sharpe) < 0.35 && !isAtKeyLevel)) {
     lightStatus = 'RED';
-  } else if (confScore >= 65 && (Math.abs(sharpe) >= 0.75 || isAtKeyLevel)) {
+  } else if (confScore >= 65 && (isSharpeAlignedWithBias || isAtKeyLevel)) {
     lightStatus = 'GREEN';
   }
 
   const verdictTitle =
     lightStatus === 'GREEN'
-      ? `HIGH-CONFLUENCE ${confScore >= 50 ? 'BULLISH' : 'BEARISH'} EXECUTION WINDOW`
+      ? `HIGH-CONFLUENCE ${isBullSetup ? 'BULLISH' : 'BEARISH'} EXECUTION WINDOW`
       : lightStatus === 'RED'
       ? isHardGated
         ? 'HARD-GATE CONFLICT CAP ACTIVE (STAND DOWN)'
         : 'LOW-EDGE MID-RANGE CHOP (PROTECT CAPITAL)'
       : 'STALKING INSTITUTIONAL REACTION ZONE (WAIT FOR TRIGGER)';
 
+  const sharpeVerdictClause =
+    isBullSetup && sharpe < 0
+      ? `a counter-trend mean-reversion setup at structural support despite ${sharpe.toFixed(2)} prior drawdown Sharpe`
+      : !isBullSetup && sharpe > 0
+      ? `a counter-trend mean-reversion short at overhead resistance despite +${sharpe.toFixed(2)} prior uptrend Sharpe`
+      : `supportive orderflow and a ${sharpe >= 0 ? '+' : ''}${sharpe.toFixed(2)} Rolling Sharpe`;
+
   const verdictSummary =
     lightStatus === 'GREEN'
-      ? `${symbol} aligns structural location (within ${minKeyDist.toFixed(2)}% of key auction value) with supportive orderflow and a ${sharpe >= 0 ? '+' : ''}${sharpe.toFixed(2)} Rolling Sharpe.`
+      ? `${symbol} aligns structural location (within ${minKeyDist.toFixed(2)}% of ${nearestNodeName} $${formatPrice(nearestNodePrice)}) with ${sharpeVerdictClause}.`
       : lightStatus === 'RED'
       ? isHardGated
         ? `Cross-market flow or volatility stretch triggered an institutional safety gate (${flowRegime.replace(/_/g, ' ')} • Stretch ${maResult.stretchScoreAtr.toFixed(2)}x ATR).`
         : `${symbol} is floating in low-efficiency noise (Sharpe ${sharpe.toFixed(2)}, Hurst H=${hurst.toFixed(2)}) away from major institutional walls.`
-      : `${symbol} is building structure in the ${amdPhase.phase} phase, but requires either closer proximity to $${formatPrice(volumeProfile.val)}–$${formatPrice(volumeProfile.poc)} or a ≥1.5x Session RVOL ignition candle.`;
+      : `${symbol} is building structure in the ${amdPhase.phase} phase (${
+          isBullSetup && sharpe < 0
+            ? `counter-trend mean-reversion setup at structural support despite ${sharpe.toFixed(2)} prior drawdown Sharpe`
+            : `Rolling Sharpe ${sharpe >= 0 ? '+' : ''}${sharpe.toFixed(2)}`
+        }), requiring closer proximity to $${formatPrice(volumeProfile.val)}–$${formatPrice(volumeProfile.poc)} or a ≥1.5x Session RVOL ignition candle.`;
+
+  const trigger1Impact: 'BULLISH' | 'BEARISH' | 'WARNING' | 'NEUTRAL' =
+    hurst > 0.55 && adx >= 25
+      ? 'BULLISH'
+      : hurst <= 0.55 && adx >= 25
+      ? 'WARNING'
+      : hurst < 0.45 && adx < 25
+      ? 'NEUTRAL'
+      : 'WARNING';
+
+  const trigger1Explanation =
+    hurst > 0.55 && adx >= 25
+      ? `Persistent trend memory & strong directional momentum confirmed (H=${hurst.toFixed(2)} > 0.55 & ADX=${adx.toFixed(1)} >= 25).`
+      : hurst <= 0.55 && adx >= 25
+      ? `Directional ADX expansion (ADX=${adx.toFixed(1)} >= 25), but sub-0.55 Hurst (H=${hurst.toFixed(2)}) warns of mean-reverting pullbacks—do not chase breakouts.`
+      : hurst < 0.45 && adx < 25
+      ? `Mean-reverting rotational regime active (H=${hurst.toFixed(2)} < 0.45 & ADX=${adx.toFixed(1)} < 25). Fade extremes back toward POC.`
+      : `Transitional / balanced regime (H=${hurst.toFixed(2)} • ADX=${adx.toFixed(1)}). Wait for key-level reactions.`;
+
+  const basisBps = telemetry.spotPerpDivergence?.basisBps ?? 0;
+  const spotPerpGap = spotDeltaPct - perpDeltaPct;
+  const hasSpotPerpImbalance =
+    Math.abs(spotPerpGap) >= 3.5 || Math.abs(spotDeltaPct) >= 5.0 || Math.abs(basisBps) >= 10;
+
+  let trigger2Impact: 'BULLISH' | 'BEARISH' | 'WARNING' | 'NEUTRAL' = 'NEUTRAL';
+  let trigger2Explanation = `Spot (${spotDeltaPct >= 0 ? '+' : ''}${spotDeltaPct.toFixed(1)}%) and Perpetual (${perpDeltaPct >= 0 ? '+' : ''}${perpDeltaPct.toFixed(1)}%) orderflow deltas are balanced (${basisBps >= 0 ? '+' : ''}${basisBps.toFixed(1)} bps basis).`;
+
+  if (flowRegime === 'LEVERAGE_TRAP_LONG' || (spotPerpGap <= -3.5 && perpDeltaPct > 2.0)) {
+    trigger2Impact = 'WARNING';
+    trigger2Explanation = `Perp Leverage Chase detected: Perpetual buyers (${perpDeltaPct >= 0 ? '+' : ''}${perpDeltaPct.toFixed(1)}%) are outpacing Spot flow (${spotDeltaPct >= 0 ? '+' : ''}${spotDeltaPct.toFixed(1)}% • ${basisBps >= 0 ? '+' : ''}${basisBps.toFixed(1)} bps basis) — elevated long-squeeze risk.`;
+  } else if (
+    flowRegime === 'SPOT_ABSORPTION_ACCUMULATION' ||
+    (spotPerpGap >= 3.5 && spotDeltaPct > 0)
+  ) {
+    trigger2Impact = 'BULLISH';
+    trigger2Explanation = `Spot Whale Accumulation active: unleveraged Spot demand (${spotDeltaPct >= 0 ? '+' : ''}${spotDeltaPct.toFixed(1)}%) is outpacing Perpetual flow (${perpDeltaPct >= 0 ? '+' : ''}${perpDeltaPct.toFixed(1)}% • ${basisBps >= 0 ? '+' : ''}${basisBps.toFixed(1)} bps basis).`;
+  } else if (
+    flowRegime === 'SPOT_DRIVEN_EXPANSION' ||
+    (spotDeltaPct >= 5.0 && perpDeltaPct >= 3.5)
+  ) {
+    trigger2Impact = 'BULLISH';
+    trigger2Explanation = `Spot-Driven Expansion confirmed: Spot (+${spotDeltaPct.toFixed(1)}%) and Perpetual (+${perpDeltaPct.toFixed(1)}%) buyers are expanding in sync (${basisBps >= 0 ? '+' : ''}${basisBps.toFixed(1)} bps basis).`;
+  } else if (flowRegime === 'LEVERAGE_TRAP_SHORT' || (spotPerpGap >= 3.5 && perpDeltaPct < -2.0)) {
+    trigger2Impact = 'BULLISH';
+    trigger2Explanation = `Aggressive Perp shorts (${perpDeltaPct.toFixed(1)}%) are selling into passive Spot accumulation (${spotDeltaPct >= 0 ? '+' : ''}${spotDeltaPct.toFixed(1)}% • ${basisBps >= 0 ? '+' : ''}${basisBps.toFixed(1)} bps basis) — short-squeeze fuel.`;
+  } else if (hasSpotPerpImbalance) {
+    trigger2Impact = spotDeltaPct < -5.0 ? 'WARNING' : 'NEUTRAL';
+    trigger2Explanation =
+      spotDeltaPct <= -5.0
+        ? `Spot distribution flow (${spotDeltaPct.toFixed(1)}% Spot vs ${perpDeltaPct >= 0 ? '+' : ''}${perpDeltaPct.toFixed(1)}% Perp • ${basisBps >= 0 ? '+' : ''}${basisBps.toFixed(1)} bps basis) signals unleveraged supply overhead.`
+        : `Cross-market basis divergence active: Spot ${spotDeltaPct >= 0 ? '+' : ''}${spotDeltaPct.toFixed(1)}% vs Perp ${perpDeltaPct >= 0 ? '+' : ''}${perpDeltaPct.toFixed(1)}% (${basisBps >= 0 ? '+' : ''}${basisBps.toFixed(1)} bps basis).`;
+  }
 
   const node2_triggers: ReverseSignalDeconstruction['node2_triggers'] = [
     {
       label: '1. Statistical Regime (Hurst + ADX)',
       liveValue: `H = ${hurst.toFixed(2)} • ADX = ${adx.toFixed(1)}`,
-      impact: hurst > 0.55 || adx >= 25 ? 'BULLISH' : hurst < 0.45 ? 'NEUTRAL' : 'WARNING',
-      explanation:
-        hurst > 0.55 || adx >= 25
-          ? `Persistent trend memory active (H > 0.55 / ADX ≥ 25). Momentum continuations are statistically favored over counter-trend fades.`
-          : `Mean-reverting regime (H = ${hurst.toFixed(2)}). Breakouts frequently fail; fade extremes near VAH ($${formatPrice(volumeProfile.vah)}) and VAL ($${formatPrice(volumeProfile.val)}).`,
+      impact: trigger1Impact,
+      explanation: trigger1Explanation,
     },
     {
       label: '2. Spot vs. Perpetual CVD Flow',
       liveValue: `Spot ${spotDeltaPct >= 0 ? '+' : ''}${spotDeltaPct.toFixed(1)}% vs Perp ${perpDeltaPct >= 0 ? '+' : ''}${perpDeltaPct.toFixed(1)}%`,
-      impact:
-        flowRegime === 'SPOT_DRIVEN_EXPANSION' || flowRegime === 'SPOT_ABSORPTION_ACCUMULATION'
-          ? 'BULLISH'
-          : flowRegime.includes('TRAP')
-          ? 'WARNING'
-          : 'NEUTRAL',
-      explanation:
-        flowRegime === 'LEVERAGE_TRAP_LONG'
-          ? `Perpetual futures buyers are aping in (+${perpDeltaPct.toFixed(1)}%) while true unleveraged Spot whales are net selling (${spotDeltaPct.toFixed(1)}%) — classic long-squeeze trap.`
-          : flowRegime === 'SPOT_ABSORPTION_ACCUMULATION'
-          ? `Passive Spot limit buyers are absorbing leveraged perp selling (${perpDeltaPct.toFixed(1)}%) — institutional accumulation footprint.`
-          : `Spot and Perpetual orderflow deltas are balanced (${telemetry.spotPerpDivergence?.basisBps?.toFixed(1) ?? '0.0'} bps basis).`,
+      impact: trigger2Impact,
+      explanation: trigger2Explanation,
     },
     {
       label: '3. Auction Location & Session RVOL',
-      liveValue: `${ Math.abs(pocDistPct).toFixed(2)}% from POC • ${sessionRvol.toFixed(2)}x RVOL`,
-      impact: isAtKeyLevel ? 'BULLISH' : sessionRvol < 0.45 ? 'NEUTRAL' : 'WARNING',
+      liveValue: `${minKeyDist.toFixed(2)}% from ${nearestNodeName} • ${sessionRvol.toFixed(2)}x RVOL`,
+      impact: isAtKeyLevel ? 'BULLISH' : sessionRvol <= 0.48 ? 'NEUTRAL' : 'WARNING',
       explanation: isAtKeyLevel
-        ? `Price ($${formatPrice(currentPrice)}) sits directly inside the 1.2% institutional reaction zone around POC ($${formatPrice(volumeProfile.poc)}) / VAL ($${formatPrice(volumeProfile.val)}).`
-        : `Price is ${minKeyDist.toFixed(2)}% away from the nearest major auction node with ${sessionRvol.toFixed(2)}x time-of-day volume.`,
+        ? `Price ($${formatPrice(currentPrice)}) sits ${minKeyDist.toFixed(2)}% from ${nearestNodeName} ($${formatPrice(nearestNodePrice)}) — inside the 1.2% institutional reaction zone with ${sessionRvol.toFixed(2)}x Session RVOL.`
+        : `Price ($${formatPrice(currentPrice)}) is ${minKeyDist.toFixed(2)}% away from the nearest key level (${nearestNodeName} $${formatPrice(nearestNodePrice)}) with ${sessionRvol.toFixed(2)}x Session RVOL.`,
     },
   ];
 
@@ -365,6 +444,7 @@ export function generateCurriculumModules(input: ReverseAcademyInput): Curriculu
           midLabel: '0.5% – 2.5% (Institutional Sweet Spot)',
           maxLabel: '> 5.0% (Wide Macro Stop)',
           currentZone: stopDistPct >= 0.4 && stopDistPct <= 3.5 ? 'BULLISH_OR_EDGE' : 'BEARISH_OR_DANGER',
+          activeBox: stopDistPct < 0.4 ? 'A' : stopDistPct <= 3.5 ? 'B' : 'C',
         },
         mentalModel: 'Think of Risk ($) as your airbag and Stop Distance (%) as how close you follow the car ahead. If you tailgate (<0.35% stop), normal market braking triggers a crash and fees eat your account.',
         formulaPlain: 'Position Size (Coins) = Risk Capital ($) ÷ |Entry Price - Stop Loss Price|',
@@ -379,7 +459,8 @@ export function generateCurriculumModules(input: ReverseAcademyInput): Curriculu
           minLabel: '1x – 5x (Low Ruin Risk)',
           midLabel: '5x – 12x (Tactical Perp)',
           maxLabel: '> 20x (Liquidation Danger)',
-          currentZone: calcResult.leverageEq <= 10 ? 'BULLISH_OR_EDGE' : calcResult.leverageEq <= 18 ? 'NEUTRAL' : 'BEARISH_OR_DANGER',
+          currentZone: calcResult.leverageEq <= 12 ? 'BULLISH_OR_EDGE' : calcResult.leverageEq <= 18 ? 'NEUTRAL' : 'BEARISH_OR_DANGER',
+          activeBox: calcResult.leverageEq <= 5 ? 'A' : calcResult.leverageEq <= 15 ? 'B' : 'C',
         },
         mentalModel: 'Leverage does NOT change your dollar profit when sizing by fixed risk—it only moves the exchange liquidation guillotine closer to your entry.',
         formulaPlain: 'Notional Value = Position Size × Entry Price; Safe Max Leverage ≈ 85% ÷ Stop Distance %',
@@ -395,6 +476,7 @@ export function generateCurriculumModules(input: ReverseAcademyInput): Curriculu
           midLabel: '8% – 18% of 1R (Moderate Drag)',
           maxLabel: '> 20% of 1R (Edge Eroded)',
           currentZone: feeDragPct <= 10 ? 'BULLISH_OR_EDGE' : feeDragPct <= 18 ? 'NEUTRAL' : 'BEARISH_OR_DANGER',
+          activeBox: feeDragPct < 8 ? 'A' : feeDragPct <= 18 ? 'B' : 'C',
         },
         mentalModel: 'Market orders (Taker) pay a toll tax to cross the bridge immediately; Limit orders (Maker) rest on the orderbook wall and let impatient traders pay you liquidity rebates.',
         formulaPlain: 'Round-Trip Taker Drag = Notional × (0.05% Open + 0.05% Close + Orderbook Impact Slippage)',
@@ -410,8 +492,9 @@ export function generateCurriculumModules(input: ReverseAcademyInput): Curriculu
           midLabel: '1.8R – 2.5R Net (Solid Institutional)',
           maxLabel: '> 2.5R Net (Asymmetric Home Run)',
           currentZone: effNetRR >= 1.8 ? 'BULLISH_OR_EDGE' : effNetRR >= 1.5 ? 'NEUTRAL' : 'BEARISH_OR_DANGER',
+          activeBox: effNetRR < 1.6 ? 'A' : effNetRR <= 2.5 ? 'B' : 'C',
         },
-        mentalModel: 'Gross R:R is sticker price; Net R:R is take-home pay after taxes. Half-Kelly tells you the mathematically optimal bet size to grow wealth without risking a drawdown spiral.',
+      mentalModel: 'Gross R:R is sticker price; Net R:R is take-home pay after taxes. Half-Kelly tells you the mathematically optimal bet size to grow wealth without risking a drawdown spiral.',
         formulaPlain: 'Half-Kelly % = 0.5 × [ WinProb - (1 - WinProb) ÷ Effective_Net_RR ]',
       },
     ],
@@ -461,6 +544,7 @@ export function generateCurriculumModules(input: ReverseAcademyInput): Curriculu
           midLabel: 'CLV 35%–65% (In-Balance)',
           maxLabel: 'CLV > 75% + Wick > 50% (Strong Rejection)',
           currentZone: clvPct >= 65 || wickRatioPct >= 55 ? 'BULLISH_OR_EDGE' : clvPct <= 35 ? 'BEARISH_OR_DANGER' : 'NEUTRAL',
+          activeBox: clvPct < 35 ? 'A' : clvPct <= 65 ? 'B' : 'C',
         },
         mentalModel: 'A candle wick is a failed invasion. A long lower wick with a high CLV (>75%) means sellers marched down, ran into a wall of limit buyers, and got pushed all the way back up before the bell.',
         formulaPlain: 'CLV % = ((Close - Low) ÷ (High - Low)) × 100; Wick Ratio = Max(UpperWick, LowerWick) ÷ TotalRange',
@@ -479,7 +563,8 @@ export function generateCurriculumModules(input: ReverseAcademyInput): Curriculu
           minLabel: '< 0.5x ATR (Compression / Doji)',
           midLabel: '0.6x – 1.2x ATR (Normal Bar)',
           maxLabel: '> 1.5x ATR (Institutional Displacement)',
-          currentZone: bodyAtr >= 1.25 ? 'BULLISH_OR_EDGE' : 'NEUTRAL',
+          currentZone: bodyAtr >= 0.55 ? 'BULLISH_OR_EDGE' : 'NEUTRAL',
+          activeBox: bodyAtr < 0.55 ? 'A' : bodyAtr <= 1.35 ? 'B' : 'C',
         },
         mentalModel: 'ATR is the asset’s normal stride length. When a candle prints 1.8x ATR, the market just sprinted nearly two full strides in a single bar—only big money can move the tape that far.',
         formulaPlain: 'TR = Max(High-Low, |High-PrevClose|, |Low-PrevClose|); ATR(14) = Wilder Smoothing of TR over 14 bars',
@@ -495,6 +580,7 @@ export function generateCurriculumModules(input: ReverseAcademyInput): Curriculu
           midLabel: 'Coiled / Compression',
           maxLabel: 'Bull Stack (9 > 21 > 50 > 200)',
           currentZone: maResult.ribbonBias === 'BULLISH' ? 'BULLISH_OR_EDGE' : maResult.ribbonBias === 'BEARISH' ? 'BEARISH_OR_DANGER' : 'NEUTRAL',
+          activeBox: maResult.ribbonBias === 'BEARISH' ? 'A' : maResult.ribbonBias === 'BULLISH' ? 'C' : 'B',
         },
         mentalModel: 'The EMA Ribbon is a 4-lane highway: 9 EMA is fast motorcycles, 21 EMA is institutional trend-followers, 50 EMA is swing funds, and 200 EMA is macro pension traffic. When all 4 lanes flow in parallel, pullbacks to the 21 EMA act like a trampoline.',
         formulaPlain: 'EMA_t = Price_t × k + EMA_(t-1) × (1 - k), where k = 2 ÷ (Period + 1)',
@@ -514,6 +600,7 @@ export function generateCurriculumModules(input: ReverseAcademyInput): Curriculu
           midLabel: '±1.5 to ±2.2 ATR (Extended)',
           maxLabel: 'Beyond ±2.5 ATR (Snap-Back Danger)',
           currentZone: Math.abs(maResult.stretchScoreAtr) <= 1.6 ? 'BULLISH_OR_EDGE' : Math.abs(maResult.stretchScoreAtr) <= 2.3 ? 'NEUTRAL' : 'BEARISH_OR_DANGER',
+          activeBox: Math.abs(maResult.stretchScoreAtr) <= 1.35 ? 'A' : Math.abs(maResult.stretchScoreAtr) <= 2.3 ? 'B' : 'C',
         },
         mentalModel: 'Imagine walking a dog on a stretchy leash where you are the 21 EMA and the dog is spot price. Once the dog sprints >2.5 leash-lengths away, it physically has to pause or trot back toward you.',
         formulaPlain: 'ATR Stretch Score = (Current Close - 21 EMA) ÷ 14-Period ATR',
@@ -557,7 +644,16 @@ export function generateCurriculumModules(input: ReverseAcademyInput): Curriculu
           minLabel: 'Below VAL (Discount / Imbalance)',
           midLabel: 'Inside VAL–VAH (70% Balance Bell Curve)',
           maxLabel: 'Above VAH (Premium / Breakout)',
-          currentZone: Math.abs(currentPrice - volumeProfile.val) / currentPrice <= 0.015 || Math.abs(currentPrice - volumeProfile.poc) / currentPrice <= 0.01 ? 'BULLISH_OR_EDGE' : 'NEUTRAL',
+          currentZone:
+            currentPrice >= volumeProfile.val && currentPrice <= volumeProfile.vah
+              ? 'BULLISH_OR_EDGE'
+              : 'NEUTRAL',
+          activeBox:
+            currentPrice < volumeProfile.val
+              ? 'A'
+              : currentPrice <= volumeProfile.vah
+              ? 'B'
+              : 'C',
         },
         mentalModel: 'Standard volume bars tell you WHEN trading happened; Volume Profile turns the histogram sideways to show you WHERE (at which exact price) 70% of all coins changed hands. POC is the crowded town square; LVNs (Low Volume Nodes) are empty highways where price zips through fast.',
         formulaPlain: 'Bucket volume across 24 price rows; expand outward from the highest-volume row (POC) until ≥70% of total session volume is enclosed (VAL to VAH).',
@@ -577,6 +673,11 @@ export function generateCurriculumModules(input: ReverseAcademyInput): Curriculu
           midLabel: 'Partial Mitigation (Testing Zone)',
           maxLabel: 'Unmitigated + FVG Aligned (High Edge)',
           currentZone: bullOB?.mitigationStatus === 'UNMITIGATED' ? 'BULLISH_OR_EDGE' : 'NEUTRAL',
+          activeBox: !bullOB
+            ? 'A'
+            : bullOB.mitigationStatus === 'PARTIAL'
+            ? 'B'
+            : 'C',
         },
         mentalModel: 'Before an institutional whale can launch a massive rally, they must accumulate a huge position inside a quiet base candle (the Order Block). When price returns to that base later, they defend their average entry price (the 50% Mean Threshold).',
         formulaPlain: 'Last opposing candle before a ≥1.5x ATR displacement impulse leaving a 3-bar Fair Value Gap; invalidated if candle closes beyond 50% midpoint.',
@@ -592,6 +693,12 @@ export function generateCurriculumModules(input: ReverseAcademyInput): Curriculu
           midLabel: '2. Manipulation (Judas Stop Sweep)',
           maxLabel: '3. Expansion / Markup (Trend Run)',
           currentZone: amdPhase.phase === 'MANIPULATION' || amdPhase.phase === 'EXPANSION' ? 'BULLISH_OR_EDGE' : 'NEUTRAL',
+          activeBox:
+            amdPhase.phase === 'ACCUMULATION'
+              ? 'A'
+              : amdPhase.phase === 'MANIPULATION'
+              ? 'B'
+              : 'C',
         },
         mentalModel: 'Smart money rarely moves in a straight line: First they build a quiet box (Accumulation), then they fake a breakout the wrong way to trigger retail stop-losses and fill their own limit orders (Manipulation / Judas Swing), and finally they drive the true trend (Expansion).',
         formulaPlain: 'Multi-factor state machine scoring range compression (ATR ratio), wick liquidity sweeps of swing highs/lows, and directional CVD displacement.',
@@ -631,7 +738,8 @@ export function generateCurriculumModules(input: ReverseAcademyInput): Curriculu
           minLabel: 'Heavy Negative CVD (Seller Aggression)',
           midLabel: 'Balanced Tape',
           maxLabel: 'Positive CVD + Absorption (Buyer Aggression)',
-          currentZone: telemetry.cvdDelta > 0 ? 'BULLISH_OR_EDGE' : 'NEUTRAL',
+          currentZone: telemetry.cvdDelta > 0 ? 'BULLISH_OR_EDGE' : telemetry.cvdDelta < -50 ? 'BEARISH_OR_DANGER' : 'NEUTRAL',
+          activeBox: telemetry.cvdDelta < -50 ? 'A' : telemetry.cvdDelta <= 50 ? 'B' : 'C',
         },
         mentalModel: 'Every trade has a patient limit order (Maker) and an impatient market order (Taker). BarDelta = Market Buy Volume minus Market Sell Volume. It reveals who is urgently crossing the spread right now.',
         formulaPlain: 'BarDelta = TakerBuyBaseVolume - (TotalVolume - TakerBuyBaseVolume); CVD = Cumulative Sum of BarDelta',
@@ -644,12 +752,17 @@ export function generateCurriculumModules(input: ReverseAcademyInput): Curriculu
         reverseRead: `When a cyan/red ±2σ Delta Bubble prints on ${symbol}'s chart with a Gold Absorption Ring, it means market orders hammered the tape at >2 standard deviations above normal, yet passive limit walls at $${formatPrice(liquidity?.bidLiquidityPrice || volumeProfile.val)} absorbed every coin without letting price break.`,
         thresholdScale: {
           minLabel: 'Unabsorbed Impulse Breakdown',
-          midLabel: 'Normal Orderflow (< 2.0σ Delta)',
-          maxLabel: '≥ 2.0σ Delta + Gold Ring (Limit Wall Absorption)',
+          midLabel: 'Normal Orderflow (< 1.85σ Delta)',
+          maxLabel: '≥ 1.85σ Delta + Gold Ring (Limit Wall Absorption)',
           currentZone: 'BULLISH_OR_EDGE',
+          activeBox:
+            telemetry.divergenceBias.toLowerCase().includes('absorption') ||
+            telemetry.divergenceBias.toLowerCase().includes('squeeze')
+              ? 'C'
+              : 'B',
         },
         mentalModel: 'Imagine a battering ram (market sellers) slamming into a castle gate (passive limit buy wall). If the ram hits with 3x normal force (±2σ Delta) but the gate doesn’t budge (candle closes high), the attackers are exhausted and trapped.',
-        formulaPlain: 'Delta Sigma = |BarDelta| ÷ StdDev(BarDelta, 20); Absorption = |DeltaSigma| ≥ 1.8 while candle closes against the delta direction',
+        formulaPlain: 'Delta Sigma = |BarDelta| ÷ StdDev(BarDelta, 20); Absorption = |DeltaSigma| ≥ 1.85 while candle closes against the delta direction',
       },
       {
         id: 'session_rvol_vdu',
@@ -667,7 +780,8 @@ export function generateCurriculumModules(input: ReverseAcademyInput): Curriculu
           minLabel: '💧 VDU ≤ 0.45x (Seller Exhaustion)',
           midLabel: '0.6x – 1.5x (Normal Session Flow)',
           maxLabel: '⚡ Ignition ≥ 2.0x (Institutional Surge)',
-          currentZone: sessionRvol <= 0.45 || sessionRvol >= 1.5 ? 'BULLISH_OR_EDGE' : 'NEUTRAL',
+          currentZone: sessionRvol <= 0.48 || sessionRvol >= 0.8 ? 'BULLISH_OR_EDGE' : 'NEUTRAL',
+          activeBox: sessionRvol <= 0.48 ? 'A' : sessionRvol < 1.6 ? 'B' : 'C',
         },
         mentalModel: 'Comparing Asian session volume at 03:00 UTC to New York Overlap volume at 14:30 UTC is an apples-to-oranges mistake. Session-Normalized RVOL compares current volume strictly against the same UTC session bucket.',
         formulaPlain: 'Session RVOL = Current Bar Volume ÷ Mean Volume of matching UTC Session bars (Asian / London / NY Overlap / NY Afternoon)',
@@ -684,11 +798,19 @@ export function generateCurriculumModules(input: ReverseAcademyInput): Curriculu
           maxLabel: 'Spot Up + Perp Down (Short Squeeze Fuel)',
           currentZone:
             telemetry.spotPerpDivergence?.flowRegime === 'SPOT_DRIVEN_EXPANSION' ||
-            telemetry.spotPerpDivergence?.flowRegime === 'SPOT_ABSORPTION_ACCUMULATION'
+            telemetry.spotPerpDivergence?.flowRegime === 'SPOT_ABSORPTION_ACCUMULATION' ||
+            spotDelta - perpDelta >= 3.5
               ? 'BULLISH_OR_EDGE'
               : telemetry.spotPerpDivergence?.flowRegime.includes('TRAP')
               ? 'BEARISH_OR_DANGER'
               : 'NEUTRAL',
+          activeBox: telemetry.spotPerpDivergence?.flowRegime.includes('TRAP')
+            ? 'A'
+            : telemetry.spotPerpDivergence?.flowRegime === 'SPOT_DRIVEN_EXPANSION' ||
+              telemetry.spotPerpDivergence?.flowRegime === 'SPOT_ABSORPTION_ACCUMULATION' ||
+              spotDelta - perpDelta >= 3.5
+            ? 'C'
+            : 'B',
         },
         mentalModel: 'Spot buyers must put up 100% cash and cannot be liquidated; Perpetual traders use up to 50x borrowed money. When Perp CVD rockets up while Spot CVD is negative, retail gamblers are building a house of cards that market makers will sweep.',
         formulaPlain: 'SpotDelta% = 20-bar Net Spot Taker Delta ÷ Total Spot Vol; PerpDelta% = 20-bar Net Perp Taker Delta ÷ Total Perp Vol',
@@ -724,17 +846,20 @@ export function generateCurriculumModules(input: ReverseAcademyInput): Curriculu
         shortTag: 'HURST_GATE',
         liveValueFormatted: `H = ${hurst.toFixed(2)} • ADX = ${adx.toFixed(1)} (${candlestickResult.marketRegime?.regime || 'MEAN_REVERTING'})`,
         reverseRead: `Because ${symbol} prints Hurst H = ${hurst.toFixed(2)} and ADX = ${adx.toFixed(1)}, ${
-          hurst < 0.48 && adx < 25
+          hurst > 0.55 && adx >= 25
+            ? 'both fractal trend memory (H > 0.55) and directional momentum (ADX ≥ 25) are active—counter-trend reversal fades are suppressed!'
+            : hurst <= 0.55 && adx >= 25
+            ? 'directional ADX is elevated (ADX ≥ 25), but sub-0.55 Hurst warns of mean-reverting pullbacks—do not chase extended breakouts.'
+            : hurst < 0.45 && adx < 25
             ? 'the time-series is statistically mean-reverting (anti-persistent)—range fades at VAL/VAH have high edge.'
-            : hurst > 0.55 || adx >= 25
-            ? 'the time-series has strong fractal trend memory—counter-trend reversal patterns are suppressed by the hard gate!'
-            : 'the market is in a transitional random walk (H ≈ 0.50).'
+            : 'the market is in a transitional regime—wait for key-level confirmation.'
         }`,
         thresholdScale: {
-          minLabel: 'H < 0.45 & ADX < 20 (Mean-Reverting)',
-          midLabel: 'H ≈ 0.50 (Random Walk Noise)',
-          maxLabel: 'H > 0.55 or ADX ≥ 25 (Momentum Trend)',
-          currentZone: hurst > 0.55 || hurst < 0.45 ? 'BULLISH_OR_EDGE' : 'NEUTRAL',
+          minLabel: 'H < 0.45 & ADX < 25 (Mean-Reverting)',
+          midLabel: 'H ≈ 0.50 or Mixed (Transitional)',
+          maxLabel: 'H > 0.55 & ADX ≥ 25 (Momentum Trend)',
+          currentZone: (hurst > 0.55 && adx >= 25) || (hurst < 0.45 && adx < 25) ? 'BULLISH_OR_EDGE' : 'NEUTRAL',
+          activeBox: hurst < 0.45 && adx < 25 ? 'A' : hurst > 0.55 && adx >= 25 ? 'C' : 'B',
         },
         mentalModel: 'Most traders lose because they use a trend strategy in a sideways chop market, or fade a freight-train breakout. Hurst (H) measures fractal memory: H < 0.45 is a pendulum swinging back to center; H > 0.55 is a snowball rolling downhill.',
         formulaPlain: 'H = log(R/S) ÷ log(N) across multi-scale lag windows, where R is cumulative deviation range and S is standard deviation.',
@@ -747,12 +872,13 @@ export function generateCurriculumModules(input: ReverseAcademyInput): Curriculu
         reverseRead: `Because ${symbol} sits at ${telemetry.zScore >= 0 ? '+' : ''}${telemetry.zScore.toFixed(2)}σ from its 50-bar Volume-Weighted Moving Average ($${formatPrice(telemetry.vwma50)}) with a ${kaufmanEff.toFixed(0)}% Kaufman Trend Efficiency, ${telemetry.zScoreBias}.`,
         thresholdScale: {
           minLabel: '|Sharpe| < 0.4 (Noisy Chop)',
-          midLabel: 'Sharpe 0.5 – 1.2 (Steady Drift)',
-          maxLabel: 'Sharpe > 1.2 + High Sortino (Clean Institutional Trend)',
-          currentZone: Math.abs(sharpe) >= 0.8 ? 'BULLISH_OR_EDGE' : Math.abs(sharpe) >= 0.4 ? 'NEUTRAL' : 'BEARISH_OR_DANGER',
+          midLabel: '|Sharpe| 0.5 – 1.2 (Steady Drift)',
+          maxLabel: '|Sharpe| > 1.2 + High Sortino (Clean Trend)',
+          currentZone: Math.abs(sharpe) >= 0.5 ? 'BULLISH_OR_EDGE' : 'BEARISH_OR_DANGER',
+          activeBox: Math.abs(sharpe) < 0.45 ? 'A' : Math.abs(sharpe) <= 1.2 ? 'B' : 'C',
         },
         mentalModel: 'Sharpe penalizes all volatility equally; Sortino only penalizes downside crashes (bad volatility), letting upside parabolic rockets score high. VWMA Z-Score tells you how many volume-weighted standard deviations price is stretched from fair value.',
-        formulaPlain: 'Z = (Close - VWMA50) ÷ VolumeWeightedStdDev(50); Sortino = (MeanReturn × √PeriodsPerYear) ÷ DownsideStdDev',
+        formulaPlain: 'Z = (Close - VWMA50) ÷ VolumeWeightedStdDev(50); Sortino = (MeanReturn × AnnualFactor) ÷ DownsideStdDev',
       },
       {
         id: 'gex_zerogamma',
@@ -769,6 +895,12 @@ export function generateCurriculumModules(input: ReverseAcademyInput): Curriculu
           midLabel: 'Near 0-Γ Flip ($' + formatPrice(zeroGamma) + ')',
           maxLabel: 'Positive GEX (> $0M: Mean-Reversion Pinning)',
           currentZone: telemetry.netGex >= 0 ? 'BULLISH_OR_EDGE' : 'BEARISH_OR_DANGER',
+          activeBox:
+            Math.abs(currentPrice - zeroGamma) / Math.max(1, currentPrice) <= 0.004
+              ? 'B'
+              : telemetry.netGex < 0
+              ? 'A'
+              : 'C',
         },
         mentalModel: 'Options dealers don’t want directional risk—they delta-hedge continuously. Above the Zero-Gamma Flip (Positive GEX), dealers act like brakes on a car. Below the Zero-Gamma Flip (Negative GEX), dealers’ brakes fail and they press the gas pedal in whichever direction price moves.',
         formulaPlain: 'Strike GEX = OpenInterest × BS_Gamma(S, K, T, σ) × Spot² × 0.01 × (+1 for Calls, -1 for Puts); 0-Γ is the spot price where Σ(GEX) = 0.',
@@ -781,9 +913,10 @@ export function generateCurriculumModules(input: ReverseAcademyInput): Curriculu
         reverseRead: `Because 25-Delta Skew is ${optionsData.skew25d >= 0 ? '+' : ''}${optionsData.skew25d.toFixed(1)}% (${telemetry.skewBias}) and Put/Call walls sit at $${formatPrice(optionsData.putWall)} / $${formatPrice(optionsData.callWall)}, options hedging creates heavy structural resistance at the Call Wall and floor support at the Put Wall.`,
         thresholdScale: {
           minLabel: 'Skew > +5% (Expensive Put Downside Fear)',
-          midLabel: 'Skew -2% to +3% (Balanced)',
+          midLabel: 'Skew -2% to +3.5% (Balanced)',
           maxLabel: 'Skew < -3% (Aggressive Call Demand)',
           currentZone: Math.abs(optionsData.skew25d) <= 4 ? 'BULLISH_OR_EDGE' : 'NEUTRAL',
+          activeBox: optionsData.skew25d > 3.5 ? 'A' : optionsData.skew25d >= -2.5 ? 'B' : 'C',
         },
         mentalModel: 'Max Pain is the exact strike where options buyers lose the most money and option sellers (institutions) keep the most premium at expiry. 25-Delta Skew compares the price of crash-insurance Puts vs. moon-shot Calls.',
         formulaPlain: 'Max Pain = argmin_S Σ [ CallOI × max(0, S - K) + PutOI × max(0, K - S) ]; 25Δ Skew = IV(25Δ Put) - IV(25Δ Call)',

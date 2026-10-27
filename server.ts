@@ -32,7 +32,7 @@ app.post('/api/run-quant', async (req, res) => {
   try {
     const { symbol, price, telemetry, mtfMatrix, levels } = req.body;
 
-    const prompt = `You are VERTEX QUANT, an institutional high-frequency quantitative & derivatives trading analyst.
+    const prompt = `You are INFERNO QUANT, an institutional high-frequency quantitative & derivatives trading analyst.
 Analyze the following live telemetry and multi-timeframe vector alignments for ${symbol || 'BTCUSDT'} at current mark price $${price || 89420}:
 
 CURRENT TELEMETRY:
@@ -141,7 +141,7 @@ async function startServer() {
   }
 
   httpServer.listen(PORT, '0.0.0.0', () => {
-    console.log(`Vertex Quant Radar running on http://0.0.0.0:${PORT}`);
+    console.log(`Inferno Quant Terminal running on http://0.0.0.0:${PORT}`);
   });
 }
 

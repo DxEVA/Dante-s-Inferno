@@ -45,7 +45,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-1.5 truncate">
               <span className="font-mono text-[10px] sm:text-[11px] text-[#00f0ff] tracking-wider uppercase font-bold truncate">
-                ● VERTEX // RADAR
+                ● INFERNO // QUANT RADAR
               </span>
               <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-[#1d2026] border border-[#272a31] font-mono text-[8px] sm:text-[9px] text-[#4edea3] font-semibold shrink-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#4edea3] animate-pulse"></span>

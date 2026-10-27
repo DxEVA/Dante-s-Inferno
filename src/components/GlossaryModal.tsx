@@ -628,7 +628,7 @@ export const GlossaryModal: React.FC<GlossaryModalProps> = ({ isOpen, onClose, i
 
         {/* Footer */}
         <div className="px-4 py-2.5 border-t border-[#272a31] bg-[#141821] flex items-center justify-between font-mono text-[10px] text-[#849495]">
-          <span>VERTEX COMPANION RADAR // INSTITUTIONAL KNOWLEDGE BASE</span>
+          <span>INFERNO // QUANT RADAR // INSTITUTIONAL KNOWLEDGE BASE</span>
           <button
             onClick={onClose}
             className="px-3 py-1 rounded bg-[#00f0ff]/10 hover:bg-[#00f0ff]/20 text-[#00f0ff] border border-[#00f0ff]/30 font-semibold transition-colors cursor-pointer"

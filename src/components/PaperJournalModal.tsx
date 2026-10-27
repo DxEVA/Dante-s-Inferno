@@ -211,7 +211,7 @@ export const PaperJournalModal: React.FC<PaperJournalModalProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `vertex_paper_trades_${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `inferno_paper_trades_${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
     onShowToast('EXPORTED JOURNAL TO JSON');
@@ -825,7 +825,7 @@ export const PaperJournalModal: React.FC<PaperJournalModalProps> = ({
 
         {/* Modal Footer */}
         <div className="px-4 py-2.5 border-t border-[#272a31] bg-[#141821] flex items-center justify-between font-mono text-[10px] text-[#849495]">
-          <span>VERTEX INSTITUTIONAL EXECUTION SIMULATOR // FIFO LIMIT &amp; FEE MODEL</span>
+          <span>INFERNO // TERMINAL // INSTITUTIONAL EXECUTION SIMULATOR &amp; FIFO FEE MODEL</span>
           <button
             onClick={onClose}
             className="px-3 py-1 rounded bg-[#00f0ff]/10 hover:bg-[#00f0ff]/20 text-[#00f0ff] border border-[#00f0ff]/30 font-semibold transition-colors cursor-pointer"

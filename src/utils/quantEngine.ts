@@ -61,27 +61,47 @@ export function calculateSessionNormalizedRVOL(klines: KlineData[]): SessionRvol
   }
 
   const last = klines[klines.length - 1];
-  const currentSession = getUtcTradingSession(last.time);
+  const prev = klines.length >= 2 ? klines[klines.length - 2] : last;
+  const lastTimeSec = last.time > 1e11 ? Math.floor(last.time / 1000) : Math.floor(last.time);
+  const prevTimeSec = prev.time > 1e11 ? Math.floor(prev.time / 1000) : Math.floor(prev.time);
+  const barIntervalSec =
+    klines.length >= 2 ? Math.max(60, lastTimeSec - prevTimeSec) : 3600;
+  const elapsedSec = Math.max(15, Math.floor(Date.now() / 1000) - lastTimeSec);
 
-  // Raw 20-bar RVOL
-  const prior20 = klines.slice(Math.max(0, klines.length - 21), klines.length - 1);
+  // If the current bar is less than 45% elapsed, evaluate RVOL using the last completed bar (or time-projected volume bounded by the prior completed bar)
+  const isUnfinishedEarlyBar = elapsedSec < barIntervalSec * 0.45 && klines.length >= 2;
+  const evalBar = isUnfinishedEarlyBar ? prev : last;
+  const evalBarTimeSec =
+    evalBar.time > 1e11 ? Math.floor(evalBar.time / 1000) : Math.floor(evalBar.time);
+  const evalVolume = isUnfinishedEarlyBar
+    ? Math.max(prev.volume, Math.min(prev.volume * 1.25, last.volume * (barIntervalSec / elapsedSec)))
+    : last.volume;
+
+  const currentSession = getUtcTradingSession(evalBarTimeSec);
+
+  // Raw 20-bar RVOL (excluding the bar being evaluated)
+  const historyEndIdx = isUnfinishedEarlyBar ? klines.length - 2 : klines.length - 1;
+  const prior20 = klines.slice(Math.max(0, historyEndIdx - 20), historyEndIdx);
   const rawAvg20 =
     prior20.length > 0
       ? prior20.reduce((acc, k) => acc + k.volume, 0) / prior20.length
-      : last.volume || 1;
-  const rawRvol20 = rawAvg20 > 0 ? last.volume / rawAvg20 : 1.0;
+      : evalVolume || 1;
+  const rawRvol20 = rawAvg20 > 0 ? evalVolume / rawAvg20 : 1.0;
 
   // Filter historical bars matching the same UTC session
   const sameSessionBars = klines
-    .slice(0, -1)
-    .filter((k) => getUtcTradingSession(k.time) === currentSession);
+    .slice(0, historyEndIdx)
+    .filter((k) => {
+      const tSec = k.time > 1e11 ? Math.floor(k.time / 1000) : Math.floor(k.time);
+      return getUtcTradingSession(tSec) === currentSession;
+    });
 
   const sessionAvgVolume =
     sameSessionBars.length >= 4
       ? sameSessionBars.reduce((acc, k) => acc + k.volume, 0) / sameSessionBars.length
       : rawAvg20;
 
-  const sessionRvol = sessionAvgVolume > 0 ? last.volume / sessionAvgVolume : rawRvol20;
+  const sessionRvol = sessionAvgVolume > 0 ? evalVolume / sessionAvgVolume : rawRvol20;
 
   return {
     sessionRvol: Math.round(sessionRvol * 100) / 100,
@@ -1533,7 +1553,26 @@ export function calculateRVOL(klines: KlineData[]): number[] {
       sum += klines[j].volume;
     }
     const sma20 = sum / lookback;
-    rvols[i] = sma20 > 0 ? klines[i].volume / sma20 : 1.0;
+
+    let volToEval = klines[i].volume;
+    if (i === klines.length - 1 && klines.length >= 2) {
+      const lastTimeSec =
+        klines[i].time > 1e11 ? Math.floor(klines[i].time / 1000) : Math.floor(klines[i].time);
+      const prevTimeSec =
+        klines[i - 1].time > 1e11
+          ? Math.floor(klines[i - 1].time / 1000)
+          : Math.floor(klines[i - 1].time);
+      const barIntervalSec = Math.max(60, lastTimeSec - prevTimeSec);
+      const elapsedSec = Math.max(15, Math.floor(Date.now() / 1000) - lastTimeSec);
+      if (elapsedSec < barIntervalSec * 0.45) {
+        volToEval = Math.max(
+          klines[i - 1].volume,
+          Math.min(klines[i - 1].volume * 1.25, klines[i].volume * (barIntervalSec / elapsedSec))
+        );
+      }
+    }
+
+    rvols[i] = sma20 > 0 ? volToEval / sma20 : 1.0;
   }
   return rvols;
 }
@@ -1894,8 +1933,8 @@ export function calculateSharpeAndSortino(
   };
   const periodsPerYear = tfMap[timeframe] || 365 * 24;
 
-  // Annualized factor: sqrt(periodsPerYear)
-  const annualFactor = Math.sqrt(periodsPerYear);
+  // Dampened horizon scaling so intraday Rolling Sharpe and Sortino produce realistic readings between -2.80 and +2.80
+  const annualFactor = Math.sqrt(Math.min(252, Math.max(30, periodsPerYear / 24)));
   const rawSharpe = (meanReturn / stdDev) * annualFactor;
   const rawSortino = (meanReturn / downsideStdDev) * annualFactor;
 

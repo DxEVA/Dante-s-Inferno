@@ -518,7 +518,7 @@ export const QuantChart: React.FC<QuantChartProps> = ({
         const hasAbsorption = isBullBidAbsorption || isBearAskAbsorption;
 
         const isStatSignificant = deltaSigma >= 1.85;
-        const isTwoSigmaAnomaly = deltaSigma >= 2.2;
+        const isTwoSigmaAnomaly = deltaSigma >= 2.0;
         const totalLiqUsd =
           (k.liquidationBuyUsd || (k as any).liquidationsBuy || (k as any).liqBuyUsd || 0) +
           (k.liquidationSellUsd || (k as any).liquidationsSell || (k as any).liqSellUsd || 0);
@@ -538,22 +538,22 @@ export const QuantChart: React.FC<QuantChartProps> = ({
         if (y === null || y < 0 || y > h) continue;
 
         const sigmaNormalized = Math.max(0.15, Math.min(1, (deltaSigma + 0.5) / 3.2));
-        const maxBubbleR = isMobile ? 10 : 14;
-        const minBubbleR = isMobile ? 4.5 : 6.5;
+        const maxBubbleR = isMobile ? 9 : 13;
+        const minBubbleR = isMobile ? 4.5 : 6.0;
         const r = minBubbleR + sigmaNormalized * (maxBubbleR - minBubbleR);
 
         ctx.beginPath();
         ctx.arc(x, y, r, 0, Math.PI * 2);
 
         if (netDelta >= 0) {
-          ctx.fillStyle = isTwoSigmaAnomaly ? 'rgba(16, 185, 129, 0.34)' : 'rgba(16, 185, 129, 0.22)';
+          ctx.fillStyle = isTwoSigmaAnomaly ? 'rgba(16, 185, 129, 0.32)' : 'rgba(16, 185, 129, 0.20)';
           ctx.fill();
           ctx.strokeStyle = isTwoSigmaAnomaly ? '#6ffbbe' : '#10b981';
           ctx.lineWidth = isTwoSigmaAnomaly ? 2 : 1.25;
           ctx.setLineDash([]);
           ctx.stroke();
         } else {
-          ctx.fillStyle = isTwoSigmaAnomaly ? 'rgba(244, 63, 94, 0.34)' : 'rgba(244, 63, 94, 0.22)';
+          ctx.fillStyle = isTwoSigmaAnomaly ? 'rgba(244, 63, 94, 0.32)' : 'rgba(244, 63, 94, 0.20)';
           ctx.fill();
           ctx.strokeStyle = isTwoSigmaAnomaly ? '#ffb4ab' : '#f43f5e';
           ctx.lineWidth = isTwoSigmaAnomaly ? 2 : 1.25;
@@ -1221,7 +1221,7 @@ export const QuantChart: React.FC<QuantChartProps> = ({
         {/* Watermark */}
         <div className="absolute bottom-2 right-2 pointer-events-none flex flex-col items-end z-20">
           <span className="font-mono text-[9px] text-[#849495]/50 tracking-wider">
-            VERTEX QUANT // HFT ORDERFLOW
+            INFERNO // HFT ORDERFLOW
           </span>
         </div>
       </div>

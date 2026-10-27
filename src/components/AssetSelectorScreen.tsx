@@ -77,7 +77,7 @@ export const AssetSelectorScreen: React.FC<AssetSelectorScreenProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-mono text-[9px] text-[#00f0ff] uppercase tracking-wider font-bold">
-                  ● VERTEX QUANT // SELECT TARGET ASSET
+                  ● INFERNO // QUANT RADAR // SELECT TARGET ASSET
                 </span>
                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#191c22] border border-[#272a31] font-mono text-[8px] text-[#4edea3]">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#4edea3] animate-pulse"></span>
@@ -286,7 +286,7 @@ export const AssetSelectorScreen: React.FC<AssetSelectorScreenProps> = ({
       {/* Footer */}
       <footer className="border-t border-[#1e2433] bg-[#0b0e14] py-3 px-4 font-mono text-[10px] text-[#849495] flex flex-col sm:flex-row items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <span className="text-[#00f0ff]">VERTEX QUANT</span>
+          <span className="text-[#00f0ff]">INFERNO // TERMINAL</span>
           <span>•</span>
           <span>Binance Futures USDT Perpetuals Catalog</span>
         </div>

@@ -1,5 +1,5 @@
 {
-  "name": "Vertex Quant Companion Radar",
+  "name": "Inferno Quant Terminal",
   "description": "Institutional Quantitative & Derivatives Terminal with live Binance & Deribit orderflow, Volume Profile, Options GEX, Multi-Timeframe Matrix, AI synthesis, and execution sizing calculator.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

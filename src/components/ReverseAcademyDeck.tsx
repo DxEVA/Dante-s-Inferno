@@ -456,44 +456,57 @@ export const ReverseAcademyDeck: React.FC<ReverseAcademyDeckProps> = ({
                             <span className="font-mono text-[9px] text-[#849495] uppercase font-bold">
                               2. INSTITUTIONAL THRESHOLD SCALE:
                             </span>
-                            <div className="grid grid-cols-3 gap-1.5 font-mono text-[9px] tabular-nums">
-                              <div
-                                className={`p-2 border ${
-                                  ind.thresholdScale.currentZone === 'BEARISH_OR_DANGER'
-                                    ? 'bg-[#f43f5e]/15 border-[#f43f5e] text-[#ffb4ab] font-bold'
-                                    : 'bg-[#0b0e14] border-[#1e2433] text-[#849495]'
-                                }`}
-                              >
-                                <span className="block text-[8px] uppercase opacity-75">
-                                  ZONE A
-                                </span>
-                                {ind.thresholdScale.minLabel}
-                              </div>
-                              <div
-                                className={`p-2 border ${
-                                  ind.thresholdScale.currentZone === 'NEUTRAL'
-                                    ? 'bg-[#00f0ff]/15 border-[#00f0ff] text-[#00f0ff] font-bold'
-                                    : 'bg-[#0b0e14] border-[#1e2433] text-[#849495]'
-                                }`}
-                              >
-                                <span className="block text-[8px] uppercase opacity-75">
-                                  ZONE B
-                                </span>
-                                {ind.thresholdScale.midLabel}
-                              </div>
-                              <div
-                                className={`p-2 border ${
-                                  ind.thresholdScale.currentZone === 'BULLISH_OR_EDGE'
-                                    ? 'bg-[#4edea3]/15 border-[#4edea3] text-[#4edea3] font-bold'
-                                    : 'bg-[#0b0e14] border-[#1e2433] text-[#849495]'
-                                }`}
-                              >
-                                <span className="block text-[8px] uppercase opacity-75">
-                                  ZONE C
-                                </span>
-                                {ind.thresholdScale.maxLabel}
-                              </div>
-                            </div>
+                            {(() => {
+                              const activeBox =
+                                ind.thresholdScale.activeBox ||
+                                (ind.thresholdScale.currentZone === 'BEARISH_OR_DANGER'
+                                  ? 'A'
+                                  : ind.thresholdScale.currentZone === 'NEUTRAL'
+                                  ? 'B'
+                                  : 'C');
+                              const activeHighlightClass =
+                                ind.thresholdScale.currentZone === 'BULLISH_OR_EDGE'
+                                  ? 'bg-[#4edea3]/15 border-[#4edea3] text-[#4edea3] font-bold'
+                                  : ind.thresholdScale.currentZone === 'BEARISH_OR_DANGER'
+                                  ? 'bg-[#f43f5e]/15 border-[#f43f5e] text-[#ffb4ab] font-bold'
+                                  : 'bg-[#00f0ff]/15 border-[#00f0ff] text-[#00f0ff] font-bold';
+                              const inactiveClass = 'bg-[#0b0e14] border-[#1e2433] text-[#849495]';
+
+                              return (
+                                <div className="grid grid-cols-3 gap-1.5 font-mono text-[9px] tabular-nums">
+                                  <div
+                                    className={`p-2 border ${
+                                      activeBox === 'A' ? activeHighlightClass : inactiveClass
+                                    }`}
+                                  >
+                                    <span className="block text-[8px] uppercase opacity-75">
+                                      ZONE A {activeBox === 'A' ? '• ACTIVE' : ''}
+                                    </span>
+                                    {ind.thresholdScale.minLabel}
+                                  </div>
+                                  <div
+                                    className={`p-2 border ${
+                                      activeBox === 'B' ? activeHighlightClass : inactiveClass
+                                    }`}
+                                  >
+                                    <span className="block text-[8px] uppercase opacity-75">
+                                      ZONE B {activeBox === 'B' ? '• ACTIVE' : ''}
+                                    </span>
+                                    {ind.thresholdScale.midLabel}
+                                  </div>
+                                  <div
+                                    className={`p-2 border ${
+                                      activeBox === 'C' ? activeHighlightClass : inactiveClass
+                                    }`}
+                                  >
+                                    <span className="block text-[8px] uppercase opacity-75">
+                                      ZONE C {activeBox === 'C' ? '• ACTIVE' : ''}
+                                    </span>
+                                    {ind.thresholdScale.maxLabel}
+                                  </div>
+                                </div>
+                              );
+                            })()}
                           </div>
 
                           {/* 3. Mental Model Analogy & 4. Formula */}
