@@ -101,6 +101,24 @@ export default function App() {
     deck: TacticalDeckMode;
     ts: number;
   } | null>(null);
+  const [mobilePage, setMobilePage] = useState<'CHART' | 'RADAR' | 'LENSES' | 'EXECUTE' | 'ACADEMY'>('CHART');
+
+  const handleNavigateMobilePage = useCallback(
+    (page: 'CHART' | 'RADAR' | 'LENSES' | 'EXECUTE' | 'ACADEMY') => {
+      setMobilePage(page);
+      if (page === 'RADAR') {
+        setExternalDeckRequest({ deck: 'MTF_RADAR', ts: Date.now() });
+      } else if (page === 'LENSES') {
+        setExternalDeckRequest({ deck: 'LENSES', ts: Date.now() });
+      } else if (page === 'EXECUTE') {
+        setExternalDeckRequest({ deck: 'PREFLIGHT_SIZER', ts: Date.now() });
+      } else if (page === 'ACADEMY') {
+        setExternalDeckRequest({ deck: 'REVERSE_ACADEMY', ts: Date.now() });
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+    []
+  );
 
   const openTradesCount = useMemo(
     () => paperTradesList.filter((t) => t.status === 'OPEN' || t.status === 'PENDING').length,
@@ -953,6 +971,7 @@ export default function App() {
           {/* 1. Single Top Navigation Header with prominent SWITCH ASSET button, Journal & Glossary */}
           <Header
             topPairs={topPairs}
+            activePair={activePair}
             pingMs={pingMs}
             onSelectPair={handleSelectPair}
             onSwitchAsset={() => setViewMode('selector')}
@@ -970,10 +989,20 @@ export default function App() {
             onOpenGlossary={() => setShowGlossaryModal(true)}
             onOpenJournal={() => setShowJournalModal(true)}
             activeJournalTradesCount={openTradesCount}
+            obMode={obMode}
+            onToggleObMode={(mode) => {
+              setObMode(mode);
+              showToast(`OB SENSITIVITY: ${mode.toUpperCase()}`);
+            }}
+            vpMode={vpMode}
+            onToggleVpMode={(mode) => {
+              setVpMode(mode);
+              showToast(`VP PROFILE: ${mode.toUpperCase()}`);
+            }}
           />
 
           {/* Main Full-Viewport Cyber-Brutalist Split-Screen Workstation */}
-          <main className="flex flex-col w-full pt-14 flex-1 max-w-[1920px] mx-auto border-x border-[#1e2433]">
+          <main className="flex flex-col w-full pt-12 sm:pt-14 pb-16 lg:pb-0 flex-1 max-w-[1920px] mx-auto border-x border-[#1e2433]">
             {/* Full-Width Active Asset Command & Ticker Strip */}
             <div className="w-full border-b border-[#1e2433] bg-[#0b0e14]">
               <TickerBar
@@ -1004,45 +1033,60 @@ export default function App() {
 
             {/* Main 12-Column Split Cockpit */}
             <div className="grid grid-cols-1 lg:grid-cols-12 border-b border-[#1e2433] items-start">
-              {/* LEFT PANE — LIVE CHART & ACTIONABILITY COCKPIT (Sticky on Desktop) */}
-              <div className="lg:col-span-7 xl:col-span-7 lg:sticky lg:top-14 lg:h-[calc(100vh-3.5rem)] lg:overflow-y-auto no-scrollbar border-b lg:border-b-0 lg:border-r border-[#1e2433] bg-[#0b0e14] flex flex-col">
-                {/* Brutalist Left Pane Header Bar */}
-                <div className="flex items-center justify-between px-3 py-1.5 bg-[#10131a] border-b border-[#1e2433] font-mono text-[10px]">
+              {/* LEFT PANE — LIVE CHART & ACTIONABILITY COCKPIT (Sticky on Desktop; Page-Gated on Mobile) */}
+              <div
+                className={`${
+                  mobilePage === 'CHART' || mobilePage === 'RADAR' ? 'flex' : 'hidden'
+                } lg:flex lg:col-span-7 xl:col-span-7 lg:sticky lg:top-14 lg:h-[calc(100vh-3.5rem)] lg:overflow-y-auto no-scrollbar border-b lg:border-b-0 lg:border-r border-[#1e2433] bg-[#0b0e14] flex-col`}
+              >
+                {/* Brutalist Left Pane Header Bar (Desktop + Mobile Chart Page) */}
+                <div
+                  className={`${
+                    mobilePage === 'CHART' ? 'flex' : 'hidden'
+                  } lg:flex items-center justify-between px-3 py-1.5 bg-[#10131a] border-b border-[#1e2433] font-mono text-[10px]`}
+                >
                   <div className="flex items-center gap-2">
                     <span className="px-1.5 py-0.5 bg-[#00f0ff]/10 text-[#00f0ff] border border-[#00f0ff]/40 font-bold tracking-wider">
                       VEC_01
                     </span>
-                    <span className="text-[#e1e2eb] font-bold uppercase tracking-wider">
-                      LIVE CHART &amp; ACTIONABILITY COCKPIT
+                    <span className="text-[#e1e2eb] font-bold uppercase tracking-wider truncate">
+                      LIVE CHART &amp; ORDERFLOW COCKPIT
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 text-[#849495] tabular-nums">
+                  <div className="flex items-center gap-2 text-[#849495] tabular-nums shrink-0">
                     <span>{activePair.symbol}</span>
                     <span>•</span>
                     <span className="text-[#00f0ff] font-bold">{selectedTf.toUpperCase()}</span>
-                    <span>•</span>
-                    <span className={showSetupOnChart ? 'text-[#4edea3]' : 'text-[#849495]'}>
+                    <span className="hidden sm:inline">•</span>
+                    <span className={`hidden sm:inline ${showSetupOnChart ? 'text-[#4edea3]' : 'text-[#849495]'}`}>
                       R:R BOX {showSetupOnChart ? 'ACTIVE' : 'HIDDEN'}
                     </span>
                   </div>
                 </div>
 
-                {/* Floating Structural Overlays & Chart Canvas */}
-                <div className="flex flex-col bg-[#0b0e14] px-2.5 sm:px-3 py-2 gap-2 border-b border-[#1e2433]">
-                  <FloatingLevels
-                    vp={volumeProfile}
-                    bullOB={bullOB}
-                    bearOB={bearOB}
-                    options={optionsData}
-                    liquidity={liquidity}
-                    symbol={activePair.symbol}
-                    currentPrice={activePair.price}
-                    onHoverLevel={setHighlightedLevel}
-                    activeLayers={chartLayers}
-                  />
+                {/* Floating Structural Overlays & Chart Canvas (Shown on Desktop & Mobile CHART page) */}
+                <div
+                  className={`${
+                    mobilePage === 'CHART' ? 'flex' : 'hidden'
+                  } lg:flex flex-col bg-[#0b0e14] px-2 sm:px-3 py-1.5 sm:py-2 gap-1.5 sm:gap-2 border-b border-[#1e2433]`}
+                >
+                  {/* Desktop FloatingLevels Row (On mobile, rendered inside QuantChart toggleable HUD overlay) */}
+                  <div className="hidden lg:block">
+                    <FloatingLevels
+                      vp={volumeProfile}
+                      bullOB={bullOB}
+                      bearOB={bearOB}
+                      options={optionsData}
+                      liquidity={liquidity}
+                      symbol={activePair.symbol}
+                      currentPrice={activePair.price}
+                      onHoverLevel={setHighlightedLevel}
+                      activeLayers={chartLayers}
+                    />
+                  </div>
 
                   {isInitialLoading || klines.length === 0 ? (
-                    <div className="w-full h-[440px] sm:h-[460px] rounded-none bg-[#0b0e14] border border-[#1e2433] flex flex-col items-center justify-center gap-3">
+                    <div className="w-full h-[calc(100dvh-14.5rem)] min-h-[360px] sm:h-[440px] lg:h-[460px] rounded-none bg-[#0b0e14] border border-[#1e2433] flex flex-col items-center justify-center gap-3">
                       <div className="w-9 h-9 border-2 border-[#00f0ff] border-t-transparent rounded-full animate-spin"></div>
                       <div className="font-mono text-[13px] text-[#00f0ff] font-bold tracking-wider">
                         ● INITIALIZING {activePair.symbol} QUANT ENGINE ({selectedTf.toUpperCase()})...
@@ -1076,39 +1120,93 @@ export default function App() {
                       activeLayers={chartLayers}
                       onLayersChange={setChartLayers}
                       activeStrategyTab={activeStrategyTab}
+                      floatingLevelsNode={
+                        <FloatingLevels
+                          vp={volumeProfile}
+                          bullOB={bullOB}
+                          bearOB={bearOB}
+                          options={optionsData}
+                          liquidity={liquidity}
+                          symbol={activePair.symbol}
+                          currentPrice={activePair.price}
+                          onHoverLevel={setHighlightedLevel}
+                          activeLayers={chartLayers}
+                        />
+                      }
                     />
                   )}
+
+                  {/* Compact 1-Line Mobile Verdict Bar on Chart Page (Jumps to RADAR or LENSES) */}
+                  <div className="flex lg:hidden items-center justify-between gap-2 px-2.5 py-2 rounded-lg bg-[#141821] border border-[#272a31] font-mono text-[10px]">
+                    <div className="flex items-center gap-1.5 min-w-0 truncate">
+                      <span
+                        className={`w-2 h-2 rounded-full shrink-0 ${
+                          confluence.score >= 65
+                            ? 'bg-[#4edea3]'
+                            : confluence.score <= 35
+                            ? 'bg-[#f43f5e]'
+                            : 'bg-[#f59e0b]'
+                        }`}
+                      />
+                      <span className="text-[#dbfcff] font-bold truncate">
+                        {confluence.score}% {confluence.bias}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleNavigateMobilePage('RADAR')}
+                        className="px-2 py-1 rounded bg-[#00f0ff]/15 text-[#00f0ff] border border-[#00f0ff]/40 font-bold text-[9px] cursor-pointer"
+                      >
+                        RADAR →
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleNavigateMobilePage('LENSES')}
+                        className="px-2 py-1 rounded bg-[#4edea3]/15 text-[#4edea3] border border-[#4edea3]/40 font-bold text-[9px] cursor-pointer"
+                      >
+                        5 LENSES →
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Market Actionability Traffic Light Banner & Rookie Workflow */}
-                <TrafficLightBanner
-                  symbol={activePair.symbol}
-                  currentPrice={activePair.price}
-                  klines={klines}
-                  volumeProfile={volumeProfile}
-                  bullOB={bullOB}
-                  bearOB={bearOB}
-                  optionsData={optionsData}
-                  liquidity={liquidity}
-                  candlestickResult={candlestickResult}
-                  maResult={maResult}
-                  amdPhase={amdPhase}
-                  telemetry={telemetry}
-                  confluence={confluence}
-                  sharpeSortino={sharpeSortino}
-                  lensSetups={lensSetups}
-                  experienceMode={experienceMode}
-                  showGlossaryModal={showGlossaryModal}
-                  onToggleGlossaryModal={setShowGlossaryModal}
-                  onDeconstructSignal={() => {
-                    setExternalDeckRequest({ deck: 'REVERSE_ACADEMY', ts: Date.now() });
-                    showToast(`🔬 REVERSE SIGNAL X-RAY OPENED FOR ${activePair.symbol} (SYS.04)`);
-                  }}
-                />
+                {/* Market Actionability Traffic Light Banner & Rookie Workflow (Desktop + Mobile RADAR Page) */}
+                <div className={`${mobilePage === 'RADAR' ? 'block' : 'hidden'} lg:block`}>
+                  <TrafficLightBanner
+                    symbol={activePair.symbol}
+                    currentPrice={activePair.price}
+                    klines={klines}
+                    volumeProfile={volumeProfile}
+                    bullOB={bullOB}
+                    bearOB={bearOB}
+                    optionsData={optionsData}
+                    liquidity={liquidity}
+                    candlestickResult={candlestickResult}
+                    maResult={maResult}
+                    amdPhase={amdPhase}
+                    telemetry={telemetry}
+                    confluence={confluence}
+                    sharpeSortino={sharpeSortino}
+                    lensSetups={lensSetups}
+                    experienceMode={experienceMode}
+                    showGlossaryModal={showGlossaryModal}
+                    onToggleGlossaryModal={setShowGlossaryModal}
+                    onDeconstructSignal={() => {
+                      setExternalDeckRequest({ deck: 'REVERSE_ACADEMY', ts: Date.now() });
+                      setMobilePage('ACADEMY');
+                      showToast(`🔬 REVERSE SIGNAL X-RAY OPENED FOR ${activePair.symbol} (SYS.04)`);
+                    }}
+                  />
+                </div>
               </div>
 
-              {/* RIGHT PANE — MODULAR TACTICAL COMMAND DECK */}
-              <div className="lg:col-span-5 xl:col-span-5 lg:h-[calc(100vh-3.5rem)] lg:overflow-y-auto bg-[#10131a] flex flex-col">
+              {/* RIGHT PANE — MODULAR TACTICAL COMMAND DECK (Always visible on Desktop; visible on Mobile RADAR, LENSES, EXECUTE, ACADEMY pages) */}
+              <div
+                className={`${
+                  mobilePage !== 'CHART' ? 'flex' : 'hidden'
+                } lg:flex lg:col-span-5 xl:col-span-5 lg:h-[calc(100vh-3.5rem)] lg:overflow-y-auto bg-[#10131a] flex-col`}
+              >
                 <StrategyTabs
                   currentPrice={activePair.price}
                   baseAsset={activePair.baseAsset}
@@ -1149,6 +1247,7 @@ export default function App() {
                   activeTab={activeStrategyTab}
                   onTabChange={setActiveStrategyTab}
                   externalDeckRequest={externalDeckRequest}
+                  onNavigateMobilePage={handleNavigateMobilePage}
                   paperTrades={paperTradesList as any}
                   onAddPaperTrade={(trade) => {
                     const isLimitOrder =
@@ -1197,8 +1296,57 @@ export default function App() {
             </div>
           </main>
 
-          {/* Global Status Footer */}
-          <Footer latencyMs={pingMs} />
+          {/* Fixed 5-Tab Mobile Bottom Navigation Bar (< 1024px) */}
+          <nav
+            aria-label="Mobile Terminal Pages"
+            className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0b0e14]/98 backdrop-blur-xl border-t border-[#1e2433] grid grid-cols-5 h-14 px-1 shadow-[0_-4px_20px_rgba(0,0,0,0.8)]"
+          >
+            {(
+              [
+                { id: 'CHART', label: 'CHART', icon: 'candlestick_chart', badge: selectedTf.toUpperCase() },
+                { id: 'RADAR', label: 'RADAR', icon: 'radar', badge: `${confluence.score}%` },
+                { id: 'LENSES', label: '5 LENSES', icon: 'layers', badge: `T${activeStrategyTab}` },
+                { id: 'EXECUTE', label: 'EXECUTE', icon: 'calculate', badge: 'SIZER' },
+                { id: 'ACADEMY', label: 'ACADEMY', icon: 'school', badge: 'X-RAY' },
+              ] as const
+            ).map((item) => {
+              const isActive = mobilePage === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => handleNavigateMobilePage(item.id)}
+                  className={`relative flex flex-col items-center justify-center gap-0.5 font-mono transition-colors cursor-pointer ${
+                    isActive
+                      ? 'text-[#00f0ff] bg-[#141821]'
+                      : 'text-[#849495] hover:text-[#e1e2eb]'
+                  }`}
+                >
+                  {isActive && (
+                    <span className="absolute top-0 left-2 right-2 h-0.5 bg-[#00f0ff]" />
+                  )}
+                  <div className="flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[17px]">{item.icon}</span>
+                    <span
+                      className={`text-[8px] px-1 rounded font-bold tabular-nums ${
+                        isActive
+                          ? 'bg-[#00f0ff]/20 text-[#00f0ff]'
+                          : 'bg-[#191c22] text-[#849495]'
+                      }`}
+                    >
+                      {item.badge}
+                    </span>
+                  </div>
+                  <span className="text-[9px] font-bold tracking-tight">{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Global Status Footer (Hidden on mobile where bottom nav bar is fixed) */}
+          <div className="hidden lg:block">
+            <Footer latencyMs={pingMs} />
+          </div>
 
           {/* Paper Trade Journal & Strategy Tester Modal */}
           <PaperJournalModal

@@ -67,6 +67,7 @@ interface StrategyTabsProps {
   activeTab?: 1 | 2 | 3 | 4 | 5;
   onTabChange?: (tab: 1 | 2 | 3 | 4 | 5) => void;
   externalDeckRequest?: { deck: TacticalDeckMode; ts: number } | null;
+  onNavigateMobilePage?: (page: 'CHART' | 'RADAR' | 'LENSES' | 'EXECUTE' | 'ACADEMY') => void;
 }
 
 export const StrategyTabs: React.FC<StrategyTabsProps> = ({
@@ -103,6 +104,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
   activeTab: controlledActiveTab,
   onTabChange,
   externalDeckRequest,
+  onNavigateMobilePage,
 }) => {
   const [internalActiveTab, setInternalActiveTab] = useState<1 | 2 | 3 | 4 | 5>(1);
   const activeTab = controlledActiveTab !== undefined ? controlledActiveTab : internalActiveTab;
@@ -622,6 +624,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                   notes: `${setup.setupType} - ${setup.triggerCondition}`,
                 } as any);
                 setActiveDeck('PREFLIGHT_SIZER');
+                onNavigateMobilePage?.('EXECUTE');
               }}
               className="flex items-center gap-1.5 px-3 py-2 rounded-none bg-[#4edea3]/15 hover:bg-[#4edea3]/25 text-[#4edea3] border border-[#4edea3]/40 font-mono text-[10px] font-bold uppercase transition-all cursor-pointer"
               title="Log this setup as an active paper trade and open Pre-Flight Sizer"
@@ -639,6 +642,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                   setup.target2Price
                 );
                 setActiveDeck('PREFLIGHT_SIZER');
+                onNavigateMobilePage?.('EXECUTE');
               }}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-none bg-[#00f0ff]/15 hover:bg-[#00f0ff]/25 text-[#00f0ff] border border-[#00f0ff] font-mono text-[10px] font-bold uppercase transition-all shadow-[0_0_12px_rgba(0,240,255,0.2)] cursor-pointer"
             >
@@ -654,9 +658,9 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
   return (
     <div className="flex flex-col w-full bg-[#10131a]">
       {/* =========================================================================== */}
-      {/* TOP CYBER-BRUTALIST 4-DECK COMMAND SWITCHER BAR                             */}
+      {/* TOP CYBER-BRUTALIST 4-DECK COMMAND SWITCHER BAR (Desktop Only; Mobile uses Bottom Nav) */}
       {/* =========================================================================== */}
-      <div className="sticky top-0 z-30 bg-[#0b0e14]/95 backdrop-blur-md border-b border-[#1e2433] grid grid-cols-2 xl:grid-cols-4">
+      <div className="hidden lg:grid sticky top-0 z-30 bg-[#0b0e14]/95 backdrop-blur-md border-b border-[#1e2433] grid-cols-2 xl:grid-cols-4">
         {/* DECK 1: SYS.01 // STRATEGY LENSES (5) */}
         <button
           type="button"

@@ -1,90 +1,105 @@
-# Cyber-Brutalist Chart De-Cluttering & Pre-Flight Directional Barrier Polish
+# Inferno Quant Terminal — Mobile Multi-Page Architecture & Decluttering Plan
 
-This update resolves four high-impact visual and quantitative accuracy issues observed on live `XAUUSDT` and multi-asset sessions: eliminating "Bubble Soup" on the candlestick overlay canvas, preventing right-axis price scale label collisions, keeping the 4-Deck Tactical Command Bar sticky with translucent backdrop blur while scrolling, and fixing the directional barrier math in Pre-Flight Check #4 so behind-entry Call/Put walls never trigger false path warnings.
+Re-architect the mobile viewport (`< 1024px`) from a single crowded vertical scroll into a dedicated **5-Page Mobile Workstation** anchored by a fixed bottom navigation bar, a compact header with a slide-out quick-action drawer, and a full-screen mobile chart experience with a toggleable HUD overlay — while keeping the desktop (`lg:`) split-screen workstation, quantitative math, and live telemetry 100% unchanged.
 
----
-
-### User Review & Critical Decisions
+## User Review & Critical Decisions
 
 > [!IMPORTANT]
-> All four engineering specifications, statistical thresholds, and directional barrier formulas were explicitly defined in the request and require no additional clarification before review:
+> The following architectural choices were confirmed and govern the mobile responsiveness upgrade:
 
-- **Confirmed Decision 1 — Strict Outlier Delta Bubbles (`>= 1.85σ`)**: Footprint bubbles will only render when `deltaSigma >= 1.85`, when passive limit absorption (`hasAbsorption`) is confirmed, or when forced liquidations (`totalLiqUsd > 0`) occur. Maximum radius is reduced (`10px` mobile / `14px` desktop) with translucent fills (`0.22` standard, `0.34` for `>= 2.2σ`) so price wicks and candle bodies remain crisp.
-- **Confirmed Decision 2 — Priority Right-Axis Label De-Cluttering (`0.28%` Minimum Separation) & Native Deribit Gating**: Price lines are evaluated in institutional priority order (`POC` → `VAH/VAL` → `S/R & Liquidity` → `0-Γ & Options`). Any line within `0.28%` (`Math.abs(price - existing) / price < 0.0028`) of an already-labeled level still renders its horizontal guide across the canvas but suppresses its right-axis badge (`axisLabelVisible: false`). Furthermore, non-Deribit assets (`optionsData.isDeribitNative === false`, such as `XAUUSDT`) will hide synthetic `0-GAMMA FLIP`, `MP`, `CW`, and `PW` overlays by default unless the user explicitly toggles the `OPTIONS + 0Γ` layer button.
-- **Confirmed Decision 3 — Sticky Translucent 4-Deck Switcher Bar**: The top Tactical Deck Switcher (`SYS.01` through `SYS.04`) is pinned with `sticky top-0 z-30 bg-[#0b0e14]/95 backdrop-blur-md border-b border-[#1e2433]` so switching decks remains effortless even when scrolled deep into the Execution Calculator or Paper Trade Journal.
-- **Confirmed Decision 4 — Directional Pre-Flight Check #4 Barrier Validation**: Opposing barriers (`callWall` / `srHigh` for Longs; `putWall` / `srLow` for Shorts) only flag a blocked path to `TP1` if the barrier strictly sits *between* `entryPrice` and `tp1Price` (`barrierPrice > entryPrice * 1.001 && barrierPrice < tp1Price * 0.999` for Longs; `barrierPrice < entryPrice * 0.999 && barrierPrice > tp1Price * 1.001` for Shorts).
-
----
-
-### 1. Overview & Core Concept
-
-- **What It Does**: Refines the visual signal-to-noise ratio of the primary institutional chart and sharpens the spatial accuracy of the 5-Point Pre-Flight Gate.
-- **Target Audience / Persona**: Quantitative and discretionary crypto/commodities traders operating the split-screen workstation who need unobstructed candlestick price action, readable right-axis price tags during tight volatility compression, and mathematically sound pre-trade path validation.
-- **Key Value**: Prevents visual occlusion on tight-range instruments like `XAUUSDT`, eliminates synthetic options clutter on non-Deribit pairs unless explicitly requested, and ensures pre-flight execution grading never penalizes a trade for levels located behind the entry price.
+- **Confirmed Decision 1 (Mobile Page Division)**: **Bottom tab bar with 5 dedicated pages** (`CHART`, `RADAR`, `LENSES`, `EXECUTE`, `ACADEMY`) so each mobile screen focuses on a single job without vertical overcrowding or overlapping panels.
+- **Confirmed Decision 2 (Header & Ticker Decluttering)**: **Compact single-row mobile header with a slide-out drawer for extra actions**. On mobile (`< lg`), the top bar displays only the active symbol/price badge, live connection latency, and a drawer menu button (`☰`) that houses the Rookie/Pro mode switch, Paper Trade Journal, Institutional Glossary, Top 50 Asset Switcher, and OB/VP sensitivity settings.
+- **Confirmed Decision 3 (Mobile Chart & Level Pills)**: **Full-screen chart page with toggleable HUD overlay**. On the mobile `CHART` page, the candlestick + orderflow canvas expands to fill the available viewport height, and the structural level pills (`VAH`, `POC`, `VAL`, `Bull/Bear OB`, `0-Γ Flip`, `Call/Put Walls`) and layer toggles are accessed via a non-overlapping toggleable HUD overlay bar (`[ HUD LEVELS ]` & `[ LAYERS ]`).
 
 ---
 
-### 2. User Experience & Visual Design
+## 1. Overview & Core Concept
 
-- **Key User Flows**:
-  1. **Unobstructed Price & Orderflow Inspection**: When viewing `XAUUSDT` or any streaming ticker, routine candles display clean wicks and bodies without overlapping circles. Only true statistical anomalies (`>= 1.85σ`), passive limit absorption rings (`ABS`), or liquidation spikes (`⚡LIQ`) appear with subtle translucent fills (`0.22` / `0.34`).
-  2. **Clean Right-Axis Scale & On-Demand Synthetic Options**: Horizontal reference lines (`POC`, `VAH`, `VAL`, `RES`, `SUP`, `ASK`, `BID`) never stack illegible overlapping price tags on the right axis. When switching to a non-Deribit asset (`XAUUSDT`, `SOLUSDT`, etc.), synthetic options lines stay hidden until the user manually clicks `OPTIONS + 0Γ` in the chart toolbar.
-  3. **Persistent Tactical Deck Switching**: As the user scrolls down inside the right-hand command pane to adjust position sizing or inspect the Paper Trade Journal, the 4-Deck Command Switcher remains anchored at the top with a blurred dark-glass backdrop.
-  4. **Accurate Pre-Flight Path Check**: Loading a Long or Short setup into the Pre-Flight Checklist and Execution Sizer evaluates only overhead barriers located strictly between Entry and TP1 (for Longs) or floor barriers located strictly between Entry and TP1 (for Shorts).
-- **Visual Identity & Theme**:
-  - *Aesthetic Direction*: Cyber-Brutalist Institutional Financial Terminal.
-  - *Color Palette & Mood*: Deep obsidian canvas (`#0b0e14`), structural slate surfaces (`#10131a`, `#141821`), crisp `#1e2433` 1px grid hairlines, emerald (`#4edea3`) and rose (`#ffb4ab`) translucent orderflow footprints, amber (`#f59e0b`) POC & absorption rings, and electric cyan (`#00f0ff`) zero-gamma accents.
-  - *Typography & Hierarchy*: `JetBrains Mono` with `tabular-nums` for all axis coordinates, sigma readouts, and pre-flight metrics.
+- **What It Does**: Eliminates overlapping badges, cramped multi-row toolbars, and endless vertical scrolling on mobile screens (`375px–768px`) by partitioning the terminal into 5 purpose-built mobile views controlled by a thumb-friendly bottom navigation bar.
+- **Target Audience / Persona**: Mobile crypto and derivatives traders monitoring live Binance and Deribit orderflow who need clean, one-handed navigation between price action, multi-timeframe regime radar, strategy lenses, position sizing, and the reverse-learning academy.
+- **Key Value**: Zero feature loss and zero math changes — every existing indicator, tooltip, modal, and calculation remains intact on both mobile and desktop, with desktop (`lg:grid-cols-12`) preserving its side-by-side split cockpit.
 
 ---
 
-### 3. Key Product Decisions & Trade-Offs
+## 2. User Experience & Visual Design
 
-- **Decision 1: Priority-Ordered Axis Collision Suppression (`0.28%` Threshold)**
-  - *Chosen Approach*: Evaluate price lines in strict institutional hierarchy (`POC` → `VAH`/`VAL` → `S/R` (`RES`/`SUP`/`ASK`/`BID`) → `0-Γ` → `CW`/`PW`/`MP`) against `placedAxisPrices: number[]`. If `Math.abs(price - existing) / price < 0.0028`, keep the horizontal line on the chart canvas for visual confluence but set `axisLabelVisible: false`.
-  - *Why*: Preserves the exact visual confluence of clustered levels on the chart while guaranteeing every visible price tag on the right-hand scale is legible.
-- **Decision 2: Manual Opt-In for Non-Deribit Synthetic Options Layers**
-  - *Chosen Approach*: Track whether the user has manually opted into the `OPTIONS + 0Γ` layer on non-Deribit symbols (`optionsData.isDeribitNative === false`). By default, non-native symbols suppress synthetic `0-GAMMA FLIP`, `MP`, `CW`, and `PW` lines unless the user explicitly clicks `OPTIONS + 0Γ`.
-  - *Why*: Gold (`XAUUSDT`) and altcoins use BSM proxy strikes that can crowd intraday price action unless the trader specifically wants to inspect synthetic gamma levels.
-- **Decision 3: Synchronized Directional Barrier Logic Across Deck Badge & Checklist Card**
-  - *Chosen Approach*: Apply the exact bounded interval test (`barrier > entry * 1.001 && barrier < tp1 * 0.999` for Longs; `barrier < entry * 0.999 && barrier > tp1 * 1.001` for Shorts) across both `callWall`/`putWall` and `srHigh`/`srLow` in the Pre-Flight Checklist component and the top Deck 3 `PASS` summary badge.
-  - *Why*: Ensures the `[ SYS.03 // SIZER ] X/5 PASS` badge in the sticky header always matches the 5-card breakdown inside the checklist.
+### Key User Flows on Mobile (`< 1024px`)
+
+1. **Page 1 — `CHART` (Full-Screen HFT Chart + Toggleable HUD)**:
+   - Displays a compact timeframe selector strip (`5m` to `1w`) at the top of the chart frame.
+   - Expands the interactive `QuantChart` canvas to fill the mobile viewport between the top bar and bottom navigation bar (`calc(100dvh - 150px)`), eliminating scroll-trapping.
+   - Provides two floating HUD toggle buttons in the top-left of the chart (`[ LEVELS HUD ]` and `[ LAYERS ]`) that reveal or hide the `FloatingLevels` pills and the 6 chart layer toggles as a clean translucent backdrop overlay without squishing the candlesticks.
+   - Includes a compact 1-line live Traffic Light status pill at the bottom of the chart that jumps directly to `RADAR` or `ACADEMY` when tapped.
+
+2. **Page 2 — `RADAR` (Traffic Light Verdict + Telemetry + MTF Matrix + AI Brief)**:
+   - Houses the full `TrafficLightBanner` (Actionability Verdict, Rookie 4-Step Workflow, What-If Price Slider, and 3-column summary) followed by the 8 Institutional Telemetry Cards, AMD Phase Engine, Multi-Timeframe Confluence Matrix, and AI Speculation Brief.
+
+3. **Page 3 — `LENSES` (5 Institutional Strategy Lenses)**:
+   - Dedicated full-height page for the 5 Strategy Tabs (`1. Candles & PA`, `2. MA & Trend`, `3. SMC, VP & AMD`, `4. Orderflow & VDU`, `5. Quant & Options`) with clean horizontal swipeable/scrollable tab pills and the `Diagnostics` vs. `Setup & R:R` sub-view switcher.
+   - Tapping **"Load Setup to Calculator & Chart"** automatically loads the levels and offers a 1-tap jump to the `CHART` or `EXECUTE` mobile page.
+
+4. **Page 4 — `EXECUTE` (5-Point Pre-Flight Checklist + Position Sizer)**:
+   - Dedicated execution page containing the `PreFlightChecklist` (5-point institutional gatekeeper + 1-click Paper Trade logger) and the `ExecutionHelper` position-sizing calculator.
+
+5. **Page 5 — `ACADEMY` (Reverse Signal X-Ray + 5-Level Curriculum + Live Quiz)**:
+   - Dedicated learning page rendering the `ReverseAcademyDeck` (4-Node Live Signal Deconstruction X-Ray Tree, 5-Level Curriculum Cards with 3-Zone Threshold Scales, and Live Market Quiz).
+
+### Visual Identity & Theme
+- **Aesthetic Direction**: High-contrast institutional dark terminal (`#0b0e14` primary canvas, `#10131a` / `#141821` structural cards, `#1e2433` hairline borders).
+- **Color Palette & Accents**: `#00f0ff` (cyan primary accent), `#4edea3` (emerald bullish/pass), `#f59e0b` (amber POC/warning), `#ffb4ab` (rose bearish/invalidation).
+- **Touch Ergonomics & Sticky Cap**:
+  - All mobile interactive buttons, drawer rows, and bottom nav items enforce a minimum `44px` touch target height.
+  - Compact mobile top bar (`48px`) + compact bottom tab bar (`56px`) respect the mobile viewport budget so over 85% of the screen is dedicated to active content.
 
 ---
 
-### 4. Technical Architecture & Data Strategy *(Technical Reference)*
+## 3. Key Product Decisions & Trade-Offs
 
-- **Architecture & Component Diagram**:
+- **Decision 1: Responsive Viewport Partitioning vs. Separate Mobile Codebase**
+  - *Chosen Approach*: Drive mobile page visibility via a shared `mobilePage` state (`'CHART' | 'RADAR' | 'LENSES' | 'EXECUTE' | 'ACADEMY'`) that applies responsive visibility classes (`hidden lg:flex` / `flex`) on mobile while keeping the exact same `lg:grid-cols-12` split-screen layout on desktop (`>= 1024px`).
+  - *Why*: Preserves a single unified state tree (live WebSocket ticks, options GEX, calculator inputs, and paper trades stay instantaneously synced across all tabs) without duplicating logic or risking regressions on desktop.
+
+- **Decision 2: Slide-Out Mobile Command Drawer**
+  - *Chosen Approach*: Consolidate secondary header & ticker controls (`Rookie / Pro` toggle, `Paper Journal`, `Glossary`, `Top 50 Assets`, `Strict / Loose OB`, and `VRVP / Session VP`) into a slide-out right-hand drawer on mobile screens, while keeping a fast 1-tap coin switcher and timeframe bar accessible on the main header/chart strip.
+  - *Why*: Prevents horizontal button wrapping and overlapping text on `360px–414px` phone screens while keeping every control 1 tap away.
+
+---
+
+## 4. Technical Architecture & Data Strategy *(Technical Reference)*
 
 ```
-┌────────────────────────────────────────────────────────────────────────────┐
-│                   SPLIT-SCREEN CYBER-BRUTALIST WORKSTATION                 │
-├─────────────────────────────────────┬──────────────────────────────────────┤
-│ LEFT PANE: QUANT CHART COCKPIT      │ RIGHT PANE: TACTICAL COMMAND DECK    │
-│                                     │                                      │
-│ ┌─────────────────────────────────┐ │ ┌──────────────────────────────────┐ │
-│ │ Chart Layer Toolbar             │ │ │ Sticky 4-Deck Switcher Bar       │ │
-│ │ [VP] [OB] [S/R] [Δ] [OPT*] [RR] │ │ │ sticky top-0 z-30 backdrop-blur  │ │
-│ └───────────────┬─────────────────┘ │ └────────────────┬─────────────────┘ │
-│                 ▼                   │                  ▼                   │
-│ ┌─────────────────────────────────┐ │ ┌──────────────────────────────────┐ │
-│ │ 60FPS Canvas Overlay            │ │ │ Pre-Flight Check #4 Gate         │ │
-│ │ • Filter: σ >= 1.85 | ABS | LIQ │ │ │ • LONG:  Entry*1.001 < B < TP1   │ │
-│ │ • Radius: max 10px/14px         │ │ │ • SHORT: TP1 < B < Entry*0.999   │ │
-│ │ • Alpha:  0.22 std / 0.34 >=2.2σ│ │ │ • Evaluates Call/Put Wall & S/R  │ │
-│ └───────────────┬─────────────────┘ │ └──────────────────────────────────┘ │
-│                 ▼                   │                                      │
-│ ┌─────────────────────────────────┐ │                                      │
-│ │ Right-Axis Price Line Sync      │ │                                      │
-│ │ • Priority: POC>VA>SR>0Γ>CW/PW  │ │                                      │
-│ │ • Collision Gate: Δp/p < 0.0028 │ │                                      │
-│ │ • Native Deribit / Manual Gate  │ │                                      │
-│ └─────────────────────────────────┘ │                                      │
-└─────────────────────────────────────┴──────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                       App.tsx (Unified State Core)                      │
+│  • mobilePage: 'CHART' | 'RADAR' | 'LENSES' | 'EXECUTE' | 'ACADEMY'     │
+│  • mobileDrawerOpen: boolean                                            │
+└───────────────┬─────────────────────────────────────────┬───────────────┘
+                │ (< 1024px Mobile View)                  │ (>= 1024px Desktop View)
+                ▼                                         ▼
+┌───────────────────────────────────────┐ ┌───────────────────────────────┐
+│   Compact Header + Slide-Out Drawer   │ │   Full Desktop Header +       │
+│   (Symbol, Live Price, ☰ Menu Drawer) │ │   Full TickerBar Strip        │
+├───────────────────────────────────────┤ ├───────────────┬───────────────┤
+│   Active Mobile Page Viewport:        │ │ Left Cockpit  │ Right Deck    │
+│   [1] CHART: Full-Screen QuantChart   │ │ (7 Columns)   │ (5 Columns)   │
+│       + Toggleable HUD (Levels/Layers)│ │ • Levels      │ • 4 Tactical  │
+│   [2] RADAR: TrafficLight + Telemetry │ │ • QuantChart  │   Decks       │
+│       + MTF Matrix + SpeculationBrief │ │ • Traffic     │ • 5 Strategy  │
+│   [3] LENSES: 5 Strategy Lenses       │ │   Light       │   Lenses      │
+│   [4] EXECUTE: PreFlight + Sizer      │ │               │               │
+│   [5] ACADEMY: Reverse X-Ray + Quiz   │ │               │               │
+├───────────────────────────────────────┤ └───────────────┴───────────────┘
+│   Fixed 5-Tab Bottom Navigation Bar   │
+│  [Chart] [Radar] [Lenses] [Exec] [Edu]│
+└───────────────────────────────────────┘
 ```
 
-- **Interactive Component & State Mapping**:
-  - **Delta Bubble Canvas Pass**: Iterates visible bars in `drawOverlayCanvas`, computing `deltaSigma`, `hasAbsorption`, and `totalLiqUsd`. Skips rendering unless `deltaSigma >= 1.85 || hasAbsorption || totalLiqUsd > 0`. Applies `maxBubbleR = isMobile ? 10 : 14` and fill alpha `0.34` when `deltaSigma >= 2.2`, else `0.22`.
-  - **Native Options Manual Override State**: Tracks a `manualOptionsOverride` state in the chart component (resetting to `false` when `symbol` changes). Effective options visibility is `layers.options && (optionsData.isDeribitNative !== false || manualOptionsOverride)`. Clicking the `OPTIONS + 0Γ` toolbar button toggles the layer and enables the manual override when on a non-native asset.
-  - **Axis Collision Resolver**: `addLine` in `syncPriceLines` checks `placedAxisPrices.some((existing) => Math.abs(price - existing) / price < 0.0028)`. If true, `axisLabelVisible` is set to `false`; otherwise `true` and `price` is pushed to `placedAxisPrices`. Execution order inside `syncPriceLines` is updated to: `POC` → `VAH` / `VAL` → `S/R & Liquidity` (`RES`, `SUP`, `ASK`, `BID`) → `0-Γ` → `CW`, `PW`, `MP`.
-  - **Pre-Flight Check #4 Directional Interval Evaluator**: Checks both the options barrier (`callWall` for Long, `putWall` for Short) and structural S/R barrier (`liquidity?.srHigh` for Long, `liquidity?.srLow` for Short) against the strict directional interval between `entryPrice` and `tp1Price`, reporting the specific blocking barrier and price if one sits inside the path, or confirming a clear path to `TP1`.
+### Interactive Component & State Mapping
+- **Compact Header & Slide-Out Drawer (`Header.tsx` & `TickerBar.tsx`)**:
+  - On mobile (`< md`), `Header` displays the brand mark, active pair price/delta pill (tapping opens the Top 50 quick switcher), live latency indicator, and a `44x44px` menu trigger button that opens the slide-out command drawer.
+  - Inside the slide-out drawer, users can switch `Rookie / Pro` mode, open the `Paper Trade Journal` (with active trade count badge), open the `Institutional Glossary`, toggle `Strict / Loose OB` and `VRVP / Session VP` modes, or jump to the full Top 50 Launchpad.
+- **Full-Screen Mobile Chart & Toggleable HUD (`QuantChart.tsx` & `FloatingLevels.tsx`)**:
+  - On mobile, `QuantChart` uses a responsive height (`h-[calc(100dvh-11.5rem)] min-h-[360px] lg:h-[460px]`) so it fills the `CHART` page cleanly.
+  - Two floating HUD buttons (`HUD LEVELS` and `CHART LAYERS`) toggle translucent overlay panels over the top of the chart canvas on mobile so level pills and layer toggles never crowd or overlap the price scale.
+- **Synchronized Cross-Page Actions (`App.tsx` & `StrategyTabs.tsx`)**:
+  - Tapping `"Deconstruct Live Signal"` on the `TrafficLightBanner` automatically switches `mobilePage` to `'ACADEMY'` on mobile (and `REVERSE_ACADEMY` deck on desktop).
+  - Tapping `"Load Setup to Calculator & Chart"` inside any Strategy Lens loads the entry/stop/TP levels and provides a quick toast action to view on `CHART` or `EXECUTE`.

@@ -50,6 +50,7 @@ interface QuantChartProps {
   activeStrategyTab?: number;
   activeLayers?: ChartLayers;
   onLayersChange?: (layers: ChartLayers) => void;
+  floatingLevelsNode?: React.ReactNode;
 }
 
 export const QuantChart: React.FC<QuantChartProps> = ({
@@ -72,6 +73,7 @@ export const QuantChart: React.FC<QuantChartProps> = ({
   activeStrategyTab = 1,
   activeLayers: controlledLayers,
   onLayersChange,
+  floatingLevelsNode,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -116,6 +118,7 @@ export const QuantChart: React.FC<QuantChartProps> = ({
   const [manualOptionsOverride, setManualOptionsOverride] = useState<boolean>(false);
   const manualOptionsOverrideRef = useRef<boolean>(false);
   manualOptionsOverrideRef.current = manualOptionsOverride;
+  const [mobileHudMode, setMobileHudMode] = useState<'NONE' | 'LEVELS' | 'LAYERS'>('NONE');
 
   // Store R:R box and highlighted level in refs so updates never recreate chart instance
   const setupBoxRef = useRef({
@@ -1206,9 +1209,9 @@ export const QuantChart: React.FC<QuantChartProps> = ({
   }, [entryPrice, stopLoss, tp1Price, highlightedLevel, drawOverlayCanvas]);
 
   return (
-    <div className="flex flex-col bg-[#141821] px-2.5 sm:px-3 py-2 gap-2 relative border-b border-[#272a31]">
-      {/* Chart Canvas Container */}
-      <div className="relative w-full h-[440px] sm:h-[460px] rounded-lg bg-[#0b0e14] overflow-hidden border border-[#272a31]">
+    <div className="flex flex-col bg-[#141821] px-2 sm:px-3 py-1.5 sm:py-2 gap-1.5 sm:gap-2 relative border-b border-[#272a31]">
+      {/* Chart Canvas Container (Full-screen height on Mobile Chart Page, 460px on Desktop) */}
+      <div className="relative w-full h-[calc(100dvh-14.5rem)] min-h-[360px] sm:h-[440px] lg:h-[460px] rounded-lg bg-[#0b0e14] overflow-hidden border border-[#272a31]">
         {/* Lightweight Charts mounting DOM node */}
         <div ref={containerRef} className="w-full h-full" />
 
@@ -1218,6 +1221,166 @@ export const QuantChart: React.FC<QuantChartProps> = ({
           className="absolute inset-0 pointer-events-none w-full h-full z-10"
         />
 
+        {/* Mobile Toggleable HUD Overlay Controls (Top-Left of Chart Canvas on < lg) */}
+        <div className="lg:hidden absolute top-2 left-2 right-14 z-30 flex flex-col gap-1.5 pointer-events-none">
+          <div className="flex items-center gap-1.5 pointer-events-auto">
+            <button
+              type="button"
+              onClick={() =>
+                setMobileHudMode((prev) => (prev === 'LEVELS' ? 'NONE' : 'LEVELS'))
+              }
+              className={`px-2.5 py-1 rounded-md font-mono text-[10px] font-bold border backdrop-blur-md transition-all flex items-center gap-1 cursor-pointer shadow-md ${
+                mobileHudMode === 'LEVELS'
+                  ? 'bg-[#00f0ff]/25 text-[#00f0ff] border-[#00f0ff]'
+                  : 'bg-[#0b0e14]/85 text-[#dbfcff] border-[#272a31]'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[13px] text-[#00f0ff]">layers</span>
+              <span>HUD LEVELS</span>
+              <span className="text-[9px] text-[#849495]">
+                {mobileHudMode === 'LEVELS' ? '▲' : '▼'}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setMobileHudMode((prev) => (prev === 'LAYERS' ? 'NONE' : 'LAYERS'))
+              }
+              className={`px-2.5 py-1 rounded-md font-mono text-[10px] font-bold border backdrop-blur-md transition-all flex items-center gap-1 cursor-pointer shadow-md ${
+                mobileHudMode === 'LAYERS'
+                  ? 'bg-[#4edea3]/25 text-[#4edea3] border-[#4edea3]'
+                  : 'bg-[#0b0e14]/85 text-[#dbfcff] border-[#272a31]'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[13px] text-[#4edea3]">tune</span>
+              <span>LAYERS</span>
+              <span className="text-[9px] text-[#849495]">
+                {mobileHudMode === 'LAYERS' ? '▲' : '▼'}
+              </span>
+            </button>
+          </div>
+
+          {/* Mobile Floating HUD Panel: Structural Levels */}
+          {mobileHudMode === 'LEVELS' && floatingLevelsNode && (
+            <div className="pointer-events-auto p-2 rounded-lg bg-[#0b0e14]/95 backdrop-blur-xl border border-[#00f0ff]/40 shadow-[0_12px_32px_rgba(0,0,0,0.9)] max-w-full overflow-x-auto">
+              <div className="flex items-center justify-between mb-1 pb-1 border-b border-[#1e2433] font-mono text-[9px] text-[#849495]">
+                <span className="text-[#00f0ff] font-bold uppercase">
+                  STRUCTURAL PRICE LEVELS (TAP FOR MENTOR GUIDE)
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setMobileHudMode('NONE')}
+                  className="text-[#849495] hover:text-[#e1e2eb] px-1"
+                >
+                  ✕
+                </button>
+              </div>
+              {floatingLevelsNode}
+            </div>
+          )}
+
+          {/* Mobile Floating HUD Panel: 6 Chart Layer Toggles */}
+          {mobileHudMode === 'LAYERS' && (
+            <div className="pointer-events-auto p-2.5 rounded-lg bg-[#0b0e14]/95 backdrop-blur-xl border border-[#4edea3]/40 shadow-[0_12px_32px_rgba(0,0,0,0.9)] flex flex-col gap-2">
+              <div className="flex items-center justify-between pb-1 border-b border-[#1e2433] font-mono text-[9px] text-[#849495]">
+                <span className="text-[#4edea3] font-bold uppercase">
+                  SELECTIVE CHART OVERLAY LAYERS
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setMobileHudMode('NONE')}
+                  className="text-[#849495] hover:text-[#e1e2eb] px-1"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleToggleLayer('vp')}
+                  className={`py-1.5 px-2 rounded text-[10px] font-mono font-bold border transition-all cursor-pointer ${
+                    layers.vp
+                      ? 'bg-[#00f0ff]/20 text-[#00f0ff] border-[#00f0ff]/50'
+                      : 'bg-[#191c22] text-[#849495] border-[#272a31]'
+                  }`}
+                >
+                  VP SPLIT
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleToggleLayer('ob')}
+                  className={`py-1.5 px-2 rounded text-[10px] font-mono font-bold border transition-all cursor-pointer ${
+                    layers.ob
+                      ? 'bg-[#4edea3]/20 text-[#4edea3] border-[#4edea3]/50'
+                      : 'bg-[#191c22] text-[#849495] border-[#272a31]'
+                  }`}
+                >
+                  OB + MT
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleToggleLayer('sr')}
+                  className={`py-1.5 px-2 rounded text-[10px] font-mono font-bold border transition-all cursor-pointer ${
+                    layers.sr
+                      ? 'bg-[#ffb4ab]/20 text-[#ffb4ab] border-[#ffb4ab]/50'
+                      : 'bg-[#191c22] text-[#849495] border-[#272a31]'
+                  }`}
+                >
+                  S/R WALLS
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleToggleLayer('bubbles')}
+                  className={`py-1.5 px-2 rounded text-[10px] font-mono font-bold border transition-all cursor-pointer ${
+                    layers.bubbles
+                      ? 'bg-[#38bdf8]/20 text-[#38bdf8] border-[#38bdf8]/50'
+                      : 'bg-[#191c22] text-[#849495] border-[#272a31]'
+                  }`}
+                >
+                  Δ BUBBLES
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleToggleLayer('options')}
+                  className={`py-1.5 px-2 rounded text-[10px] font-mono font-bold border transition-all cursor-pointer ${
+                    layers.options && (optionsData.isDeribitNative !== false || manualOptionsOverride)
+                      ? 'bg-[#c084fc]/20 text-[#c084fc] border-[#c084fc]/50'
+                      : 'bg-[#191c22] text-[#849495] border-[#272a31]'
+                  }`}
+                >
+                  OPTIONS + 0Γ
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleToggleLayer('rrBox')}
+                  className={`py-1.5 px-2 rounded text-[10px] font-mono font-bold border transition-all cursor-pointer ${
+                    layers.rrBox
+                      ? 'bg-[#10b981]/20 text-[#10b981] border-[#10b981]/50'
+                      : 'bg-[#191c22] text-[#849495] border-[#272a31]'
+                  }`}
+                >
+                  R:R BOX
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAutoSyncTab(!autoSyncTab)}
+                className={`w-full py-1.5 rounded font-mono text-[10px] font-semibold border flex items-center justify-center gap-1 cursor-pointer ${
+                  autoSyncTab
+                    ? 'bg-[#00f0ff]/20 border-[#00f0ff]/50 text-[#00f0ff]'
+                    : 'bg-[#191c22] border-[#272a31] text-[#849495]'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[12px]">
+                  {autoSyncTab ? 'sync' : 'sync_disabled'}
+                </span>
+                <span>AUTO-SYNC LAYERS TO ACTIVE TAB: {autoSyncTab ? 'ON' : 'OFF'}</span>
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* Watermark */}
         <div className="absolute bottom-2 right-2 pointer-events-none flex flex-col items-end z-20">
           <span className="font-mono text-[9px] text-[#849495]/50 tracking-wider">
@@ -1226,8 +1389,8 @@ export const QuantChart: React.FC<QuantChartProps> = ({
         </div>
       </div>
 
-      {/* Selective Chart Indicator Toggles Strip + Auto-Sync to Tab */}
-      <div className="flex flex-wrap items-center justify-between gap-1.5 py-1 px-1 bg-[#10131a] rounded-lg border border-[#272a31]">
+      {/* Desktop Selective Chart Indicator Toggles Strip + Auto-Sync to Tab (Hidden on mobile where it lives in HUD) */}
+      <div className="hidden lg:flex flex-wrap items-center justify-between gap-1.5 py-1 px-1 bg-[#10131a] rounded-lg border border-[#272a31]">
         {/* Left: The 6 Selective Indicator Layer Toggles */}
         <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar py-0.5">
           <span className="font-mono text-[9px] text-[#849495] font-bold uppercase tracking-wider pl-1 pr-0.5">

@@ -68,18 +68,18 @@ export const TickerBar: React.FC<TickerBarProps> = ({
   }, []);
 
   return (
-    <div className="flex flex-col bg-[#141821] px-2.5 sm:px-3 py-2 gap-2 border-b border-[#272a31] shadow-sm">
+    <div className="flex flex-col bg-[#141821] px-2.5 sm:px-3 py-1.5 sm:py-2 gap-1.5 sm:gap-2 border-b border-[#272a31] shadow-sm">
       {/* Active Asset Header & Metric Strip */}
-      <div className="flex items-center justify-between gap-2 flex-wrap">
+      <div className="flex items-center justify-between gap-1.5 sm:gap-2">
         {/* Symbol, Perpetual tag & Live Price */}
-        <div className="flex items-baseline gap-2 flex-wrap">
-          <h2 className="font-mono text-[18px] sm:text-[22px] font-bold text-[#dbfcff] tracking-tight">
+        <div className="flex items-baseline gap-1.5 sm:gap-2 min-w-0 truncate">
+          <h2 className="font-mono text-[16px] sm:text-[22px] font-bold text-[#dbfcff] tracking-tight truncate">
             {activePair.symbol}
           </h2>
-          <span className="font-mono text-[9px] sm:text-[10px] text-[#849495] uppercase tracking-wider font-semibold">
+          <span className="hidden sm:inline font-mono text-[10px] text-[#849495] uppercase tracking-wider font-semibold">
             PERP
           </span>
-          <span className="font-mono text-[16px] sm:text-[18px] text-[#e1e2eb] font-semibold tracking-tight">
+          <span className="font-mono text-[14px] sm:text-[18px] text-[#e1e2eb] font-semibold tracking-tight tabular-nums">
             ${activePair.price >= 1000
               ? activePair.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
               : activePair.price >= 1
@@ -89,21 +89,21 @@ export const TickerBar: React.FC<TickerBarProps> = ({
         </div>
 
         {/* Delta, Vol, Sharpe Badge & Top 50 Modal Trigger */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           <span
-            className={`inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded font-mono text-[10px] font-bold ${
+            className={`inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 rounded font-mono text-[9px] sm:text-[10px] font-bold tabular-nums ${
               activePair.isUp
                 ? 'bg-[#4edea3]/15 text-[#4edea3] border border-[#4edea3]/30'
                 : 'bg-[#ffb4ab]/15 text-[#ffb4ab] border border-[#ffb4ab]/30'
             }`}
           >
-            <span className="material-symbols-outlined text-[12px] sm:text-[13px]">
+            <span className="material-symbols-outlined text-[11px] sm:text-[13px]">
               {activePair.isUp ? 'trending_up' : 'trending_down'}
             </span>
             <span>{activePair.delta}</span>
           </span>
 
-          <div className="hidden xs:flex px-1.5 sm:px-2 py-0.5 rounded bg-[#1d2026] border border-[#272a31] font-mono text-[10px] sm:text-[11px] text-[#b9cacb]">
+          <div className="hidden sm:flex px-2 py-0.5 rounded bg-[#1d2026] border border-[#272a31] font-mono text-[11px] text-[#b9cacb]">
             24h: <span className="text-[#00f0ff] font-medium ml-1">{activePair.vol}</span>
           </div>
 
@@ -134,8 +134,8 @@ export const TickerBar: React.FC<TickerBarProps> = ({
                     : `${activePair.symbol} is exhibiting steady directional drift; size positions cautiously on pullbacks.`,
               }}
             >
-              <div className="px-1.5 sm:px-2 py-0.5 rounded bg-[#1d2026] hover:bg-[#252a36] border border-[#00f0ff]/30 hover:border-[#00f0ff] font-mono text-[10px] sm:text-[11px] text-[#b9cacb] flex items-center gap-1 transition-colors cursor-pointer shadow-sm">
-                <span className="text-[9px] text-[#849495] font-semibold">SHARPE:</span>
+              <div className="px-1.5 sm:px-2 py-0.5 rounded bg-[#1d2026] hover:bg-[#252a36] border border-[#00f0ff]/30 hover:border-[#00f0ff] font-mono text-[9px] sm:text-[11px] text-[#b9cacb] flex items-center gap-1 transition-colors cursor-pointer shadow-sm tabular-nums">
+                <span className="text-[8px] sm:text-[9px] text-[#849495] font-semibold">SHARPE:</span>
                 <span
                   className={`font-bold ${
                     sharpeSortino.sharpeRatio >= 1.0
@@ -156,10 +156,10 @@ export const TickerBar: React.FC<TickerBarProps> = ({
 
           <button
             onClick={() => setIsTop50ModalOpen(true)}
-            className="flex items-center gap-1 px-2 py-0.5 sm:py-1 rounded bg-[#0b0e14] border border-[#00f0ff]/50 hover:border-[#00f0ff] text-[#00f0ff] font-mono text-[10px] sm:text-[11px] font-semibold transition-all shadow-[0_0_8px_rgba(0,240,255,0.15)] cursor-pointer"
+            className="flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded bg-[#0b0e14] border border-[#00f0ff]/50 hover:border-[#00f0ff] text-[#00f0ff] font-mono text-[9px] sm:text-[11px] font-semibold transition-all shadow-[0_0_8px_rgba(0,240,255,0.15)] cursor-pointer shrink-0"
             title="Browse full list of Top 50 Binance Perpetual contracts"
           >
-            <span className="material-symbols-outlined text-[13px]">table_rows</span>
+            <span className="material-symbols-outlined text-[12px] sm:text-[13px]">table_rows</span>
             <span>TOP 50</span>
           </button>
         </div>
