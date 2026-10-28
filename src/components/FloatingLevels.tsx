@@ -12,6 +12,7 @@ interface FloatingLevelsProps {
   symbol?: string;
   currentPrice?: number;
   onHoverLevel?: (level: { label: string; price: number } | null) => void;
+  highlightedLevel?: { label: string; price: number } | null;
   activeLayers?: ChartLayers;
 }
 
@@ -24,6 +25,7 @@ export const FloatingLevels: React.FC<FloatingLevelsProps> = ({
   symbol = 'BTCUSDT',
   currentPrice = 89000,
   onHoverLevel,
+  highlightedLevel,
   activeLayers,
 }) => {
   const formatPrice = (p: number) => {
@@ -51,6 +53,22 @@ export const FloatingLevels: React.FC<FloatingLevelsProps> = ({
     return `${pct.toFixed(2)}%`;
   };
 
+  const isTracked = (price: number) =>
+    Boolean(
+      highlightedLevel &&
+        price > 0 &&
+        Math.abs(highlightedLevel.price - price) / price < 0.0002
+    );
+
+  const handleToggleLock = (label: string, price: number) => {
+    if (!onHoverLevel || !price || price <= 0) return;
+    if (isTracked(price)) {
+      onHoverLevel(null);
+    } else {
+      onHoverLevel({ label, price });
+    }
+  };
+
   // Check if layers are enabled (default to true if no activeLayers prop provided)
   const showVp = activeLayers ? activeLayers.vp : true;
   const showOb = activeLayers ? activeLayers.ob : true;
@@ -70,10 +88,11 @@ export const FloatingLevels: React.FC<FloatingLevelsProps> = ({
               symbol,
               categoryBadge: 'VOLUME PROFILE',
               badgeColor: '#00f0ff',
-              whatItIs: 'The upper boundary containing 70% of historical trading volume during the active session profile.',
-              liveRead: `${symbol} is currently $${formatPrice(currentPrice)}, trading ${
+              whatItIs:
+                'The upper boundary containing 70% of historical trading volume during the active session profile.',
+              liveRead: `${symbol} is currently ${formatPrice(currentPrice)}, trading ${
                 currentPrice > vp.vah ? 'ABOVE' : currentPrice < vp.vah ? 'BELOW' : 'DIRECTLY AT'
-              } its $${formatPrice(vp.vah)} VAH (${getDist(vp.vah)} distance).`,
+              } its ${formatPrice(vp.vah)} VAH (${getDist(vp.vah)} distance).`,
               actionability:
                 currentPrice > vp.vah
                   ? 'Acceptance above VAH indicates bullish price discovery; look for retests of VAH to act as dynamic support.'
@@ -81,13 +100,18 @@ export const FloatingLevels: React.FC<FloatingLevelsProps> = ({
             }}
           >
             <div
+              onClick={() => handleToggleLock('VAH (70% Value High)', vp.vah)}
               onMouseEnter={() => onHoverLevel?.({ label: 'VAH (70% Value High)', price: vp.vah })}
-              onMouseLeave={() => onHoverLevel?.(null)}
-              className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#0b0e14] hover:bg-[#121620] border border-[#272a31] hover:border-[#00f0ff]/50 font-mono text-[10px] sm:text-[11px] tabular-nums shrink-0 transition-colors cursor-pointer"
+              className={`flex items-center gap-1 px-2 py-0.5 bg-[#080b11] hover:bg-[#121620] border font-mono text-[10px] sm:text-[11px] tabular-nums shrink-0 transition-colors cursor-pointer ${
+                isTracked(vp.vah)
+                  ? 'border-[#00f0ff] shadow-[0_0_10px_rgba(0,240,255,0.25)]'
+                  : 'border-[#1e2636] hover:border-[#00f0ff]/50'
+              }`}
             >
               <span className="w-1.5 h-0.5 bg-[#00f0ff]"></span>
               <span className="text-[#849495] text-[9px] uppercase font-semibold">VAH</span>
               <span className="text-[#00f0ff] font-medium">{formatPrice(vp.vah)}</span>
+              {isTracked(vp.vah) && <span className="text-[8px] text-[#00f0ff]">🎯</span>}
             </div>
           </InfoTooltip>
 
@@ -99,23 +123,31 @@ export const FloatingLevels: React.FC<FloatingLevelsProps> = ({
               symbol,
               categoryBadge: 'VOLUME PROFILE',
               badgeColor: '#f59e0b',
-              whatItIs: 'The exact price level where the highest volume was transacted, acting as fair-value equilibrium gravity.',
-              liveRead: `${symbol} is currently $${formatPrice(currentPrice)}, trading ${
+              whatItIs:
+                'The exact price level where the highest volume was transacted, acting as fair-value equilibrium gravity.',
+              liveRead: `${symbol} is currently ${formatPrice(currentPrice)}, trading ${
                 currentPrice > vp.poc ? 'ABOVE' : currentPrice < vp.poc ? 'BELOW' : 'DIRECTLY ON'
-              } its $${formatPrice(vp.poc)} POC (${getDist(vp.poc)} distance). ${
-                currentPrice > vp.poc ? 'Buyers maintain upper-hand over fair value.' : 'Sellers maintain short-term control under fair value.'
+              } its ${formatPrice(vp.poc)} POC (${getDist(vp.poc)} distance). ${
+                currentPrice > vp.poc
+                  ? 'Buyers maintain upper-hand over fair value.'
+                  : 'Sellers maintain short-term control under fair value.'
               }`,
-              actionability: `Use POC ($${formatPrice(vp.poc)}) as primary equilibrium magnetic pullback target or breakout confirmation pivot.`,
+              actionability: `Use POC (${formatPrice(vp.poc)}) as primary equilibrium magnetic pullback target or breakout confirmation pivot.`,
             }}
           >
             <div
+              onClick={() => handleToggleLock('POC (Point of Control)', vp.poc)}
               onMouseEnter={() => onHoverLevel?.({ label: 'POC (Point of Control)', price: vp.poc })}
-              onMouseLeave={() => onHoverLevel?.(null)}
-              className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#0b0e14] hover:bg-[#121620] border border-[#f59e0b]/40 hover:border-[#f59e0b] font-mono text-[10px] sm:text-[11px] tabular-nums shrink-0 shadow-[0_0_8px_rgba(245,158,11,0.15)] transition-colors cursor-pointer"
+              className={`flex items-center gap-1 px-2 py-0.5 bg-[#080b11] hover:bg-[#121620] border font-mono text-[10px] sm:text-[11px] tabular-nums shrink-0 transition-colors cursor-pointer ${
+                isTracked(vp.poc)
+                  ? 'border-[#f59e0b] shadow-[0_0_12px_rgba(245,158,11,0.3)]'
+                  : 'border-[#f59e0b]/40 hover:border-[#f59e0b] shadow-[0_0_8px_rgba(245,158,11,0.15)]'
+              }`}
             >
               <span className="w-1.5 h-0.5 bg-[#f59e0b]"></span>
               <span className="text-[#f59e0b] text-[9px] uppercase font-semibold">POC</span>
               <span className="text-[#fcd34d] font-semibold">{formatPrice(vp.poc)}</span>
+              {isTracked(vp.poc) && <span className="text-[8px] text-[#fcd34d]">🎯</span>}
             </div>
           </InfoTooltip>
 
@@ -127,10 +159,11 @@ export const FloatingLevels: React.FC<FloatingLevelsProps> = ({
               symbol,
               categoryBadge: 'VOLUME PROFILE',
               badgeColor: '#00f0ff',
-              whatItIs: 'The lower boundary containing 70% of historical trading volume during the active session profile.',
-              liveRead: `${symbol} is currently $${formatPrice(currentPrice)}, trading ${
+              whatItIs:
+                'The lower boundary containing 70% of historical trading volume during the active session profile.',
+              liveRead: `${symbol} is currently ${formatPrice(currentPrice)}, trading ${
                 currentPrice > vp.val ? 'ABOVE' : currentPrice < vp.val ? 'BELOW' : 'DIRECTLY AT'
-              } its $${formatPrice(vp.val)} VAL (${getDist(vp.val)} distance).`,
+              } its ${formatPrice(vp.val)} VAL (${getDist(vp.val)} distance).`,
               actionability:
                 currentPrice > vp.val
                   ? 'Holding above VAL provides asymmetric risk/reward long entries targeting mean-reversion rotation toward POC.'
@@ -138,13 +171,18 @@ export const FloatingLevels: React.FC<FloatingLevelsProps> = ({
             }}
           >
             <div
+              onClick={() => handleToggleLock('VAL (70% Value Low)', vp.val)}
               onMouseEnter={() => onHoverLevel?.({ label: 'VAL (70% Value Low)', price: vp.val })}
-              onMouseLeave={() => onHoverLevel?.(null)}
-              className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#0b0e14] hover:bg-[#121620] border border-[#272a31] hover:border-[#00f0ff]/50 font-mono text-[10px] sm:text-[11px] tabular-nums shrink-0 transition-colors cursor-pointer"
+              className={`flex items-center gap-1 px-2 py-0.5 bg-[#080b11] hover:bg-[#121620] border font-mono text-[10px] sm:text-[11px] tabular-nums shrink-0 transition-colors cursor-pointer ${
+                isTracked(vp.val)
+                  ? 'border-[#00f0ff] shadow-[0_0_10px_rgba(0,240,255,0.25)]'
+                  : 'border-[#1e2636] hover:border-[#00f0ff]/50'
+              }`}
             >
               <span className="w-1.5 h-0.5 bg-[#00f0ff]"></span>
               <span className="text-[#849495] text-[9px] uppercase font-semibold">VAL</span>
               <span className="text-[#00f0ff] font-medium">{formatPrice(vp.val)}</span>
+              {isTracked(vp.val) && <span className="text-[8px] text-[#00f0ff]">🎯</span>}
             </div>
           </InfoTooltip>
         </>
@@ -159,26 +197,54 @@ export const FloatingLevels: React.FC<FloatingLevelsProps> = ({
             symbol,
             categoryBadge: 'SMART MONEY CONCEPTS',
             badgeColor: '#4edea3',
-            whatItIs: 'Institutional demand zone verified via ATR displacement, Fair Value Gap (FVG) creation, and Taker Delta footprint spike.',
-            liveRead: `${bullOB.status === 'PARTIAL' ? `Partially mitigated (${bullOB.mitigationPct}% eaten)` : 'Unmitigated'} Bull OB spans $${formatPrice(bullOB.low)} – $${formatPrice(bullOB.high)} (50% Mean Threshold: $${formatPrice(bullOB.midpoint)}, Quality Score: ${bullOB.qualityScore ?? 80}/100).`,
-            actionability: `Look for passive limit bid absorption inside $${formatPrice(bullOB.low)}–$${formatPrice(bullOB.midpoint)} with hard invalidation below $${formatPrice(bullOB.low)}.`,
+            whatItIs:
+              'Institutional demand zone verified via ATR displacement, Fair Value Gap (FVG) creation, and Taker Delta footprint spike.',
+            liveRead: `${
+              bullOB.status === 'PARTIAL'
+                ? `Partially mitigated (${bullOB.mitigationPct}% eaten)`
+                : 'Unmitigated'
+            } Bull OB spans ${formatPrice(bullOB.low)} – ${formatPrice(
+              bullOB.high
+            )} (50% Mean Threshold: ${formatPrice(bullOB.midpoint)}, Quality Score: ${
+              bullOB.qualityScore ?? 80
+            }/100).`,
+            actionability: `Look for passive limit bid absorption inside ${formatPrice(
+              bullOB.low
+            )}–${formatPrice(bullOB.midpoint)} with hard invalidation below ${formatPrice(
+              bullOB.low
+            )}.`,
           }}
         >
           <div
-            onMouseEnter={() => onHoverLevel?.({ label: `BULL OB 50% MT (Q:${bullOB.qualityScore ?? 80})`, price: bullOB.midpoint })}
-            onMouseLeave={() => onHoverLevel?.(null)}
-            className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#00a572]/20 hover:bg-[#00a572]/30 border border-[#00a572]/40 font-mono text-[10px] sm:text-[11px] tabular-nums shrink-0 transition-colors cursor-pointer"
+            onClick={() =>
+              handleToggleLock(
+                `BULL OB 50% MT (Q:${bullOB.qualityScore ?? 80})`,
+                bullOB.midpoint
+              )
+            }
+            onMouseEnter={() =>
+              onHoverLevel?.({
+                label: `BULL OB 50% MT (Q:${bullOB.qualityScore ?? 80})`,
+                price: bullOB.midpoint,
+              })
+            }
+            className={`flex items-center gap-1.5 px-2 py-0.5 bg-[#00a572]/20 hover:bg-[#00a572]/30 border font-mono text-[10px] sm:text-[11px] tabular-nums shrink-0 transition-colors cursor-pointer ${
+              isTracked(bullOB.midpoint)
+                ? 'border-[#4edea3] shadow-[0_0_10px_rgba(78,222,163,0.3)]'
+                : 'border-[#00a572]/40'
+            }`}
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-[#4edea3]"></span>
+            <span className="w-1.5 h-1.5 bg-[#4edea3]"></span>
             <span className="text-[#4edea3] text-[9px] font-bold uppercase">
               BULL OB {bullOB.status === 'PARTIAL' ? `(${bullOB.mitigationPct}% MIT)` : ''}
             </span>
             <span className="text-[#6ffbbe] font-medium">
               {formatShortK(bullOB.low)}–{formatShortK(bullOB.high)}
             </span>
-            <span className="text-[9px] px-1 rounded bg-[#0b0e14]/70 text-[#4edea3] font-bold">
+            <span className="text-[9px] px-1 bg-[#0b0e14]/70 text-[#4edea3] font-bold">
               Q:{bullOB.qualityScore ?? 80}
             </span>
+            {isTracked(bullOB.midpoint) && <span className="text-[8px] text-[#4edea3]">🎯</span>}
           </div>
         </InfoTooltip>
       )}
@@ -191,26 +257,52 @@ export const FloatingLevels: React.FC<FloatingLevelsProps> = ({
             symbol,
             categoryBadge: 'SMART MONEY CONCEPTS',
             badgeColor: '#ffb4ab',
-            whatItIs: 'Institutional supply zone verified via ATR markdown displacement, Fair Value Gap (FVG) creation, and Taker Sell footprint spike.',
-            liveRead: `${bearOB.status === 'PARTIAL' ? `Partially mitigated (${bearOB.mitigationPct}% eaten)` : 'Unmitigated'} Bear OB spans $${formatPrice(bearOB.low)} – $${formatPrice(bearOB.high)} (50% Mean Threshold: $${formatPrice(bearOB.midpoint)}, Quality Score: ${bearOB.qualityScore ?? 80}/100).`,
-            actionability: `Anticipate passive ask wall defense at the 50% Mean Threshold ($${formatPrice(bearOB.midpoint)}) with invalidation above $${formatPrice(bearOB.high)}.`,
+            whatItIs:
+              'Institutional supply zone verified via ATR markdown displacement, Fair Value Gap (FVG) creation, and Taker Sell footprint spike.',
+            liveRead: `${
+              bearOB.status === 'PARTIAL'
+                ? `Partially mitigated (${bearOB.mitigationPct}% eaten)`
+                : 'Unmitigated'
+            } Bear OB spans ${formatPrice(bearOB.low)} – ${formatPrice(
+              bearOB.high
+            )} (50% Mean Threshold: ${formatPrice(bearOB.midpoint)}, Quality Score: ${
+              bearOB.qualityScore ?? 80
+            }/100).`,
+            actionability: `Anticipate passive ask wall defense at the 50% Mean Threshold (${formatPrice(
+              bearOB.midpoint
+            )}) with invalidation above ${formatPrice(bearOB.high)}.`,
           }}
         >
           <div
-            onMouseEnter={() => onHoverLevel?.({ label: `BEAR OB 50% MT (Q:${bearOB.qualityScore ?? 80})`, price: bearOB.midpoint })}
-            onMouseLeave={() => onHoverLevel?.(null)}
-            className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#93000a]/30 hover:bg-[#93000a]/40 border border-[#93000a]/50 font-mono text-[10px] sm:text-[11px] tabular-nums shrink-0 transition-colors cursor-pointer"
+            onClick={() =>
+              handleToggleLock(
+                `BEAR OB 50% MT (Q:${bearOB.qualityScore ?? 80})`,
+                bearOB.midpoint
+              )
+            }
+            onMouseEnter={() =>
+              onHoverLevel?.({
+                label: `BEAR OB 50% MT (Q:${bearOB.qualityScore ?? 80})`,
+                price: bearOB.midpoint,
+              })
+            }
+            className={`flex items-center gap-1.5 px-2 py-0.5 bg-[#93000a]/30 hover:bg-[#93000a]/40 border font-mono text-[10px] sm:text-[11px] tabular-nums shrink-0 transition-colors cursor-pointer ${
+              isTracked(bearOB.midpoint)
+                ? 'border-[#ffb4ab] shadow-[0_0_10px_rgba(255,180,171,0.3)]'
+                : 'border-[#93000a]/50'
+            }`}
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-[#ffb4ab]"></span>
+            <span className="w-1.5 h-1.5 bg-[#ffb4ab]"></span>
             <span className="text-[#ffb4ab] text-[9px] font-bold uppercase">
               BEAR OB {bearOB.status === 'PARTIAL' ? `(${bearOB.mitigationPct}% MIT)` : ''}
             </span>
             <span className="text-[#ffb4ab] font-medium">
               {formatShortK(bearOB.low)}–{formatShortK(bearOB.high)}
             </span>
-            <span className="text-[9px] px-1 rounded bg-[#0b0e14]/70 text-[#ffb4ab] font-bold">
+            <span className="text-[9px] px-1 bg-[#0b0e14]/70 text-[#ffb4ab] font-bold">
               Q:{bearOB.qualityScore ?? 80}
             </span>
+            {isTracked(bearOB.midpoint) && <span className="text-[8px] text-[#ffb4ab]">🎯</span>}
           </div>
         </InfoTooltip>
       )}
@@ -224,19 +316,31 @@ export const FloatingLevels: React.FC<FloatingLevelsProps> = ({
             symbol,
             categoryBadge: 'DEPTH ORDERBOOK',
             badgeColor: '#ffb4ab',
-            whatItIs: 'Resting limit sell orders and macro swing fractal resistance detected from the 500-level orderbook.',
-            liveRead: `Resting Ask Wall of ${liquidity.askLiquidityQty?.toFixed(1) || '1.8K'} contracts is stationed at $${formatPrice(liquidity.askLiquidityPrice)} (${getDist(liquidity.askLiquidityPrice)} overhead).`,
+            whatItIs:
+              'Resting limit sell orders and macro swing fractal resistance detected from the 500-level orderbook.',
+            liveRead: `Resting Ask Wall of ${
+              liquidity.askLiquidityQty?.toFixed(1) || '1.8K'
+            } contracts is stationed at ${formatPrice(liquidity.askLiquidityPrice)} (${getDist(
+              liquidity.askLiquidityPrice
+            )} overhead).`,
             actionability: `Overhead ceiling zone. A high-volume ignition surge (>= 2.0x RVOL) is required to break through resting asks.`,
           }}
         >
           <div
-            onMouseEnter={() => onHoverLevel?.({ label: 'ORDERBOOK ASK WALL', price: liquidity.askLiquidityPrice })}
-            onMouseLeave={() => onHoverLevel?.(null)}
-            className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#ffb4ab]/10 hover:bg-[#ffb4ab]/20 border border-[#ffb4ab]/30 font-mono text-[10px] sm:text-[11px] tabular-nums shrink-0 transition-colors cursor-pointer"
+            onClick={() => handleToggleLock('ORDERBOOK ASK WALL', liquidity.askLiquidityPrice)}
+            onMouseEnter={() =>
+              onHoverLevel?.({ label: 'ORDERBOOK ASK WALL', price: liquidity.askLiquidityPrice })
+            }
+            className={`flex items-center gap-1 px-2 py-0.5 bg-[#ffb4ab]/10 hover:bg-[#ffb4ab]/20 border font-mono text-[10px] sm:text-[11px] tabular-nums shrink-0 transition-colors cursor-pointer ${
+              isTracked(liquidity.askLiquidityPrice) ? 'border-[#ffb4ab]' : 'border-[#ffb4ab]/30'
+            }`}
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-[#ffb4ab]"></span>
+            <span className="w-1.5 h-1.5 bg-[#ffb4ab]"></span>
             <span className="text-[#ffb4ab] text-[9px] font-bold uppercase">RES</span>
-            <span className="text-[#e1e2eb] font-medium">{formatPrice(liquidity.askLiquidityPrice)}</span>
+            <span className="text-[#e1e2eb] font-medium">
+              {formatPrice(liquidity.askLiquidityPrice)}
+            </span>
+            {isTracked(liquidity.askLiquidityPrice) && <span className="text-[8px]">🎯</span>}
           </div>
         </InfoTooltip>
       )}
@@ -249,19 +353,31 @@ export const FloatingLevels: React.FC<FloatingLevelsProps> = ({
             symbol,
             categoryBadge: 'DEPTH ORDERBOOK',
             badgeColor: '#4edea3',
-            whatItIs: 'Resting limit buy orders and macro swing fractal support detected from the 500-level orderbook.',
-            liveRead: `Resting Bid Wall of ${liquidity.bidLiquidityQty?.toFixed(1) || '1.2K'} contracts is placed at $${formatPrice(liquidity.bidLiquidityPrice)} (${getDist(liquidity.bidLiquidityPrice)} below spot).`,
+            whatItIs:
+              'Resting limit buy orders and macro swing fractal support detected from the 500-level orderbook.',
+            liveRead: `Resting Bid Wall of ${
+              liquidity.bidLiquidityQty?.toFixed(1) || '1.2K'
+            } contracts is placed at ${formatPrice(liquidity.bidLiquidityPrice)} (${getDist(
+              liquidity.bidLiquidityPrice
+            )} below spot).`,
             actionability: `Defensive floor zone. Resting bids absorb aggressive market sellers; failure of this wall triggers stop-runs.`,
           }}
         >
           <div
-            onMouseEnter={() => onHoverLevel?.({ label: 'ORDERBOOK BID WALL', price: liquidity.bidLiquidityPrice })}
-            onMouseLeave={() => onHoverLevel?.(null)}
-            className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#4edea3]/10 hover:bg-[#4edea3]/20 border border-[#4edea3]/30 font-mono text-[10px] sm:text-[11px] tabular-nums shrink-0 transition-colors cursor-pointer"
+            onClick={() => handleToggleLock('ORDERBOOK BID WALL', liquidity.bidLiquidityPrice)}
+            onMouseEnter={() =>
+              onHoverLevel?.({ label: 'ORDERBOOK BID WALL', price: liquidity.bidLiquidityPrice })
+            }
+            className={`flex items-center gap-1 px-2 py-0.5 bg-[#4edea3]/10 hover:bg-[#4edea3]/20 border font-mono text-[10px] sm:text-[11px] tabular-nums shrink-0 transition-colors cursor-pointer ${
+              isTracked(liquidity.bidLiquidityPrice) ? 'border-[#4edea3]' : 'border-[#4edea3]/30'
+            }`}
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-[#4edea3]"></span>
+            <span className="w-1.5 h-1.5 bg-[#4edea3]"></span>
             <span className="text-[#4edea3] text-[9px] font-bold uppercase">SUP</span>
-            <span className="text-[#e1e2eb] font-medium">{formatPrice(liquidity.bidLiquidityPrice)}</span>
+            <span className="text-[#e1e2eb] font-medium">
+              {formatPrice(liquidity.bidLiquidityPrice)}
+            </span>
+            {isTracked(liquidity.bidLiquidityPrice) && <span className="text-[8px]">🎯</span>}
           </div>
         </InfoTooltip>
       )}
@@ -278,10 +394,15 @@ export const FloatingLevels: React.FC<FloatingLevelsProps> = ({
                 symbol,
                 categoryBadge: 'BLACK-SCHOLES GEX',
                 badgeColor: '#00f0ff',
-                whatItIs: 'The Black-Scholes strike transition where aggregate dealer Gamma Exposure (GEX) flips from positive (mean-reverting) to negative (volatility-amplifying).',
-                liveRead: `${symbol} ($${formatPrice(currentPrice)}) is ${
-                  currentPrice >= options.zeroGammaLevel ? 'ABOVE (+Γ Pinning Regime)' : 'BELOW (-Γ Acceleration Regime)'
-                } the Zero-Gamma Flip at $${formatPrice(options.zeroGammaLevel)} (${getDist(options.zeroGammaLevel)} distance).`,
+                whatItIs:
+                  'The Black-Scholes strike transition where aggregate dealer Gamma Exposure (GEX) flips from positive (mean-reverting) to negative (volatility-amplifying).',
+                liveRead: `${symbol} (${formatPrice(currentPrice)}) is ${
+                  currentPrice >= options.zeroGammaLevel
+                    ? 'ABOVE (+Γ Pinning Regime)'
+                    : 'BELOW (-Γ Acceleration Regime)'
+                } the Zero-Gamma Flip at ${formatPrice(options.zeroGammaLevel)} (${getDist(
+                  options.zeroGammaLevel
+                )} distance).`,
                 actionability:
                   currentPrice >= options.zeroGammaLevel
                     ? 'Dealers are Long Gamma above 0-Γ and sell rips / buy dips, dampening volatility.'
@@ -289,13 +410,23 @@ export const FloatingLevels: React.FC<FloatingLevelsProps> = ({
               }}
             >
               <div
-                onMouseEnter={() => onHoverLevel?.({ label: 'ZERO-GAMMA FLIP (0-Γ)', price: options.zeroGammaLevel! })}
-                onMouseLeave={() => onHoverLevel?.(null)}
-                className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#00f0ff]/15 hover:bg-[#00f0ff]/25 border border-[#00f0ff]/40 font-mono text-[10px] sm:text-[11px] tabular-nums shrink-0 transition-colors cursor-pointer"
+                onClick={() => handleToggleLock('ZERO-GAMMA FLIP (0-Γ)', options.zeroGammaLevel!)}
+                onMouseEnter={() =>
+                  onHoverLevel?.({
+                    label: 'ZERO-GAMMA FLIP (0-Γ)',
+                    price: options.zeroGammaLevel!,
+                  })
+                }
+                className={`flex items-center gap-1 px-2 py-0.5 bg-[#00f0ff]/15 hover:bg-[#00f0ff]/25 border font-mono text-[10px] sm:text-[11px] tabular-nums shrink-0 transition-colors cursor-pointer ${
+                  isTracked(options.zeroGammaLevel) ? 'border-[#00f0ff]' : 'border-[#00f0ff]/40'
+                }`}
               >
                 <span className="text-[10px]">⚡</span>
                 <span className="text-[#00f0ff] text-[9px] uppercase font-bold">0-Γ FLIP</span>
-                <span className="text-[#e1e2eb] font-semibold">{formatPrice(options.zeroGammaLevel)}</span>
+                <span className="text-[#e1e2eb] font-semibold">
+                  {formatPrice(options.zeroGammaLevel)}
+                </span>
+                {isTracked(options.zeroGammaLevel) && <span className="text-[8px]">🎯</span>}
               </div>
             </InfoTooltip>
           )}
@@ -308,21 +439,33 @@ export const FloatingLevels: React.FC<FloatingLevelsProps> = ({
               symbol,
               categoryBadge: 'DERIBIT OPTIONS',
               badgeColor: '#ddb7ff',
-              whatItIs: 'The options strike price at which options contracts expire with the highest financial loss to buyers, exerting gravitational pinning pull.',
-              liveRead: `${symbol} is currently $${formatPrice(currentPrice)}, trading ${
-                currentPrice > options.maxPain ? 'ABOVE' : currentPrice < options.maxPain ? 'BELOW' : 'AT'
-              } Max Pain strike $${formatPrice(options.maxPain)} (${getDist(options.maxPain)} delta).`,
-              actionability: `As weekly/monthly options expiry approaches (08:00 UTC), delta hedging by market makers pulls price gravitationally toward $${formatPrice(options.maxPain)}.`,
+              whatItIs:
+                'The options strike price at which options contracts expire with the highest financial loss to buyers, exerting gravitational pinning pull.',
+              liveRead: `${symbol} is currently ${formatPrice(currentPrice)}, trading ${
+                currentPrice > options.maxPain
+                  ? 'ABOVE'
+                  : currentPrice < options.maxPain
+                  ? 'BELOW'
+                  : 'AT'
+              } Max Pain strike ${formatPrice(options.maxPain)} (${getDist(options.maxPain)} delta).`,
+              actionability: `As weekly/monthly options expiry approaches (08:00 UTC), delta hedging by market makers pulls price gravitationally toward ${formatPrice(
+                options.maxPain
+              )}.`,
             }}
           >
             <div
-              onMouseEnter={() => onHoverLevel?.({ label: 'MAX PAIN STRIKE', price: options.maxPain })}
-              onMouseLeave={() => onHoverLevel?.(null)}
-              className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#eacfff]/15 hover:bg-[#eacfff]/25 border border-[#842bd2]/40 font-mono text-[10px] sm:text-[11px] tabular-nums shrink-0 transition-colors cursor-pointer"
+              onClick={() => handleToggleLock('MAX PAIN STRIKE', options.maxPain)}
+              onMouseEnter={() =>
+                onHoverLevel?.({ label: 'MAX PAIN STRIKE', price: options.maxPain })
+              }
+              className={`flex items-center gap-1 px-2 py-0.5 bg-[#eacfff]/15 hover:bg-[#eacfff]/25 border font-mono text-[10px] sm:text-[11px] tabular-nums shrink-0 transition-colors cursor-pointer ${
+                isTracked(options.maxPain) ? 'border-[#ddb7ff]' : 'border-[#842bd2]/40'
+              }`}
             >
               <span className="text-[10px]">🧲</span>
               <span className="text-[#f0dbff] text-[9px] uppercase font-semibold">MAX PAIN</span>
               <span className="text-[#fdf2ff] font-medium">{formatPrice(options.maxPain)}</span>
+              {isTracked(options.maxPain) && <span className="text-[8px]">🎯</span>}
             </div>
           </InfoTooltip>
 
@@ -334,19 +477,29 @@ export const FloatingLevels: React.FC<FloatingLevelsProps> = ({
               symbol,
               categoryBadge: 'DERIBIT OPTIONS',
               badgeColor: '#ffb4ab',
-              whatItIs: 'The strike with the largest open Call Open Interest where market makers hold heavy short call delta and sell underlying spot to hedge.',
-              liveRead: `Options Call Wall is established at $${formatPrice(options.callWall)} (${getDist(options.callWall)} above spot).`,
+              whatItIs:
+                'The strike with the largest open Call Open Interest where market makers hold heavy short call delta and sell underlying spot to hedge.',
+              liveRead: `Options Call Wall is established at ${formatPrice(
+                options.callWall
+              )} (${getDist(options.callWall)} above spot).`,
               actionability: `Acts as a formidable upside institutional resistance barrier. A breakout above requires violent short squeeze dynamics.`,
             }}
           >
             <div
-              onMouseEnter={() => onHoverLevel?.({ label: 'CALL WALL STRIKE', price: options.callWall })}
-              onMouseLeave={() => onHoverLevel?.(null)}
-              className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#0b0e14] hover:bg-[#121620] border border-[#272a31] hover:border-[#ffb4ab]/40 font-mono text-[10px] sm:text-[11px] tabular-nums shrink-0 transition-colors cursor-pointer"
+              onClick={() => handleToggleLock('CALL WALL STRIKE', options.callWall)}
+              onMouseEnter={() =>
+                onHoverLevel?.({ label: 'CALL WALL STRIKE', price: options.callWall })
+              }
+              className={`flex items-center gap-1 px-2 py-0.5 bg-[#080b11] hover:bg-[#121620] border font-mono text-[10px] sm:text-[11px] tabular-nums shrink-0 transition-colors cursor-pointer ${
+                isTracked(options.callWall)
+                  ? 'border-[#ffb4ab]'
+                  : 'border-[#1e2636] hover:border-[#ffb4ab]/40'
+              }`}
             >
               <span className="text-[10px]">🧱</span>
               <span className="text-[#ffb4ab] text-[9px] uppercase font-semibold">CALL WALL</span>
               <span className="text-[#e1e2eb] font-medium">{formatPrice(options.callWall)}</span>
+              {isTracked(options.callWall) && <span className="text-[8px]">🎯</span>}
             </div>
           </InfoTooltip>
 
@@ -358,19 +511,29 @@ export const FloatingLevels: React.FC<FloatingLevelsProps> = ({
               symbol,
               categoryBadge: 'DERIBIT OPTIONS',
               badgeColor: '#4edea3',
-              whatItIs: 'The strike with the largest open Put Open Interest where market makers hold long delta and buy underlying spot to hedge on dips.',
-              liveRead: `Options Put Wall is anchored at $${formatPrice(options.putWall)} (${getDist(options.putWall)} below spot).`,
+              whatItIs:
+                'The strike with the largest open Put Open Interest where market makers hold long delta and buy underlying spot to hedge on dips.',
+              liveRead: `Options Put Wall is anchored at ${formatPrice(
+                options.putWall
+              )} (${getDist(options.putWall)} below spot).`,
               actionability: `Acts as a solid institutional downside floor. If Put Wall fails, dealers become short gamma and aggressive sell-offs accelerate.`,
             }}
           >
             <div
-              onMouseEnter={() => onHoverLevel?.({ label: 'PUT WALL STRIKE', price: options.putWall })}
-              onMouseLeave={() => onHoverLevel?.(null)}
-              className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#0b0e14] hover:bg-[#121620] border border-[#272a31] hover:border-[#4edea3]/40 font-mono text-[10px] sm:text-[11px] tabular-nums shrink-0 transition-colors cursor-pointer"
+              onClick={() => handleToggleLock('PUT WALL STRIKE', options.putWall)}
+              onMouseEnter={() =>
+                onHoverLevel?.({ label: 'PUT WALL STRIKE', price: options.putWall })
+              }
+              className={`flex items-center gap-1 px-2 py-0.5 bg-[#080b11] hover:bg-[#121620] border font-mono text-[10px] sm:text-[11px] tabular-nums shrink-0 transition-colors cursor-pointer ${
+                isTracked(options.putWall)
+                  ? 'border-[#4edea3]'
+                  : 'border-[#1e2636] hover:border-[#4edea3]/40'
+              }`}
             >
               <span className="text-[10px]">🛡️</span>
               <span className="text-[#4edea3] text-[9px] uppercase font-semibold">PUT WALL</span>
               <span className="text-[#e1e2eb] font-medium">{formatPrice(options.putWall)}</span>
+              {isTracked(options.putWall) && <span className="text-[8px]">🎯</span>}
             </div>
           </InfoTooltip>
         </>

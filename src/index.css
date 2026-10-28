@@ -88,3 +88,82 @@
 .animate-pulse-slow {
   animation: pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
+/* Prevent Netlify floating preview widget from overlapping bottom mobile tabs */
+#netlify-cdp-loader,
+div[data-netlify-deploy-preview],
+iframe[id^="netlify"],
+iframe[src*="netlify.app"],
+iframe[src*="netlify.com"] {
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+/* ============================================================================
+   ELEGANT CYBER-BRUTALIST DESIGN SYSTEM (.cyber-panel, .cyber-grid-bg, scan)
+   ============================================================================ */
+.cyber-panel {
+  position: relative;
+  background-color: #080b11;
+  border: 1px solid #1e2636;
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.cyber-panel::before {
+  content: '+';
+  position: absolute;
+  top: 2px;
+  right: 5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  line-height: 1;
+  color: rgba(0, 240, 255, 0.35);
+  pointer-events: none;
+}
+
+.cyber-panel:hover {
+  border-color: rgba(0, 240, 255, 0.45);
+}
+
+.cyber-panel-tracked {
+  border-color: #00f0ff !important;
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.22), inset 0 0 12px rgba(0, 240, 255, 0.08);
+}
+
+.cyber-grid-bg {
+  background-image: radial-gradient(rgba(0, 240, 255, 0.09) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+@keyframes cyberScanSweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+.cyber-scan-active {
+  position: relative;
+  overflow: hidden;
+}
+
+.cyber-scan-active::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 45%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 240, 255, 0.09) 50%,
+    transparent 100%
+  );
+  animation: cyberScanSweep 3.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  pointer-events: none;
+}
+

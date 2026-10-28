@@ -28,6 +28,8 @@ import { InfoTooltip } from './InfoTooltip';
 import { PreFlightChecklist, PaperTradeEntry } from './PreFlightChecklist';
 import { ReverseAcademyDeck } from './ReverseAcademyDeck';
 import { loadAcademyProgress, AcademyProgressState } from '../utils/reverseAcademyEngine';
+import { AsciiOrderflowBar, AsciiWaveSparkline, ScrambleValue } from './AsciiTelemetry';
+import { getRookieMentorGuide } from '../utils/metricBenchmarks';
 
 export type TacticalDeckMode = 'LENSES' | 'MTF_RADAR' | 'PREFLIGHT_SIZER' | 'REVERSE_ACADEMY';
 type LensSubView = 'DIAGNOSTICS' | 'SETUP';
@@ -68,6 +70,8 @@ interface StrategyTabsProps {
   onTabChange?: (tab: 1 | 2 | 3 | 4 | 5) => void;
   externalDeckRequest?: { deck: TacticalDeckMode; ts: number } | null;
   onNavigateMobilePage?: (page: 'CHART' | 'RADAR' | 'LENSES' | 'EXECUTE' | 'ACADEMY') => void;
+  onHoverLevel?: (level: { label: string; price: number } | null) => void;
+  highlightedLevel?: { label: string; price: number } | null;
 }
 
 export const StrategyTabs: React.FC<StrategyTabsProps> = ({
@@ -105,6 +109,8 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
   onTabChange,
   externalDeckRequest,
   onNavigateMobilePage,
+  onHoverLevel,
+  highlightedLevel,
 }) => {
   const [internalActiveTab, setInternalActiveTab] = useState<1 | 2 | 3 | 4 | 5>(1);
   const activeTab = controlledActiveTab !== undefined ? controlledActiveTab : internalActiveTab;
@@ -115,6 +121,114 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
   const [academyProgress, setAcademyProgress] = useState<AcademyProgressState>(() =>
     loadAcademyProgress()
   );
+  const [learnDrawers, setLearnDrawers] = useState<Record<string, boolean>>({});
+
+  const isLearnOpen = (key: string) =>
+    key in learnDrawers ? learnDrawers[key] : experienceMode === 'rookie';
+
+  const toggleLearnDrawer = (e: React.MouseEvent, key: string) => {
+    e.stopPropagation();
+    const cur = isLearnOpen(key);
+    setLearnDrawers((prev) => ({ ...prev, [key]: !cur }));
+  };
+
+  const isPriceTracked = (price?: number) =>
+    Boolean(
+      highlightedLevel &&
+        price &&
+        price > 0 &&
+        Math.abs(highlightedLevel.price - price) / price < 0.0002
+    );
+
+  const toggleTrackPrice = (e: React.MouseEvent | null, label: string, price?: number) => {
+    if (e) e.stopPropagation();
+    if (!onHoverLevel || !price || price <= 0) return;
+    if (isPriceTracked(price)) {
+      onHoverLevel(null);
+    } else {
+      onHoverLevel({ label, price });
+    }
+  };
+
+  const renderInlineLearnDrawer = (metricKey: string, uniqueId: string) => {
+    const open = isLearnOpen(uniqueId);
+    const mentor = getRookieMentorGuide(metricKey, symbol);
+    const primaryResource = mentor.resources[0];
+    const videoResource = mentor.resources.find((r) => r.type === 'VIDEO') || mentor.resources[1];
+
+    return (
+      <div className="flex flex-col gap-1.5 pt-1.5 mt-1 border-t border-[#1e2636] text-left">
+        <div className="flex items-center justify-between gap-1">
+          <span className="font-mono text-[8px] text-[#849495] uppercase">BENCHMARK &amp; GUIDE</span>
+          <button
+            type="button"
+            onClick={(e) => toggleLearnDrawer(e, uniqueId)}
+            className={`px-1.5 py-0.5 font-mono text-[8px] uppercase font-bold border transition-colors cursor-pointer ${
+              open
+                ? 'bg-[#00f0ff]/15 border-[#00f0ff]/50 text-[#00f0ff]'
+                : 'bg-[#0b0e14] hover:bg-[#141821] border-[#1e2636] text-[#b9cacb] hover:text-[#00f0ff]'
+            }`}
+          >
+            🎓 STD NORM &amp; DECODE {open ? '▴' : '▾'}
+          </button>
+        </div>
+        <AnimatePresence initial={false}>
+          {open && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.16, ease: 'easeOut' }}
+              className="overflow-hidden flex flex-col gap-1 pt-0.5"
+            >
+              <div className="p-1.5 bg-[#06080d] border border-[#1e2636] font-mono text-[8.5px] flex flex-col gap-0.5">
+                <div className="text-[#00f0ff] truncate">
+                  <strong>STD NORM:</strong> {mentor.standardRangeGuide.normal}
+                </div>
+                <div className="text-[#4edea3] truncate">
+                  <strong>HIGH EXT:</strong> {mentor.standardRangeGuide.tooHigh}
+                </div>
+                <div className="text-[#ffb4ab] truncate">
+                  <strong>LOW EXT:</strong> {mentor.standardRangeGuide.tooLow}
+                </div>
+              </div>
+              <p className="font-sans text-[9.5px] text-[#b9cacb] leading-snug">
+                <strong className="text-[#fcd34d] font-mono">🔗 Analogy:</strong> {mentor.familiarBridge}
+              </p>
+              <p className="font-sans text-[9px] text-[#dbfcff] bg-[#0b0e14] px-1.5 py-1 border-l-2 border-l-[#00f0ff] leading-snug">
+                <strong className="text-[#4edea3] font-mono">✓ DO:</strong> {mentor.rookieActionRule.doThis}{' '}
+                <strong className="text-[#ffb4ab] font-mono">• ✕ AVOID:</strong> {mentor.rookieActionRule.avoidTrap}
+              </p>
+              <div className="flex items-center gap-1 flex-wrap pt-0.5">
+                {primaryResource && (
+                  <a
+                    href={primaryResource.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="px-1.5 py-0.5 bg-[#00f0ff]/10 hover:bg-[#00f0ff]/25 text-[#00f0ff] border border-[#00f0ff]/30 font-mono text-[8px] font-bold"
+                  >
+                    📖 READ GUIDE ↗
+                  </a>
+                )}
+                {videoResource && (
+                  <a
+                    href={videoResource.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="px-1.5 py-0.5 bg-[#f59e0b]/10 hover:bg-[#f59e0b]/25 text-[#fcd34d] border border-[#f59e0b]/30 font-mono text-[8px] font-bold"
+                  >
+                    ▶ WATCH VIDEO ↗
+                  </a>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  };
 
   useEffect(() => {
     if (externalDeckRequest?.deck) {
@@ -312,7 +426,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
     return (
       <div className="flex flex-col gap-2">
         <div
-          className={`relative overflow-hidden flex flex-col gap-3 bg-[#141821] border border-[#1e2433] border-l-2 ${leftBorderClass} rounded-none p-3`}
+          className={`cyber-panel cyber-scan-active flex flex-col gap-3 border-l-2 ${leftBorderClass} p-3`}
         >
           {/* Top Row: Circular SVG Gauge + Headline & Bias */}
           <div className="flex items-center gap-3.5">
@@ -341,7 +455,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
               </svg>
               <div className="absolute flex flex-col items-center justify-center text-center tabular-nums">
                 <span className="font-mono text-[19px] font-bold tracking-tight" style={{ color }}>
-                  {score}%
+                  <ScrambleValue text={`${score}%`} />
                 </span>
                 <span className="font-mono text-[7px] uppercase tracking-wider text-[#849495]">BAYESIAN</span>
               </div>
@@ -512,35 +626,48 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
           <p className="font-sans text-[12px] text-[#b9cacb] leading-relaxed">{setup.thesis}</p>
         </div>
 
-        {/* 4 Execution Metric Pillars */}
+        {/* 4 Execution Metric Pillars (Interactive Track on Chart) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5 tabular-nums">
           {/* Reaction Zone */}
-          <div className="p-2.5 rounded-none bg-[#0b0e14] border border-[#1e2433] flex flex-col justify-between">
-            <div className="flex items-center justify-between">
+          <div
+            onClick={(e) => toggleTrackPrice(e, `${setup.lensTitle} ENTRY`, setup.suggestedEntry)}
+            className={`cyber-panel p-2.5 flex flex-col justify-between cursor-pointer ${
+              isPriceTracked(setup.suggestedEntry) ? 'cyber-panel-tracked' : ''
+            }`}
+          >
+            <div className="flex items-center justify-between gap-1">
               <span className="font-mono text-[9px] text-[#849495] uppercase font-semibold">
                 KEY REACTION ZONE
               </span>
-              <button
-                onClick={() =>
-                  onCopyText(
-                    `$${formatP(setup.reactionZoneLow)} - $${formatP(setup.reactionZoneHigh)}`,
-                    'Reaction Zone'
-                  )
-                }
-                className="text-[#849495] hover:text-[#00f0ff] transition-colors cursor-pointer"
-                title="Copy Reaction Zone"
-              >
-                <span className="material-symbols-outlined text-[13px]">content_copy</span>
-              </button>
+              <div className="flex items-center gap-1">
+                <span className="font-mono text-[8px] px-1.5 py-0.5 bg-[#0b0e14] border border-[#1e2636] text-[#00f0ff]">
+                  {isPriceTracked(setup.suggestedEntry) ? '🎯 TRACKING' : '🎯 TRACK'}
+                </span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCopyText(
+                      `$${formatP(setup.reactionZoneLow)} - $${formatP(setup.reactionZoneHigh)}`,
+                      'Reaction Zone'
+                    );
+                  }}
+                  className="text-[#849495] hover:text-[#00f0ff] transition-colors cursor-pointer"
+                  title="Copy Reaction Zone"
+                >
+                  <span className="material-symbols-outlined text-[13px]">content_copy</span>
+                </button>
+              </div>
             </div>
             <div className="font-mono text-[13px] font-bold text-[#00f0ff] mt-1">
               ${formatP(setup.reactionZoneLow)} – ${formatP(setup.reactionZoneHigh)}
             </div>
-            <span className="font-mono text-[9px] text-[#849495] mt-0.5">Primary Entry Anchor</span>
+            <span className="font-mono text-[9px] text-[#849495] mt-0.5">
+              Midpoint Entry: ${formatP(setup.suggestedEntry)}
+            </span>
           </div>
 
           {/* Trigger Condition */}
-          <div className="p-2.5 rounded-none bg-[#0b0e14] border border-[#1e2433] flex flex-col justify-between">
+          <div className="cyber-panel p-2.5 flex flex-col justify-between">
             <span className="font-mono text-[9px] text-[#849495] uppercase font-semibold">
               TRIGGER CONFIRMATION
             </span>
@@ -551,18 +678,33 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
           </div>
 
           {/* Invalidation Stop */}
-          <div className="p-2.5 rounded-none bg-[#0b0e14] border border-[#1e2433] flex flex-col justify-between">
-            <div className="flex items-center justify-between">
+          <div
+            onClick={(e) =>
+              toggleTrackPrice(e, `${setup.lensTitle} STOP`, setup.invalidationPrice)
+            }
+            className={`cyber-panel p-2.5 flex flex-col justify-between cursor-pointer ${
+              isPriceTracked(setup.invalidationPrice) ? 'cyber-panel-tracked' : ''
+            }`}
+          >
+            <div className="flex items-center justify-between gap-1">
               <span className="font-mono text-[9px] text-[#849495] uppercase font-semibold">
-                STRUCTURAL STOP ($INVALIDATION)
+                STRUCTURAL STOP ($INVAL)
               </span>
-              <button
-                onClick={() => onCopyText(`$${formatP(setup.invalidationPrice)}`, 'Invalidation Stop')}
-                className="text-[#849495] hover:text-[#ffb4ab] transition-colors cursor-pointer"
-                title="Copy Stop Price"
-              >
-                <span className="material-symbols-outlined text-[13px]">content_copy</span>
-              </button>
+              <div className="flex items-center gap-1">
+                <span className="font-mono text-[8px] px-1.5 py-0.5 bg-[#0b0e14] border border-[#1e2636] text-[#ffb4ab]">
+                  {isPriceTracked(setup.invalidationPrice) ? '🎯 TRACKING' : '🎯 TRACK'}
+                </span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCopyText(`$${formatP(setup.invalidationPrice)}`, 'Invalidation Stop');
+                  }}
+                  className="text-[#849495] hover:text-[#ffb4ab] transition-colors cursor-pointer"
+                  title="Copy Stop Price"
+                >
+                  <span className="material-symbols-outlined text-[13px]">content_copy</span>
+                </button>
+              </div>
             </div>
             <div className="font-mono text-[14px] font-bold text-[#ffb4ab] mt-1">
               ${formatP(setup.invalidationPrice)}
@@ -573,10 +715,20 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
           </div>
 
           {/* Targets */}
-          <div className="p-2.5 rounded-none bg-[#0b0e14] border border-[#1e2433] flex flex-col justify-between">
-            <span className="font-mono text-[9px] text-[#849495] uppercase font-semibold">
-              THEORETICAL TARGETS
-            </span>
+          <div
+            onClick={(e) => toggleTrackPrice(e, `${setup.lensTitle} TP1`, setup.target1Price)}
+            className={`cyber-panel p-2.5 flex flex-col justify-between cursor-pointer ${
+              isPriceTracked(setup.target1Price) ? 'cyber-panel-tracked' : ''
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[9px] text-[#849495] uppercase font-semibold">
+                THEORETICAL TARGETS
+              </span>
+              <span className="font-mono text-[8px] px-1.5 py-0.5 bg-[#0b0e14] border border-[#1e2636] text-[#4edea3]">
+                {isPriceTracked(setup.target1Price) ? '🎯 TRACKING' : '🎯 TRACK TP1'}
+              </span>
+            </div>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="font-mono text-[12px] font-bold text-[#4edea3]">
                 TP1: ${formatP(setup.target1Price)}
@@ -1233,7 +1385,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                             </div>
                           </div>
 
-                          {/* 6-Card Moving Average Telemetry Grid */}
+                          {/* 6-Card Moving Average Telemetry Grid (Click any MA card to Track on Chart) */}
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 tabular-nums">
                             {[
                               maResult.mas.ema9,
@@ -1258,7 +1410,12 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                                 }}
                                 className="w-full"
                               >
-                                <div className="p-2.5 bg-[#191c22] hover:bg-[#1f232b] border border-[#1e2433] hover:border-[#00f0ff]/40 flex flex-col justify-between transition-all cursor-pointer w-full">
+                                <div
+                                  onClick={(e) => toggleTrackPrice(e, `${ma.name} LEVEL`, ma.price)}
+                                  className={`cyber-panel p-2.5 flex flex-col justify-between transition-all cursor-pointer w-full ${
+                                    isPriceTracked(ma.price) ? 'cyber-panel-tracked' : ''
+                                  }`}
+                                >
                                   <div className="flex items-center justify-between">
                                     <span className="font-mono text-[10px] text-[#849495] uppercase font-semibold">
                                       {ma.name}
@@ -1278,10 +1435,15 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                                   <div className="font-mono text-[14px] font-bold text-[#e1e2eb] mt-1">
                                     ${formatP(ma.price)}
                                   </div>
-                                  <span className="font-mono text-[9px] text-[#849495] mt-0.5">
-                                    {ma.distancePct >= 0 ? '+' : ''}
-                                    {ma.distancePct.toFixed(2)}% vs Price
-                                  </span>
+                                  <div className="flex items-center justify-between mt-1">
+                                    <span className="font-mono text-[9px] text-[#849495]">
+                                      {ma.distancePct >= 0 ? '+' : ''}
+                                      {ma.distancePct.toFixed(2)}%
+                                    </span>
+                                    <span className="font-mono text-[8px] text-[#00f0ff]">
+                                      {isPriceTracked(ma.price) ? '🎯 TRACKING' : '🎯 TRACK'}
+                                    </span>
+                                  </div>
                                 </div>
                               </InfoTooltip>
                             ))}
@@ -1369,45 +1531,50 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
 
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 tabular-nums">
                             {/* Volume Profile Auction Status */}
-                            <div className="p-3 bg-[#191c22] border border-[#1e2433] flex flex-col justify-between">
+                            <div
+                              onClick={(e) =>
+                                toggleTrackPrice(e, 'POC (Point of Control)', volumeProfile.poc)
+                              }
+                              className={`cyber-panel border-l-2 border-l-[#00f0ff] p-3 flex flex-col justify-between cursor-pointer ${
+                                isPriceTracked(volumeProfile.poc) ? 'cyber-panel-tracked' : ''
+                              }`}
+                            >
                               <div className="flex items-center justify-between">
                                 <span className="font-mono text-[9px] text-[#00f0ff] uppercase font-bold tracking-wider">
                                   VP 70% AUCTION
                                 </span>
-                                <InfoTooltip
-                                  content={{
-                                    title: 'VOLUME PROFILE AUCTION THEORY',
-                                    symbol,
-                                    categoryBadge: 'MARKET PROFILE',
-                                    badgeColor: '#00f0ff',
-                                    whatItIs:
-                                      'Session Volume Profile showing the 70% Value Area (VAH/VAL) and Point of Control (POC) high-volume node.',
-                                    liveRead: `${symbol} auction state: VAH $${formatP(volumeProfile.vah)}, POC $${formatP(volumeProfile.poc)}, VAL $${formatP(volumeProfile.val)}.`,
-                                    actionability:
-                                      'Trade rotations toward POC inside Value; trade breakouts with volume outside Value.',
-                                  }}
-                                >
-                                  <span className="font-mono text-[9px] text-[#00f0ff] underline cursor-pointer">
-                                    ⓘ Guide
-                                  </span>
-                                </InfoTooltip>
+                                <span className="font-mono text-[8px] px-1.5 py-0.5 bg-[#0b0e14] border border-[#1e2636] text-[#00f0ff]">
+                                  {isPriceTracked(volumeProfile.poc) ? '🎯 TRACKING POC' : '🎯 TRACK POC'}
+                                </span>
                               </div>
-                              <div className="flex items-baseline justify-between mt-1.5">
+                              <div
+                                onClick={(e) => toggleTrackPrice(e, 'VAH (70% Value High)', volumeProfile.vah)}
+                                className="flex items-baseline justify-between mt-1.5 hover:bg-[#141821] px-1 py-0.5"
+                              >
                                 <span className="font-mono text-[10px] text-[#849495]">VAH:</span>
                                 <span className="font-mono text-[12px] font-bold text-[#00dbe9]">
-                                  ${formatP(volumeProfile.vah)}
+                                  ${formatP(volumeProfile.vah)}{' '}
+                                  {isPriceTracked(volumeProfile.vah) && '🎯'}
                                 </span>
                               </div>
-                              <div className="flex items-baseline justify-between">
+                              <div
+                                onClick={(e) => toggleTrackPrice(e, 'POC (Point of Control)', volumeProfile.poc)}
+                                className="flex items-baseline justify-between hover:bg-[#141821] px-1 py-0.5"
+                              >
                                 <span className="font-mono text-[10px] text-[#849495]">POC:</span>
                                 <span className="font-mono text-[12px] font-bold text-[#f59e0b]">
-                                  ${formatP(volumeProfile.poc)}
+                                  ${formatP(volumeProfile.poc)}{' '}
+                                  {isPriceTracked(volumeProfile.poc) && '🎯'}
                                 </span>
                               </div>
-                              <div className="flex items-baseline justify-between">
+                              <div
+                                onClick={(e) => toggleTrackPrice(e, 'VAL (70% Value Low)', volumeProfile.val)}
+                                className="flex items-baseline justify-between hover:bg-[#141821] px-1 py-0.5"
+                              >
                                 <span className="font-mono text-[10px] text-[#849495]">VAL:</span>
                                 <span className="font-mono text-[12px] font-bold text-[#00dbe9]">
-                                  ${formatP(volumeProfile.val)}
+                                  ${formatP(volumeProfile.val)}{' '}
+                                  {isPriceTracked(volumeProfile.val) && '🎯'}
                                 </span>
                               </div>
                               <span className="font-mono text-[8px] text-[#849495] mt-1">
@@ -1415,16 +1582,31 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                                   ? 'State: Balance Inside Value'
                                   : 'State: Directional Imbalance'}
                               </span>
+                              {renderInlineLearnDrawer('volume_profile', 'tab3_vp')}
                             </div>
 
                             {/* Bullish Order Block */}
-                            <div className="p-3 bg-[#191c22] border border-[#1e2433] flex flex-col justify-between">
+                            <div
+                              onClick={(e) =>
+                                bullOB &&
+                                toggleTrackPrice(
+                                  e,
+                                  `BULL OB 50% MT (Q:${bullOB.qualityScore ?? 80})`,
+                                  bullOB.midpoint
+                                )
+                              }
+                              className={`cyber-panel border-l-2 border-l-[#4edea3] p-3 flex flex-col justify-between cursor-pointer ${
+                                bullOB && isPriceTracked(bullOB.midpoint) ? 'cyber-panel-tracked' : ''
+                              }`}
+                            >
                               <div className="flex items-center justify-between">
                                 <span className="font-mono text-[9px] text-[#4edea3] uppercase font-bold tracking-wider">
                                   BULL OB (DEMAND)
                                 </span>
                                 <span className="px-1.5 py-0.5 bg-[#0b0e14] text-[#4edea3] border border-[#4edea3]/30 font-mono text-[8px] font-bold">
-                                  Q:{bullOB?.qualityScore ?? 80}/100
+                                  {bullOB && isPriceTracked(bullOB.midpoint)
+                                    ? '🎯 TRACKING'
+                                    : `Q:${bullOB?.qualityScore ?? 80}/100`}
                                 </span>
                               </div>
                               {bullOB ? (
@@ -1433,7 +1615,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                                     ${formatP(bullOB.low)} – ${formatP(bullOB.high)}
                                   </div>
                                   <div className="font-mono text-[10px] text-[#b9cacb] mt-0.5">
-                                    50% Mean: ${formatP(bullOB.midpoint)}
+                                    50% Mean: ${formatP(bullOB.midpoint)} 🎯
                                   </div>
                                   <span className="font-mono text-[8px] text-[#849495] mt-0.5">
                                     {bullOB.mitigationStatus || 'UNMITIGATED'} ({Math.round(bullOB.mitigationPct || 0)}% mit)
@@ -1444,16 +1626,31 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                                   No active unmitigated Bull OB
                                 </span>
                               )}
+                              {renderInlineLearnDrawer('order_blocks', 'tab3_bull_ob')}
                             </div>
 
                             {/* Bearish Order Block */}
-                            <div className="p-3 bg-[#191c22] border border-[#1e2433] flex flex-col justify-between">
+                            <div
+                              onClick={(e) =>
+                                bearOB &&
+                                toggleTrackPrice(
+                                  e,
+                                  `BEAR OB 50% MT (Q:${bearOB.qualityScore ?? 80})`,
+                                  bearOB.midpoint
+                                )
+                              }
+                              className={`cyber-panel border-l-2 border-l-[#ffb4ab] p-3 flex flex-col justify-between cursor-pointer ${
+                                bearOB && isPriceTracked(bearOB.midpoint) ? 'cyber-panel-tracked' : ''
+                              }`}
+                            >
                               <div className="flex items-center justify-between">
                                 <span className="font-mono text-[9px] text-[#ffb4ab] uppercase font-bold tracking-wider">
                                   BEAR OB (SUPPLY)
                                 </span>
                                 <span className="px-1.5 py-0.5 bg-[#0b0e14] text-[#ffb4ab] border border-[#ffb4ab]/30 font-mono text-[8px] font-bold">
-                                  Q:{bearOB?.qualityScore ?? 80}/100
+                                  {bearOB && isPriceTracked(bearOB.midpoint)
+                                    ? '🎯 TRACKING'
+                                    : `Q:${bearOB?.qualityScore ?? 80}/100`}
                                 </span>
                               </div>
                               {bearOB ? (
@@ -1462,7 +1659,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                                     ${formatP(bearOB.low)} – ${formatP(bearOB.high)}
                                   </div>
                                   <div className="font-mono text-[10px] text-[#b9cacb] mt-0.5">
-                                    50% Mean: ${formatP(bearOB.midpoint)}
+                                    50% Mean: ${formatP(bearOB.midpoint)} 🎯
                                   </div>
                                   <span className="font-mono text-[8px] text-[#849495] mt-0.5">
                                     {bearOB.mitigationStatus || 'UNMITIGATED'} ({Math.round(bearOB.mitigationPct || 0)}% mit)
@@ -1473,6 +1670,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                                   No active unmitigated Bear OB
                                 </span>
                               )}
+                              {renderInlineLearnDrawer('order_blocks', 'tab3_bear_ob')}
                             </div>
                           </div>
                         </div>
@@ -1484,7 +1682,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                       {activeTab === 4 && (
                         <div className="flex flex-col gap-3">
                           {telemetry.spotPerpDivergence && (
-                            <div className="flex flex-col gap-2 p-3 bg-[#141821] border border-[#1e2433] border-l-2 border-l-[#00f0ff]">
+                            <div className="cyber-panel border-l-2 border-l-[#00f0ff] flex flex-col gap-2 p-3">
                               <div className="flex items-center justify-between gap-2 flex-wrap">
                                 <span className="font-mono text-[10px] text-[#00f0ff] uppercase font-bold tracking-wider">
                                   ⚖️ SPOT VS. PERP CVD FLOW &amp; BASIS
@@ -1505,47 +1703,64 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                               <p className="font-sans text-[11px] text-[#b9cacb] leading-snug">
                                 {telemetry.spotPerpDivergence.description}
                               </p>
-                              <div className="flex items-center gap-2 font-mono text-[10px] tabular-nums flex-wrap">
-                                <span className="px-2 py-0.5 bg-[#0b0e14] border border-[#1e2433] text-[#4edea3]">
-                                  Spot Δ:{' '}
-                                  <strong>
-                                    {telemetry.spotPerpDivergence.spotDeltaPct >= 0 ? '+' : ''}
-                                    {telemetry.spotPerpDivergence.spotDeltaPct.toFixed(1)}%
-                                  </strong>
-                                </span>
-                                <span className="px-2 py-0.5 bg-[#0b0e14] border border-[#1e2433] text-[#00f0ff]">
-                                  Perp Δ:{' '}
-                                  <strong>
-                                    {telemetry.spotPerpDivergence.perpDeltaPct >= 0 ? '+' : ''}
-                                    {telemetry.spotPerpDivergence.perpDeltaPct.toFixed(1)}%
-                                  </strong>
-                                </span>
-                                <span className="px-2 py-0.5 bg-[#0b0e14] border border-[#1e2433] text-[#fcd34d]">
-                                  Basis:{' '}
-                                  <strong>
-                                    {telemetry.spotPerpDivergence.basisBps >= 0 ? '+' : ''}
-                                    {telemetry.spotPerpDivergence.basisBps.toFixed(1)} bps
-                                  </strong>
-                                </span>
+                              <div className="flex items-center justify-between gap-2 font-mono text-[10px] tabular-nums flex-wrap">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="px-2 py-0.5 bg-[#0b0e14] border border-[#1e2433] text-[#4edea3]">
+                                    Spot Δ:{' '}
+                                    <strong>
+                                      {telemetry.spotPerpDivergence.spotDeltaPct >= 0 ? '+' : ''}
+                                      {telemetry.spotPerpDivergence.spotDeltaPct.toFixed(1)}%
+                                    </strong>
+                                  </span>
+                                  <span className="px-2 py-0.5 bg-[#0b0e14] border border-[#1e2433] text-[#00f0ff]">
+                                    Perp Δ:{' '}
+                                    <strong>
+                                      {telemetry.spotPerpDivergence.perpDeltaPct >= 0 ? '+' : ''}
+                                      {telemetry.spotPerpDivergence.perpDeltaPct.toFixed(1)}%
+                                    </strong>
+                                  </span>
+                                  <span className="px-2 py-0.5 bg-[#0b0e14] border border-[#1e2433] text-[#fcd34d]">
+                                    Basis:{' '}
+                                    <strong>
+                                      {telemetry.spotPerpDivergence.basisBps >= 0 ? '+' : ''}
+                                      {telemetry.spotPerpDivergence.basisBps.toFixed(1)} bps
+                                    </strong>
+                                  </span>
+                                </div>
+                                <AsciiOrderflowBar
+                                  buyRatio={Math.max(
+                                    0.15,
+                                    Math.min(
+                                      0.85,
+                                      0.5 + (telemetry.spotPerpDivergence.spotDeltaPct || 0) / 100
+                                    )
+                                  )}
+                                  width={14}
+                                />
                               </div>
                             </div>
                           )}
 
                           {/* VDU & Ignition Scanner */}
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                            <div className="p-3 bg-[#191c22] border border-[#1e2433] flex flex-col justify-between">
+                            <div className="cyber-panel p-3 flex flex-col justify-between">
                               <span className="font-mono text-[9px] text-[#00f0ff] uppercase font-bold tracking-wider">
                                 💧 VOLUME DRY-UP (VDU)
                               </span>
-                              <div className="font-mono text-[16px] font-bold text-[#00f0ff] mt-1">
-                                RVOL &lt; 0.45x
+                              <div className="font-mono text-[16px] font-bold text-[#00f0ff] mt-1 flex items-center justify-between">
+                                <span>RVOL &lt; 0.45x</span>
+                                <AsciiWaveSparkline
+                                  values={klines.slice(-8).map((k) => k.volume)}
+                                  isStreaming={true}
+                                  barsCount={6}
+                                />
                               </div>
                               <p className="font-sans text-[10px] text-[#b9cacb] mt-1 leading-snug">
                                 Seller exhaustion &amp; pre-breakout volatility compression.
                               </p>
                             </div>
 
-                            <div className="p-3 bg-[#191c22] border border-[#1e2433] flex flex-col justify-between">
+                            <div className="cyber-panel p-3 flex flex-col justify-between">
                               <span className="font-mono text-[9px] text-[#f59e0b] uppercase font-bold tracking-wider">
                                 ⚡ VOLUME IGNITION
                               </span>
@@ -1557,7 +1772,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                               </p>
                             </div>
 
-                            <div className="p-3 bg-[#191c22] border border-[#1e2433] flex flex-col justify-between">
+                            <div className="cyber-panel p-3 flex flex-col justify-between">
                               <span className="font-mono text-[9px] text-[#e879f9] uppercase font-bold tracking-wider">
                                 🟡 ABSORPTION RINGS
                               </span>
@@ -1570,17 +1785,34 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                             </div>
                           </div>
 
-                          {/* 500-Depth Bid vs Ask Liquidity Walls */}
+                          {/* 500-Depth Bid vs Ask Liquidity Walls (Interactive Track on Chart) */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 tabular-nums">
-                            <div className="p-3 bg-[#191c22] border border-[#1e2433] border-l-2 border-l-[#4edea3] flex flex-col justify-between">
+                            <div
+                              onClick={(e) =>
+                                toggleTrackPrice(
+                                  e,
+                                  'ORDERBOOK BID WALL',
+                                  liquidity?.bidLiquidityPrice || currentPrice * 0.985
+                                )
+                              }
+                              className={`cyber-panel border-l-2 border-l-[#4edea3] p-3 flex flex-col justify-between cursor-pointer ${
+                                isPriceTracked(liquidity?.bidLiquidityPrice || currentPrice * 0.985)
+                                  ? 'cyber-panel-tracked'
+                                  : ''
+                              }`}
+                            >
                               <div className="flex items-center justify-between">
                                 <span className="font-mono text-[9px] text-[#4edea3] uppercase font-bold tracking-wider">
                                   BID WALL (SUPPORT)
                                 </span>
-                                <span className="font-mono text-[10px] text-[#4edea3] font-bold">
-                                  {liquidity?.bidLiquidityQty
+                                <span className="font-mono text-[9px] px-1.5 py-0.5 bg-[#0b0e14] border border-[#1e2636] text-[#4edea3] font-bold">
+                                  {isPriceTracked(
+                                    liquidity?.bidLiquidityPrice || currentPrice * 0.985
+                                  )
+                                    ? '🎯 TRACKING ON CHART'
+                                    : liquidity?.bidLiquidityQty
                                     ? `${liquidity.bidLiquidityQty.toFixed(1)} ${baseAsset}`
-                                    : '1.2K contracts'}
+                                    : '🎯 TRACK'}
                                 </span>
                               </div>
                               <div className="font-mono text-[16px] font-bold text-[#4edea3] mt-1">
@@ -1591,15 +1823,32 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                               </span>
                             </div>
 
-                            <div className="p-3 bg-[#191c22] border border-[#1e2433] border-l-2 border-l-[#ffb4ab] flex flex-col justify-between">
+                            <div
+                              onClick={(e) =>
+                                toggleTrackPrice(
+                                  e,
+                                  'ORDERBOOK ASK WALL',
+                                  liquidity?.askLiquidityPrice || currentPrice * 1.018
+                                )
+                              }
+                              className={`cyber-panel border-l-2 border-l-[#ffb4ab] p-3 flex flex-col justify-between cursor-pointer ${
+                                isPriceTracked(liquidity?.askLiquidityPrice || currentPrice * 1.018)
+                                  ? 'cyber-panel-tracked'
+                                  : ''
+                              }`}
+                            >
                               <div className="flex items-center justify-between">
                                 <span className="font-mono text-[9px] text-[#ffb4ab] uppercase font-bold tracking-wider">
                                   ASK WALL (SUPPLY)
                                 </span>
-                                <span className="font-mono text-[10px] text-[#ffb4ab] font-bold">
-                                  {liquidity?.askLiquidityQty
+                                <span className="font-mono text-[9px] px-1.5 py-0.5 bg-[#0b0e14] border border-[#1e2636] text-[#ffb4ab] font-bold">
+                                  {isPriceTracked(
+                                    liquidity?.askLiquidityPrice || currentPrice * 1.018
+                                  )
+                                    ? '🎯 TRACKING ON CHART'
+                                    : liquidity?.askLiquidityQty
                                     ? `${liquidity.askLiquidityQty.toFixed(1)} ${baseAsset}`
-                                    : '1.8K contracts'}
+                                    : '🎯 TRACK'}
                                 </span>
                               </div>
                               <div className="font-mono text-[16px] font-bold text-[#ffb4ab] mt-1">
@@ -1620,22 +1869,48 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                         <div className="flex flex-col gap-3">
                           {/* Black-Scholes Dealer Positioning & Zero-Gamma Strip */}
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 tabular-nums">
-                            <div className="p-2.5 bg-[#191c22] border border-[#1e2433] flex flex-col justify-between">
-                              <span className="font-mono text-[9px] text-[#849495] uppercase font-semibold">
-                                ZERO-GAMMA FLIP
-                              </span>
+                            <div
+                              onClick={(e) =>
+                                toggleTrackPrice(
+                                  e,
+                                  'ZERO-GAMMA FLIP (0-Γ)',
+                                  optionsData.zeroGammaLevel || optionsData.maxPain
+                                )
+                              }
+                              className={`cyber-panel p-2.5 flex flex-col justify-between cursor-pointer ${
+                                isPriceTracked(optionsData.zeroGammaLevel || optionsData.maxPain)
+                                  ? 'cyber-panel-tracked'
+                                  : ''
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="font-mono text-[9px] text-[#849495] uppercase font-semibold">
+                                  ZERO-GAMMA FLIP
+                                </span>
+                                <span className="font-mono text-[8px] text-[#00f0ff]">🎯</span>
+                              </div>
                               <div className="font-mono text-[14px] font-bold text-[#00f0ff] mt-1">
                                 ${formatP(optionsData.zeroGammaLevel || optionsData.maxPain)}
                               </div>
-                              <span className="font-mono text-[8px] text-[#849495] mt-0.5">
+                              <span className="font-mono text-[8px] text-[#849495] mt-0.5 truncate">
                                 {optionsData.gammaRegime || 'POSITIVE_GAMMA_PINNING'}
                               </span>
                             </div>
 
-                            <div className="p-2.5 bg-[#191c22] border border-[#1e2433] flex flex-col justify-between">
-                              <span className="font-mono text-[9px] text-[#849495] uppercase font-semibold">
-                                MAX PAIN STRIKE
-                              </span>
+                            <div
+                              onClick={(e) =>
+                                toggleTrackPrice(e, 'MAX PAIN STRIKE', optionsData.maxPain)
+                              }
+                              className={`cyber-panel p-2.5 flex flex-col justify-between cursor-pointer ${
+                                isPriceTracked(optionsData.maxPain) ? 'cyber-panel-tracked' : ''
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="font-mono text-[9px] text-[#849495] uppercase font-semibold">
+                                  MAX PAIN STRIKE
+                                </span>
+                                <span className="font-mono text-[8px] text-[#ddb7ff]">🎯</span>
+                              </div>
                               <div className="font-mono text-[14px] font-bold text-[#ddb7ff] mt-1">
                                 ${formatP(optionsData.maxPain)}
                               </div>
@@ -1644,21 +1919,38 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                               </span>
                             </div>
 
-                            <div className="p-2.5 bg-[#191c22] border border-[#1e2433] flex flex-col justify-between">
-                              <span className="font-mono text-[9px] text-[#849495] uppercase font-semibold">
-                                CALL / PUT WALLS
-                              </span>
+                            <div
+                              onClick={(e) =>
+                                toggleTrackPrice(e, 'CALL WALL STRIKE', optionsData.callWall)
+                              }
+                              className={`cyber-panel p-2.5 flex flex-col justify-between cursor-pointer ${
+                                isPriceTracked(optionsData.callWall) ? 'cyber-panel-tracked' : ''
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="font-mono text-[9px] text-[#849495] uppercase font-semibold">
+                                  CALL / PUT WALLS
+                                </span>
+                                <span className="font-mono text-[8px] text-[#ffb4ab]">🎯</span>
+                              </div>
                               <div className="font-mono text-[11px] font-bold text-[#e1e2eb] mt-1">
                                 <span className="text-[#ffb4ab]">${formatP(optionsData.callWall)}</span>
                                 {' / '}
-                                <span className="text-[#4edea3]">${formatP(optionsData.putWall)}</span>
+                                <span
+                                  onClick={(e) =>
+                                    toggleTrackPrice(e, 'PUT WALL STRIKE', optionsData.putWall)
+                                  }
+                                  className="text-[#4edea3] hover:underline"
+                                >
+                                  ${formatP(optionsData.putWall)}
+                                </span>
                               </div>
                               <span className="font-mono text-[8px] text-[#849495] mt-0.5">
                                 Dealer Hedging Bounds
                               </span>
                             </div>
 
-                            <div className="p-2.5 bg-[#191c22] border border-[#1e2433] flex flex-col justify-between">
+                            <div className="cyber-panel p-2.5 flex flex-col justify-between">
                               <span className="font-mono text-[9px] text-[#849495] uppercase font-semibold">
                                 25D SKEW &amp; P/C RATIO
                               </span>
@@ -1677,6 +1969,9 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                             metrics={telemetry}
                             symbol={symbol}
                             experienceMode={experienceMode}
+                            onHoverLevel={onHoverLevel}
+                            highlightedLevel={highlightedLevel}
+                            onNavigateMobilePage={onNavigateMobilePage}
                           />
                         </div>
                       )}
@@ -1739,7 +2034,14 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
             />
 
             {/* 3x2 Derivatives Telemetry Cards */}
-            <TelemetryCards metrics={telemetry} symbol={symbol} experienceMode={experienceMode} />
+            <TelemetryCards
+              metrics={telemetry}
+              symbol={symbol}
+              experienceMode={experienceMode}
+              onHoverLevel={onHoverLevel}
+              highlightedLevel={highlightedLevel}
+              onNavigateMobilePage={onNavigateMobilePage}
+            />
           </motion.div>
         )}
 
@@ -1808,6 +2110,8 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
               onEntryChange={onEntryChange}
               onStopChange={onStopChange}
               onCopyText={onCopyText}
+              onHoverLevel={onHoverLevel}
+              highlightedLevel={highlightedLevel}
             />
           </motion.div>
         )}

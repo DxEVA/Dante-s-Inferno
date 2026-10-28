@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { PairItem, SharpeSortinoMetrics } from '../types';
 import { InfoTooltip } from './InfoTooltip';
+import { ScrambleValue } from './AsciiTelemetry';
 
 interface TickerBarProps {
   activePair: PairItem;
@@ -67,24 +68,31 @@ export const TickerBar: React.FC<TickerBarProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const formattedLivePrice = `$${
+    activePair.price >= 1000
+      ? activePair.price.toLocaleString(undefined, {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })
+      : activePair.price >= 1
+      ? activePair.price.toFixed(2)
+      : activePair.price.toFixed(4)
+  }`;
+
   return (
-    <div className="flex flex-col bg-[#141821] px-2.5 sm:px-3 py-1.5 sm:py-2 gap-1.5 sm:gap-2 border-b border-[#272a31] shadow-sm">
+    <div className="flex flex-col bg-[#080b11] cyber-grid-bg px-2.5 sm:px-3 py-1.5 sm:py-2 gap-1.5 sm:gap-2 border-b border-[#1e2636] shadow-sm">
       {/* Active Asset Header & Metric Strip */}
       <div className="flex items-center justify-between gap-1.5 sm:gap-2">
         {/* Symbol, Perpetual tag & Live Price */}
         <div className="flex items-baseline gap-1.5 sm:gap-2 min-w-0 truncate">
           <h2 className="font-mono text-[16px] sm:text-[22px] font-bold text-[#dbfcff] tracking-tight truncate">
-            {activePair.symbol}
+            <ScrambleValue text={activePair.symbol} />
           </h2>
           <span className="hidden sm:inline font-mono text-[10px] text-[#849495] uppercase tracking-wider font-semibold">
             PERP
           </span>
           <span className="font-mono text-[14px] sm:text-[18px] text-[#e1e2eb] font-semibold tracking-tight tabular-nums">
-            ${activePair.price >= 1000
-              ? activePair.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-              : activePair.price >= 1
-              ? activePair.price.toFixed(2)
-              : activePair.price.toFixed(4)}
+            <ScrambleValue text={formattedLivePrice} durationMs={120} />
           </span>
         </div>
 

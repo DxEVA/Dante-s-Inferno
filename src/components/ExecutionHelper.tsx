@@ -8,6 +8,8 @@ interface ExecutionHelperProps {
   onEntryChange: (val: number) => void;
   onStopChange: (val: number) => void;
   onCopyText: (text: string, label: string) => void;
+  onHoverLevel?: (level: { label: string; price: number } | null) => void;
+  highlightedLevel?: { label: string; price: number } | null;
 }
 
 export const ExecutionHelper: React.FC<ExecutionHelperProps> = ({
@@ -17,6 +19,8 @@ export const ExecutionHelper: React.FC<ExecutionHelperProps> = ({
   onEntryChange,
   onStopChange,
   onCopyText,
+  onHoverLevel,
+  highlightedLevel,
 }) => {
   const isTightStop = calc.stopDistPct < 2.0;
   const makerCost = calc.makerFeeUsdt ?? Math.round(calc.notionalValue * 0.0004 * 100) / 100;
@@ -29,8 +33,24 @@ export const ExecutionHelper: React.FC<ExecutionHelperProps> = ({
   const netRR2 = calc.effectiveNetRR2 ?? 2.84;
   const halfKellyPct = calc.halfKellyRiskPct ?? 1.25;
 
+  const isTracked = (price: number) =>
+    Boolean(
+      highlightedLevel &&
+        price > 0 &&
+        Math.abs(highlightedLevel.price - price) / price < 0.0002
+    );
+
+  const toggleTrackLevel = (label: string, price: number) => {
+    if (!onHoverLevel || !price || price <= 0) return;
+    if (isTracked(price)) {
+      onHoverLevel(null);
+    } else {
+      onHoverLevel({ label, price });
+    }
+  };
+
   return (
-    <div className="flex flex-col px-3 py-3 gap-2.5 bg-[#1d2026] border-b border-[#272a31] rounded-xl border">
+    <div className="flex flex-col px-3 py-3 gap-2.5 bg-[#080b11] cyber-grid-bg border border-[#1e2636] border-l-2 border-l-[#00f0ff]">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex flex-col">
@@ -42,10 +62,10 @@ export const ExecutionHelper: React.FC<ExecutionHelperProps> = ({
           </span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="px-2 py-0.5 rounded bg-[#0b0e14] border border-[#00f0ff]/30 font-mono text-[9px] text-[#00f0ff] font-bold uppercase">
+          <span className="px-2 py-0.5 bg-[#0b0e14] border border-[#00f0ff]/30 font-mono text-[9px] text-[#00f0ff] font-bold uppercase">
             HALF-KELLY OPTIMAL: {halfKellyPct.toFixed(2)}% EQUITY
           </span>
-          <span className="px-2 py-0.5 rounded bg-[#0b0e14] border border-[#4edea3]/30 font-mono text-[9px] text-[#4edea3] font-bold uppercase">
+          <span className="px-2 py-0.5 bg-[#0b0e14] border border-[#4edea3]/30 font-mono text-[9px] text-[#4edea3] font-bold uppercase">
             RISK ENGINE READY
           </span>
         </div>
@@ -54,7 +74,7 @@ export const ExecutionHelper: React.FC<ExecutionHelperProps> = ({
       {/* Inputs Row (3 items) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         {/* Input 1: Risk (USDT) */}
-        <div className="p-2.5 rounded bg-[#0b0e14] border border-[#272a31] flex flex-col gap-1">
+        <div className="cyber-panel p-2.5 flex flex-col gap-1">
           <label className="font-mono text-[10px] text-[#849495] uppercase font-semibold">
             RISK CAPITAL ($ USDT)
           </label>
@@ -72,10 +92,25 @@ export const ExecutionHelper: React.FC<ExecutionHelperProps> = ({
         </div>
 
         {/* Input 2: Entry Price ($) */}
-        <div className="p-2.5 rounded bg-[#0b0e14] border border-[#272a31] flex flex-col gap-1">
-          <label className="font-mono text-[10px] text-[#849495] uppercase font-semibold">
-            ENTRY PRICE ($ MIDPOINT)
-          </label>
+        <div
+          className={`cyber-panel p-2.5 flex flex-col gap-1 ${
+            isTracked(calc.entryPrice) ? 'cyber-panel-tracked' : ''
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <label className="font-mono text-[10px] text-[#849495] uppercase font-semibold">
+              ENTRY PRICE ($ MID)
+            </label>
+            {onHoverLevel && (
+              <button
+                type="button"
+                onClick={() => toggleTrackLevel('SIZER ENTRY', calc.entryPrice)}
+                className="font-mono text-[8px] px-1.5 py-0.5 bg-[#0b0e14] border border-[#1e2636] text-[#00f0ff] cursor-pointer"
+              >
+                {isTracked(calc.entryPrice) ? '🎯 TRACKING' : '🎯 TRACK'}
+              </button>
+            )}
+          </div>
           <div className="flex items-center justify-between">
             <span className="text-[#00f0ff] font-mono text-[13px]">$</span>
             <input
@@ -89,10 +124,25 @@ export const ExecutionHelper: React.FC<ExecutionHelperProps> = ({
         </div>
 
         {/* Input 3: Stop Loss ($) */}
-        <div className="p-2.5 rounded bg-[#0b0e14] border border-[#272a31] flex flex-col gap-1">
-          <label className="font-mono text-[10px] text-[#849495] uppercase font-semibold">
-            STOP LOSS ($ INVAL)
-          </label>
+        <div
+          className={`cyber-panel p-2.5 flex flex-col gap-1 ${
+            isTracked(calc.stopLoss) ? 'cyber-panel-tracked' : ''
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <label className="font-mono text-[10px] text-[#849495] uppercase font-semibold">
+              STOP LOSS ($ INVAL)
+            </label>
+            {onHoverLevel && (
+              <button
+                type="button"
+                onClick={() => toggleTrackLevel('SIZER STOP LOSS', calc.stopLoss)}
+                className="font-mono text-[8px] px-1.5 py-0.5 bg-[#0b0e14] border border-[#1e2636] text-[#ffb4ab] cursor-pointer"
+              >
+                {isTracked(calc.stopLoss) ? '🎯 TRACKING' : '🎯 TRACK'}
+              </button>
+            )}
+          </div>
           <div className="flex items-center justify-between">
             <span className="text-[#ffb4ab] font-mono text-[13px]">$</span>
             <input
@@ -109,7 +159,7 @@ export const ExecutionHelper: React.FC<ExecutionHelperProps> = ({
       {/* Computed Outputs Strip (Position Size, Notional, Stop Dist, Fee/Slippage Microstructure) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 tabular-nums">
         {/* Position Size */}
-        <div className="p-2.5 rounded bg-[#0b0e14] border border-[#272a31] flex flex-col justify-between">
+        <div className="cyber-panel p-2.5 flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="font-mono text-[10px] text-[#849495] uppercase font-semibold">
               POSITION SIZE
@@ -130,7 +180,7 @@ export const ExecutionHelper: React.FC<ExecutionHelperProps> = ({
         </div>
 
         {/* Notional Value */}
-        <div className="p-2.5 rounded bg-[#0b0e14] border border-[#272a31] flex flex-col justify-between">
+        <div className="cyber-panel p-2.5 flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="font-mono text-[10px] text-[#849495] uppercase font-semibold">
               NOTIONAL VALUE
@@ -155,7 +205,7 @@ export const ExecutionHelper: React.FC<ExecutionHelperProps> = ({
         </div>
 
         {/* Stop Distance % */}
-        <div className="p-2.5 rounded bg-[#0b0e14] border border-[#272a31] flex flex-col justify-between">
+        <div className="cyber-panel p-2.5 flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="font-mono text-[10px] text-[#849495] uppercase font-semibold">
               STOP DISTANCE
@@ -177,7 +227,7 @@ export const ExecutionHelper: React.FC<ExecutionHelperProps> = ({
         </div>
 
         {/* Round-Trip Fee & Slippage Drag */}
-        <div className="p-2.5 rounded bg-[#0b0e14] border border-[#272a31] flex flex-col justify-between">
+        <div className="cyber-panel p-2.5 flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="font-mono text-[10px] text-[#fcd34d] uppercase font-semibold">
               ROUND-TRIP FEE &amp; SLIP
@@ -207,15 +257,23 @@ export const ExecutionHelper: React.FC<ExecutionHelperProps> = ({
       {/* Profit Target Brackets (Gross vs Effective Net R:R Projections) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5 tabular-nums">
         {/* Target 1 */}
-        <div className="p-2.5 rounded bg-[#0b0e14] border border-[#272a31] flex items-center justify-between">
+        <div
+          onClick={() => toggleTrackLevel('TARGET 1 (+1.5R)', calc.target1Price)}
+          className={`cyber-panel p-2.5 flex items-center justify-between cursor-pointer ${
+            isTracked(calc.target1Price) ? 'cyber-panel-tracked' : ''
+          }`}
+        >
           <div className="flex flex-col">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="px-1.5 py-0.5 rounded bg-[#00a572]/20 border border-[#00a572]/40 text-[#4edea3] font-mono text-[9px] uppercase font-bold">
+              <span className="px-1.5 py-0.5 bg-[#00a572]/20 border border-[#00a572]/40 text-[#4edea3] font-mono text-[9px] uppercase font-bold">
                 +1.5R GROSS • +{netRR1.toFixed(2)}R NET
               </span>
               <span className="font-mono text-[10px] text-[#849495] uppercase font-semibold">
                 TARGET 1 (50% SCALE-OUT)
               </span>
+              {isTracked(calc.target1Price) && (
+                <span className="font-mono text-[8px] text-[#00f0ff] font-bold">🎯 TRACKING</span>
+              )}
             </div>
             <span className="font-mono text-[18px] text-[#4edea3] font-bold mt-1">
               $
@@ -232,8 +290,11 @@ export const ExecutionHelper: React.FC<ExecutionHelperProps> = ({
           </div>
 
           <button
-            onClick={() => onCopyText(calc.target1Price.toFixed(2), 'Target 1 (+1.5R)')}
-            className="px-2.5 py-1 rounded bg-[#1d2026] hover:bg-[#00f0ff] text-[#00f0ff] hover:text-[#00363a] border border-[#272a31] hover:border-[#00f0ff] font-mono text-[10px] transition-all flex items-center gap-1 cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              onCopyText(calc.target1Price.toFixed(2), 'Target 1 (+1.5R)');
+            }}
+            className="px-2.5 py-1 bg-[#141821] hover:bg-[#00f0ff] text-[#00f0ff] hover:text-[#00363a] border border-[#1e2636] hover:border-[#00f0ff] font-mono text-[10px] transition-all flex items-center gap-1 cursor-pointer"
           >
             <span className="material-symbols-outlined text-[13px]">content_copy</span>
             <span>Copy</span>
@@ -241,15 +302,23 @@ export const ExecutionHelper: React.FC<ExecutionHelperProps> = ({
         </div>
 
         {/* Target 2 */}
-        <div className="p-2.5 rounded bg-[#0b0e14] border border-[#272a31] flex items-center justify-between">
+        <div
+          onClick={() => toggleTrackLevel('TARGET 2 (+3.0R)', calc.target2Price)}
+          className={`cyber-panel p-2.5 flex items-center justify-between cursor-pointer ${
+            isTracked(calc.target2Price) ? 'cyber-panel-tracked' : ''
+          }`}
+        >
           <div className="flex flex-col">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="px-1.5 py-0.5 rounded bg-[#00a572]/20 border border-[#00a572]/40 text-[#4edea3] font-mono text-[9px] uppercase font-bold">
+              <span className="px-1.5 py-0.5 bg-[#00a572]/20 border border-[#00a572]/40 text-[#4edea3] font-mono text-[9px] uppercase font-bold">
                 +3.0R GROSS • +{netRR2.toFixed(2)}R NET
               </span>
               <span className="font-mono text-[10px] text-[#ddb7ff] uppercase font-semibold">
                 TARGET 2 (RUNNER)
               </span>
+              {isTracked(calc.target2Price) && (
+                <span className="font-mono text-[8px] text-[#00f0ff] font-bold">🎯 TRACKING</span>
+              )}
             </div>
             <span className="font-mono text-[18px] text-[#4edea3] font-bold mt-1">
               $
@@ -266,8 +335,11 @@ export const ExecutionHelper: React.FC<ExecutionHelperProps> = ({
           </div>
 
           <button
-            onClick={() => onCopyText(calc.target2Price.toFixed(2), 'Target 2 (+3.0R)')}
-            className="px-2.5 py-1 rounded bg-[#1d2026] hover:bg-[#00f0ff] text-[#00f0ff] hover:text-[#00363a] border border-[#272a31] hover:border-[#00f0ff] font-mono text-[10px] transition-all flex items-center gap-1 cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              onCopyText(calc.target2Price.toFixed(2), 'Target 2 (+3.0R)');
+            }}
+            className="px-2.5 py-1 bg-[#141821] hover:bg-[#00f0ff] text-[#00f0ff] hover:text-[#00363a] border border-[#1e2636] hover:border-[#00f0ff] font-mono text-[10px] transition-all flex items-center gap-1 cursor-pointer"
           >
             <span className="material-symbols-outlined text-[13px]">content_copy</span>
             <span>Copy</span>

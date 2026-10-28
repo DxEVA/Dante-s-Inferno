@@ -60,6 +60,7 @@ import { Footer } from './components/Footer';
 import { Toast } from './components/Toast';
 import { PaperJournalModal } from './components/PaperJournalModal';
 import { GlossaryModal } from './components/GlossaryModal';
+import { AsciiRadarHeader } from './components/AsciiTelemetry';
 import {
   loadPaperTrades,
   addPaperTrade as addJournalPaperTrade,
@@ -957,7 +958,7 @@ export default function App() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#10131a] text-[#e1e2eb] font-sans select-none pb-10">
+    <div className="flex flex-col min-h-screen bg-[#10131a] text-[#e1e2eb] font-sans select-none pb-24 lg:pb-10">
       {viewMode === 'selector' ? (
         <AssetSelectorScreen
           pairs={allPairs.length > 0 ? allPairs : topPairs}
@@ -1002,7 +1003,7 @@ export default function App() {
           />
 
           {/* Main Full-Viewport Cyber-Brutalist Split-Screen Workstation */}
-          <main className="flex flex-col w-full pt-12 sm:pt-14 pb-16 lg:pb-0 flex-1 max-w-[1920px] mx-auto border-x border-[#1e2433]">
+          <main className="flex flex-col w-full pt-12 sm:pt-14 pb-24 lg:pb-0 flex-1 max-w-[1920px] mx-auto border-x border-[#1e2433]">
             {/* Full-Width Active Asset Command & Ticker Strip */}
             <div className="w-full border-b border-[#1e2433] bg-[#0b0e14]">
               <TickerBar
@@ -1030,6 +1031,19 @@ export default function App() {
                 }}
               />
             </div>
+
+            {/* Live ASCII Radar Telemetry Strip (Directly above main Chart & Strategy Workspace) */}
+            <AsciiRadarHeader
+              symbol={activePair.symbol}
+              regime={candlestickResult.marketRegime?.regime || confluence.regime}
+              rvol={telemetry.sessionRvol || 1.0}
+              cvdDelta={telemetry.cvdDelta}
+              isStreaming={isStreaming}
+              volumeSeries={klines.slice(-10).map((k) => k.volume)}
+              trackedLevel={highlightedLevel}
+              onClearTrackedLevel={() => setHighlightedLevel(null)}
+              onJumpToChart={() => handleNavigateMobilePage('CHART')}
+            />
 
             {/* Main 12-Column Split Cockpit */}
             <div className="grid grid-cols-1 lg:grid-cols-12 border-b border-[#1e2433] items-start">
@@ -1081,6 +1095,7 @@ export default function App() {
                       symbol={activePair.symbol}
                       currentPrice={activePair.price}
                       onHoverLevel={setHighlightedLevel}
+                      highlightedLevel={highlightedLevel}
                       activeLayers={chartLayers}
                     />
                   </div>
@@ -1130,6 +1145,7 @@ export default function App() {
                           symbol={activePair.symbol}
                           currentPrice={activePair.price}
                           onHoverLevel={setHighlightedLevel}
+                          highlightedLevel={highlightedLevel}
                           activeLayers={chartLayers}
                         />
                       }
@@ -1248,6 +1264,13 @@ export default function App() {
                   onTabChange={setActiveStrategyTab}
                   externalDeckRequest={externalDeckRequest}
                   onNavigateMobilePage={handleNavigateMobilePage}
+                  onHoverLevel={(lvl) => {
+                    setHighlightedLevel(lvl);
+                    if (lvl) {
+                      showToast(`🎯 TRACKING ON CHART: ${lvl.label} ($${lvl.price.toLocaleString()})`);
+                    }
+                  }}
+                  highlightedLevel={highlightedLevel}
                   paperTrades={paperTradesList as any}
                   onAddPaperTrade={(trade) => {
                     const isLimitOrder =
@@ -1296,10 +1319,10 @@ export default function App() {
             </div>
           </main>
 
-          {/* Fixed 5-Tab Mobile Bottom Navigation Bar (< 1024px) */}
+          {/* Floating Chamfered 5-Tab Mobile Bottom Dock (< 1024px) */}
           <nav
             aria-label="Mobile Terminal Pages"
-            className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0b0e14]/98 backdrop-blur-xl border-t border-[#1e2433] grid grid-cols-5 h-14 px-1 shadow-[0_-4px_20px_rgba(0,0,0,0.8)]"
+            className="lg:hidden fixed bottom-2 left-2 right-2 z-[9999] bg-[#07090e]/95 backdrop-blur-xl border border-[#00f0ff]/35 shadow-[0_8px_32px_rgba(0,0,0,0.9)] grid grid-cols-5 h-14 px-1 pb-[env(safe-area-inset-bottom,4px)]"
           >
             {(
               [
@@ -1328,7 +1351,7 @@ export default function App() {
                   <div className="flex items-center gap-1">
                     <span className="material-symbols-outlined text-[17px]">{item.icon}</span>
                     <span
-                      className={`text-[8px] px-1 rounded font-bold tabular-nums ${
+                      className={`text-[8px] px-1 font-bold tabular-nums ${
                         isActive
                           ? 'bg-[#00f0ff]/20 text-[#00f0ff]'
                           : 'bg-[#191c22] text-[#849495]'
