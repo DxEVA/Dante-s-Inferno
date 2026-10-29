@@ -1,6 +1,6 @@
 {
-  "summary":  "Implementation plan for a 5-page mobile navigation architecture with a fixed bottom tab bar, compact mobile header with slide-out drawer, and full-screen mobile chart page with toggleable HUD overlay, while preserving 100% of desktop functionality and math.",
-  "updatedAt":  "2026-10-27T19:41:16.185677979Z",
+  "summary":  "Implementation plan to refactor StrategyTabs.tsx, QuantChart.tsx, and App.tsx into a 6-Stage Progressive Trader Flow with Automatic Chart Layer Synchronization, spacious 3-Block stage layouts, Guided Flow vs. Compact All view modes, and Stage 06 Final Funnel Scorecard & Execution Sizer while preserving 100% of existing quantitative engines, Rookie/Pro modes, Reverse Academy, and Paper Journal.",
+  "updatedAt":  "2026-10-29T20:54:57.662487744Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

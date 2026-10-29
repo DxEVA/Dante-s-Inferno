@@ -114,7 +114,7 @@ export const QuantChart: React.FC<QuantChartProps> = ({
   const layersRef = useRef<ChartLayers>(layers);
   layersRef.current = layers;
 
-  const [autoSyncTab, setAutoSyncTab] = useState<boolean>(false);
+  const [autoSyncTab, setAutoSyncTab] = useState<boolean>(true);
   const [manualOptionsOverride, setManualOptionsOverride] = useState<boolean>(false);
   const manualOptionsOverrideRef = useRef<boolean>(false);
   manualOptionsOverrideRef.current = manualOptionsOverride;
@@ -852,26 +852,44 @@ export const QuantChart: React.FC<QuantChartProps> = ({
     }
   }, []);
 
-  // Auto-Sync to Strategy Tab
+  // Sync whenever parent controlledLayers changes
+  useEffect(() => {
+    if (!controlledLayers) return;
+    layersRef.current = controlledLayers;
+    setInternalLayers(controlledLayers);
+    if (controlledLayers.options) {
+      manualOptionsOverrideRef.current = true;
+      setManualOptionsOverride(true);
+    }
+    syncPriceLines();
+    requestAnimationFrame(drawOverlayCanvas);
+  }, [controlledLayers, syncPriceLines, drawOverlayCanvas]);
+
+  // Auto-Sync to 6-Stage Progressive Trader Pipeline (Stages 1 to 6)
   useEffect(() => {
     if (!autoSyncTab) return;
 
     let targetLayers: ChartLayers = { ...DEFAULT_CHART_LAYERS };
     if (activeStrategyTab === 1) {
-      // Candles & PA: Focus on S/R, Bubbles, R:R Box
-      targetLayers = { vp: false, ob: false, sr: true, bubbles: true, options: false, rrBox: true };
+      // Stage 01 (Price & S/R): Pure candlesticks + clean Support/Resistance lines
+      targetLayers = { vp: false, ob: false, sr: true, bubbles: false, options: false, rrBox: false };
     } else if (activeStrategyTab === 2) {
-      // MA & Trend: Focus on S/R, R:R Box
-      targetLayers = { vp: false, ob: false, sr: true, bubbles: false, options: false, rrBox: true };
+      // Stage 02 (Volume & Value): Fades in Bid/Ask Volume Profile (POC, VAH, VAL) + S/R
+      targetLayers = { vp: true, ob: false, sr: true, bubbles: false, options: false, rrBox: false };
     } else if (activeStrategyTab === 3) {
-      // SMC & AMD: Focus on VP, OB, R:R Box
-      targetLayers = { vp: true, ob: true, sr: false, bubbles: false, options: false, rrBox: true };
+      // Stage 03 (Trend & MA): Clean auction & trend structure
+      targetLayers = { vp: true, ob: false, sr: true, bubbles: false, options: false, rrBox: false };
     } else if (activeStrategyTab === 4) {
-      // Orderflow & VDU: Focus on Bubbles, VP, R:R Box
-      targetLayers = { vp: true, ob: false, sr: false, bubbles: true, options: false, rrBox: true };
+      // Stage 04 (Orderflow & SMC): Mitigated Order Blocks (50% MT) + Delta Bubbles / ABS Rings
+      targetLayers = { vp: true, ob: true, sr: false, bubbles: true, options: false, rrBox: false };
     } else if (activeStrategyTab === 5) {
-      // Quant & Options: Focus on Options, VP, R:R Box
-      targetLayers = { vp: true, ob: false, sr: false, bubbles: false, options: true, rrBox: true };
+      // Stage 05 (Quant & Options): Deribit Call Wall, Put Wall, 0-Gamma Flip, Max Pain
+      targetLayers = { vp: true, ob: false, sr: false, bubbles: false, options: true, rrBox: false };
+      manualOptionsOverrideRef.current = true;
+      setManualOptionsOverride(true);
+    } else if (activeStrategyTab === 6) {
+      // Stage 06 (Execute & Size): Visual R:R Projection Box (Entry, Stop, TP1) + VP + OB
+      targetLayers = { vp: true, ob: true, sr: false, bubbles: false, options: false, rrBox: true };
     }
 
     layersRef.current = targetLayers;
@@ -1369,13 +1387,17 @@ export const QuantChart: React.FC<QuantChartProps> = ({
                 className={`w-full py-1.5 rounded font-mono text-[10px] font-semibold border flex items-center justify-center gap-1 cursor-pointer ${
                   autoSyncTab
                     ? 'bg-[#00f0ff]/20 border-[#00f0ff]/50 text-[#00f0ff]'
-                    : 'bg-[#191c22] border-[#272a31] text-[#849495]'
+                    : 'bg-[#f59e0b]/20 border-[#f59e0b]/50 text-[#fcd34d]'
                 }`}
               >
                 <span className="material-symbols-outlined text-[12px]">
-                  {autoSyncTab ? 'sync' : 'sync_disabled'}
+                  {autoSyncTab ? 'sync' : 'lock'}
                 </span>
-                <span>AUTO-SYNC LAYERS TO ACTIVE TAB: {autoSyncTab ? 'ON' : 'OFF'}</span>
+                <span>
+                  {autoSyncTab
+                    ? '🔓 AUTO-SYNC TO STAGE (01–06): ON'
+                    : '🔒 LAYERS LOCKED (MANUAL OVERRIDE)'}
+                </span>
               </button>
             </div>
           )}
@@ -1482,7 +1504,7 @@ export const QuantChart: React.FC<QuantChartProps> = ({
           </button>
         </div>
 
-        {/* Right: Auto-Sync to Strategy Tab */}
+        {/* Right: Auto-Sync to 6-Stage Pipeline or Lock Layers */}
         <div className="flex items-center gap-1.5 shrink-0 pl-1">
           <button
             type="button"
@@ -1490,14 +1512,16 @@ export const QuantChart: React.FC<QuantChartProps> = ({
             className={`px-2 py-0.5 rounded font-mono text-[9px] sm:text-[10px] font-semibold border flex items-center gap-1 cursor-pointer transition-colors ${
               autoSyncTab
                 ? 'bg-[#00f0ff]/20 border-[#00f0ff]/50 text-[#00f0ff]'
-                : 'bg-[#191c22] border-[#272a31] text-[#849495] hover:text-[#e1e2eb]'
+                : 'bg-[#f59e0b]/20 border-[#f59e0b]/50 text-[#fcd34d]'
             }`}
-            title="Automatically switch active layers to match currently active Strategy Tab"
+            title="Toggle automatic chart layer synchronization with the 6-Stage Progressive Trader Pipeline or lock current layers"
           >
             <span className="material-symbols-outlined text-[12px]">
-              {autoSyncTab ? 'sync' : 'sync_disabled'}
+              {autoSyncTab ? 'sync' : 'lock'}
             </span>
-            <span>AUTO-SYNC TO TAB: {autoSyncTab ? 'ON' : 'OFF'}</span>
+            <span>
+              {autoSyncTab ? '🔓 AUTO-SYNC STAGE (01–06)' : '🔒 LAYERS LOCKED'}
+            </span>
           </button>
         </div>
       </div>

@@ -97,7 +97,7 @@ export default function App() {
   const [showJournalModal, setShowJournalModal] = useState<boolean>(false);
   const [paperTradesList, setPaperTradesList] = useState<PaperTrade[]>(() => loadPaperTrades());
   const [chartLayers, setChartLayers] = useState<ChartLayers>(DEFAULT_CHART_LAYERS);
-  const [activeStrategyTab, setActiveStrategyTab] = useState<1 | 2 | 3 | 4 | 5>(1);
+  const [activeStrategyTab, setActiveStrategyTab] = useState<1 | 2 | 3 | 4 | 5 | 6>(1);
   const [externalDeckRequest, setExternalDeckRequest] = useState<{
     deck: TacticalDeckMode;
     ts: number;
@@ -108,12 +108,16 @@ export default function App() {
     (page: 'CHART' | 'RADAR' | 'LENSES' | 'EXECUTE' | 'ACADEMY') => {
       setMobilePage(page);
       if (page === 'RADAR') {
+        setActiveStrategyTab(5);
         setExternalDeckRequest({ deck: 'MTF_RADAR', ts: Date.now() });
       } else if (page === 'LENSES') {
+        setActiveStrategyTab((prev) => (prev === 6 ? 1 : prev));
         setExternalDeckRequest({ deck: 'LENSES', ts: Date.now() });
       } else if (page === 'EXECUTE') {
+        setActiveStrategyTab(6);
         setExternalDeckRequest({ deck: 'PREFLIGHT_SIZER', ts: Date.now() });
       } else if (page === 'ACADEMY') {
+        setActiveStrategyTab(6);
         setExternalDeckRequest({ deck: 'REVERSE_ACADEMY', ts: Date.now() });
       }
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1181,7 +1185,7 @@ export default function App() {
                         onClick={() => handleNavigateMobilePage('LENSES')}
                         className="px-2 py-1 rounded bg-[#4edea3]/15 text-[#4edea3] border border-[#4edea3]/40 font-bold text-[9px] cursor-pointer"
                       >
-                        5 LENSES →
+                        6 STAGES →
                       </button>
                     </div>
                   </div>
@@ -1209,9 +1213,10 @@ export default function App() {
                     showGlossaryModal={showGlossaryModal}
                     onToggleGlossaryModal={setShowGlossaryModal}
                     onDeconstructSignal={() => {
+                      setActiveStrategyTab(6);
                       setExternalDeckRequest({ deck: 'REVERSE_ACADEMY', ts: Date.now() });
                       setMobilePage('ACADEMY');
-                      showToast(`🔬 REVERSE SIGNAL X-RAY OPENED FOR ${activePair.symbol} (SYS.04)`);
+                      showToast(`🔬 REVERSE SIGNAL X-RAY OPENED FOR ${activePair.symbol} (STAGE 06)`);
                     }}
                   />
                 </div>
@@ -1327,10 +1332,10 @@ export default function App() {
             {(
               [
                 { id: 'CHART', label: 'CHART', icon: 'candlestick_chart', badge: selectedTf.toUpperCase() },
+                { id: 'LENSES', label: '6 STAGES', icon: 'layers', badge: `S0${activeStrategyTab}` },
                 { id: 'RADAR', label: 'RADAR', icon: 'radar', badge: `${confluence.score}%` },
-                { id: 'LENSES', label: '5 LENSES', icon: 'layers', badge: `T${activeStrategyTab}` },
-                { id: 'EXECUTE', label: 'EXECUTE', icon: 'calculate', badge: 'SIZER' },
-                { id: 'ACADEMY', label: 'ACADEMY', icon: 'school', badge: 'X-RAY' },
+                { id: 'EXECUTE', label: 'EXECUTE', icon: 'calculate', badge: 'S06' },
+                { id: 'ACADEMY', label: 'X-RAY', icon: 'school', badge: 'LEARN' },
               ] as const
             ).map((item) => {
               const isActive = mobilePage === item.id;
