@@ -13,6 +13,18 @@ export const AMDPhaseEngine: React.FC<AMDPhaseEngineProps> = ({
   amdPhase,
   symbol = 'BTCUSDT',
 }) => {
+  const [isLight, setIsLight] = React.useState<boolean>(
+    () => typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light'
+  );
+
+  React.useEffect(() => {
+    const syncTheme = () => {
+      setIsLight(document.documentElement.getAttribute('data-theme') === 'light');
+    };
+    window.addEventListener('inferno:theme-change', syncTheme);
+    return () => window.removeEventListener('inferno:theme-change', syncTheme);
+  }, []);
+
   const {
     phase,
     stageName,
@@ -94,16 +106,32 @@ export const AMDPhaseEngine: React.FC<AMDPhaseEngineProps> = ({
   ];
 
   return (
-    <div className="bg-[#141821] border border-[#1e2433] border-l-2 border-l-[#00f0ff] rounded-none p-3 flex flex-col gap-3">
+    <div
+      className={`border border-l-2 border-l-[#00f0ff] rounded-none p-3 flex flex-col gap-3 ${
+        isLight
+          ? 'bg-[#ffffff] border-[#cbd5e1]'
+          : 'bg-[#141821] border-[#1e2433]'
+      }`}
+    >
       {/* Header with Phase Badge and Confidence */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-none bg-[#202530] border border-[#2e3442] flex items-center justify-center text-[#00f0ff]">
+          <div
+            className={`w-6 h-6 rounded-none border flex items-center justify-center text-[#00f0ff] ${
+              isLight
+                ? 'bg-[#f1f5f9] border-[#cbd5e1]'
+                : 'bg-[#202530] border-[#2e3442]'
+            }`}
+          >
             <Activity className="w-3.5 h-3.5" />
           </div>
           <div className="flex flex-col">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-mono text-[11px] font-bold text-[#e1e2eb] tracking-wider uppercase">
+              <span
+                className={`font-mono text-[11px] font-bold tracking-wider uppercase ${
+                  isLight ? 'text-[#0f172a]' : 'text-[#e1e2eb]'
+                }`}
+              >
                 INSTITUTIONAL MARKET CYCLE // AMD + WYCKOFF VSA
               </span>
               <span
@@ -113,7 +141,7 @@ export const AMDPhaseEngine: React.FC<AMDPhaseEngineProps> = ({
                 {stageName}
               </span>
             </div>
-            <span className="text-[10px] text-[#849495] font-mono">
+            <span className={`text-[10px] font-mono ${isLight ? 'text-[#475569]' : 'text-[#849495]'}`}>
               Deterministic orderflow absorption, volatility spread &amp; liquidity hunt scanner
             </span>
           </div>
@@ -134,8 +162,16 @@ export const AMDPhaseEngine: React.FC<AMDPhaseEngineProps> = ({
             }}
             inlineBadgeText={`ⓘ What This Means For ${symbol}`}
           />
-          <div className="flex items-center gap-2 bg-[#0b0e14] px-2.5 py-1 rounded-none border border-[#1e2433] tabular-nums">
-            <span className="text-[10px] font-mono text-[#849495]">CYCLE CONFIDENCE:</span>
+          <div
+            className={`flex items-center gap-2 px-2.5 py-1 rounded-none border tabular-nums ${
+              isLight
+                ? 'bg-[#f8fafc] border-[#cbd5e1]'
+                : 'bg-[#0b0e14] border-[#1e2433]'
+            }`}
+          >
+            <span className={`text-[10px] font-mono ${isLight ? 'text-[#475569]' : 'text-[#849495]'}`}>
+              CYCLE CONFIDENCE:
+            </span>
             <span className="font-mono text-xs font-bold text-[#4edea3]">{confidence}%</span>
           </div>
         </div>
@@ -150,6 +186,8 @@ export const AMDPhaseEngine: React.FC<AMDPhaseEngineProps> = ({
               className={`p-2.5 rounded-none border transition-all flex flex-col justify-between gap-1.5 tabular-nums ${
                 stg.active
                   ? `${stg.activeColor} shadow-md`
+                  : isLight
+                  ? 'bg-[#f8fafc] border-[#cbd5e1] text-[#475569] opacity-90'
                   : 'bg-[#0b0e14] border-[#1e2433] text-[#849495] opacity-80'
               }`}
             >
@@ -157,10 +195,16 @@ export const AMDPhaseEngine: React.FC<AMDPhaseEngineProps> = ({
                 <span className="font-mono text-[10px] font-bold tracking-wider">{stg.name}</span>
                 <span className="text-[10px] font-mono font-bold">{stg.score}% Match</span>
               </div>
-              <span className="text-[10px] font-mono text-[#a6b4c9]">{stg.subtitle}</span>
+              <span className={`text-[10px] font-mono ${isLight ? 'text-[#334155]' : 'text-[#a6b4c9]'}`}>
+                {stg.subtitle}
+              </span>
 
               {/* Mechanical Spring Progress Bar */}
-              <div className="w-full bg-[#191c22] h-1.5 rounded-none overflow-hidden mt-1">
+              <div
+                className={`w-full h-1.5 rounded-none overflow-hidden mt-1 ${
+                  isLight ? 'bg-[#e2e8f0]' : 'bg-[#191c22]'
+                }`}
+              >
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${stg.score}%` }}
@@ -174,6 +218,8 @@ export const AMDPhaseEngine: React.FC<AMDPhaseEngineProps> = ({
                         : phase === 'DISTRIBUTION'
                         ? 'bg-[#f43f5e]'
                         : 'bg-[#4edea3]'
+                      : isLight
+                      ? 'bg-[#94a3b8]'
                       : 'bg-[#374158]'
                   }`}
                 />
@@ -186,47 +232,71 @@ export const AMDPhaseEngine: React.FC<AMDPhaseEngineProps> = ({
       {/* Wyckoff & Orderflow Telemetry Strip (3 Metric Cards) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
         {/* Metric 1: Effort vs Result */}
-        <div className="bg-[#141822] p-2.5 rounded border border-[#222838] flex flex-col gap-1">
+        <div
+          className={`p-2.5 rounded border flex flex-col gap-1 ${
+            isLight
+              ? 'bg-[#f8fafc] border-[#cbd5e1]'
+              : 'bg-[#141822] border-[#222838]'
+          }`}
+        >
           <div className="flex items-center gap-1.5 text-[#00f0ff]">
             <Zap className="w-3.5 h-3.5" />
-            <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-[#849495]">
+            <span className={`text-[9px] font-mono font-bold uppercase tracking-wider ${isLight ? 'text-[#475569]' : 'text-[#849495]'}`}>
               Effort vs Result (VSA)
             </span>
           </div>
-          <p className="text-[11px] font-mono text-[#e1e2eb] leading-relaxed">
+          <p className={`text-[11px] font-mono leading-relaxed ${isLight ? 'text-[#0f172a]' : 'text-[#e1e2eb]'}`}>
             {effortVsResult}
           </p>
         </div>
 
         {/* Metric 2: Volume Anomaly */}
-        <div className="bg-[#141822] p-2.5 rounded border border-[#222838] flex flex-col gap-1">
+        <div
+          className={`p-2.5 rounded border flex flex-col gap-1 ${
+            isLight
+              ? 'bg-[#f8fafc] border-[#cbd5e1]'
+              : 'bg-[#141822] border-[#222838]'
+          }`}
+        >
           <div className="flex items-center gap-1.5 text-[#f59e0b]">
             <Droplets className="w-3.5 h-3.5" />
-            <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-[#849495]">
+            <span className={`text-[9px] font-mono font-bold uppercase tracking-wider ${isLight ? 'text-[#475569]' : 'text-[#849495]'}`}>
               Volume Anomaly / VDU
             </span>
           </div>
-          <p className="text-[11px] font-mono text-[#e1e2eb] leading-relaxed">
+          <p className={`text-[11px] font-mono leading-relaxed ${isLight ? 'text-[#0f172a]' : 'text-[#e1e2eb]'}`}>
             {volumeAnomaly}
           </p>
         </div>
 
         {/* Metric 3: Liquidity Sweep / Trap Status */}
-        <div className="bg-[#141822] p-2.5 rounded border border-[#222838] flex flex-col gap-1">
+        <div
+          className={`p-2.5 rounded border flex flex-col gap-1 ${
+            isLight
+              ? 'bg-[#f8fafc] border-[#cbd5e1]'
+              : 'bg-[#141822] border-[#222838]'
+          }`}
+        >
           <div className="flex items-center gap-1.5 text-[#f43f5e]">
             <ShieldAlert className="w-3.5 h-3.5" />
-            <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-[#849495]">
+            <span className={`text-[9px] font-mono font-bold uppercase tracking-wider ${isLight ? 'text-[#475569]' : 'text-[#849495]'}`}>
               Liquidity Sweep / Trap Status
             </span>
           </div>
-          <p className="text-[11px] font-mono text-[#e1e2eb] leading-relaxed">
+          <p className={`text-[11px] font-mono leading-relaxed ${isLight ? 'text-[#0f172a]' : 'text-[#e1e2eb]'}`}>
             {liquidityTrapStatus}
           </p>
         </div>
       </div>
 
       {/* Metric 4: Educated Institutional Read */}
-      <div className="bg-[#141822] p-2.5 rounded border border-[#2b3345] flex items-start gap-2.5">
+      <div
+        className={`p-2.5 rounded border flex items-start gap-2.5 ${
+          isLight
+            ? 'bg-[#f8fafc] border-[#cbd5e1]'
+            : 'bg-[#141822] border-[#2b3345]'
+        }`}
+      >
         <div className="p-1 rounded bg-[#00f0ff]/10 text-[#00f0ff] shrink-0 mt-0.5">
           <Eye className="w-4 h-4" />
         </div>
@@ -234,7 +304,7 @@ export const AMDPhaseEngine: React.FC<AMDPhaseEngineProps> = ({
           <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-[#00f0ff]">
             EDUCATED INSTITUTIONAL SYNTHESIS
           </span>
-          <p className="text-[11px] font-mono text-[#cfd7e6] leading-relaxed">
+          <p className={`text-[11px] font-mono leading-relaxed ${isLight ? 'text-[#1e293b]' : 'text-[#cfd7e6]'}`}>
             {institutionalRead}
           </p>
         </div>

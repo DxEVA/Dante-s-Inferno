@@ -19,15 +19,17 @@ export interface ChartLayers {
   bubbles: boolean;
   options: boolean;
   rrBox: boolean;
+  ma?: boolean;
 }
 
 export const DEFAULT_CHART_LAYERS: ChartLayers = {
-  vp: true,
-  ob: true,
+  vp: false,
+  ob: false,
   sr: true,
-  bubbles: true,
-  options: true,
-  rrBox: true,
+  bubbles: false,
+  options: false,
+  rrBox: false,
+  ma: false,
 };
 
 interface QuantChartProps {
@@ -120,18 +122,21 @@ export const QuantChart: React.FC<QuantChartProps> = ({
   manualOptionsOverrideRef.current = manualOptionsOverride;
   const [mobileHudMode, setMobileHudMode] = useState<'NONE' | 'LEVELS' | 'LAYERS'>('NONE');
 
+  const activeStrategyTabRef = useRef<number>(activeStrategyTab);
+  activeStrategyTabRef.current = activeStrategyTab;
+
   // Store R:R box and highlighted level in refs so updates never recreate chart instance
   const setupBoxRef = useRef({
     entryPrice,
     stopLoss,
     tp1Price,
-    showSetupOnChart: layers.rrBox && showSetupOnChart,
+    showSetupOnChart,
   });
   setupBoxRef.current = {
     entryPrice,
     stopLoss,
     tp1Price,
-    showSetupOnChart: layers.rrBox && showSetupOnChart,
+    showSetupOnChart,
   };
 
   const highlightRef = useRef<{ label: string; price: number } | null>(highlightedLevel);
@@ -227,6 +232,56 @@ export const QuantChart: React.FC<QuantChartProps> = ({
   const deltaStatsMapRef = useRef(deltaStatsMap);
   deltaStatsMapRef.current = deltaStatsMap;
 
+  // Pre-calculate EMA 21, EMA 50, EMA 200 & Session VWAP series in O(N) for Stage 03 Trend & MA Overlay
+  const maSeriesMap = useMemo(() => {
+    const map = new Map<number, { ema21: number; ema50: number; ema200: number; vwap: number }>();
+    if (!klines || klines.length === 0) return map;
+
+    const k21 = 2 / (21 + 1);
+    const k50 = 2 / (50 + 1);
+    const k200 = 2 / (200 + 1);
+
+    let ema21 = klines[0].close;
+    let ema50 = klines[0].close;
+    let ema200 = klines[0].close;
+    let cumTypVol = 0;
+    let cumVol = 0;
+    const vwapResetWindow = Math.min(klines.length, 48);
+    const vwapStartIdx = Math.max(0, klines.length - vwapResetWindow);
+
+    for (let i = 0; i < klines.length; i++) {
+      const bar = klines[i];
+      const c = bar.close;
+      if (i === 0) {
+        ema21 = c;
+        ema50 = c;
+        ema200 = c;
+      } else {
+        ema21 = c * k21 + ema21 * (1 - k21);
+        ema50 = c * k50 + ema50 * (1 - k50);
+        ema200 = c * k200 + ema200 * (1 - k200);
+      }
+
+      if (i === vwapStartIdx) {
+        cumTypVol = 0;
+        cumVol = 0;
+      }
+      const typ = (bar.high + bar.low + bar.close) / 3;
+      const v = Math.max(bar.volume, 0.00001);
+      cumTypVol += typ * v;
+      cumVol += v;
+      const vwap = cumVol > 0 ? cumTypVol / cumVol : c;
+
+      const rawT = bar.time;
+      const normTime = rawT > 1e11 ? Math.floor(rawT / 1000) : Math.floor(rawT);
+      map.set(normTime, { ema21, ema50, ema200, vwap });
+    }
+    return map;
+  }, [klines]);
+
+  const maSeriesMapRef = useRef(maSeriesMap);
+  maSeriesMapRef.current = maSeriesMap;
+
   // Synchronized 60 FPS Canvas Overlay (Bid/Ask Split VP, Mitigated OBs, 2-Sigma Delta Bubbles & Absorption Rings)
   const drawOverlayCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -259,6 +314,16 @@ export const QuantChart: React.FC<QuantChartProps> = ({
     const isMobile = w < 640;
 
     ctx.clearRect(0, 0, w, h);
+
+    const rootStyles = getComputedStyle(document.documentElement);
+    const isLightMode = document.documentElement.getAttribute('data-theme') === 'light';
+    const cssCyan = rootStyles.getPropertyValue('--chart-cyan').trim() || (isLightMode ? '#0284c7' : '#00f0ff');
+    const cssEmerald = rootStyles.getPropertyValue('--chart-emerald').trim() || (isLightMode ? '#047857' : '#4edea3');
+    const cssCoral = rootStyles.getPropertyValue('--chart-coral').trim() || (isLightMode ? '#b91c1c' : '#ffb4ab');
+    const cssAmber = rootStyles.getPropertyValue('--chart-amber').trim() || (isLightMode ? '#b45309' : '#f59e0b');
+    const cssPurple = rootStyles.getPropertyValue('--chart-purple').trim() || (isLightMode ? '#6d28d9' : '#c084fc');
+    const cssPillBg = rootStyles.getPropertyValue('--chart-pill-bg').trim() || (isLightMode ? 'rgba(255, 255, 255, 0.94)' : 'rgba(11, 14, 20, 0.88)');
+    const cssLabelText = rootStyles.getPropertyValue('--chart-label-text').trim() || (isLightMode ? '#0f172a' : '#ffffff');
 
     const timeScale = chart.timeScale();
 
@@ -294,10 +359,10 @@ export const QuantChart: React.FC<QuantChartProps> = ({
         if (yOrigLow !== null && yOrigHigh !== null) {
           const origTop = Math.min(yOrigLow, yOrigHigh);
           const origHeight = Math.max(Math.abs(yOrigLow - yOrigHigh), 4);
-          ctx.fillStyle = isBull ? 'rgba(78, 222, 163, 0.04)' : 'rgba(255, 180, 171, 0.04)';
+          ctx.fillStyle = isBull ? 'rgba(16, 185, 129, 0.06)' : 'rgba(244, 63, 94, 0.06)';
           ctx.fillRect(startX, origTop, zoneWidth, origHeight);
 
-          ctx.strokeStyle = isBull ? 'rgba(78, 222, 163, 0.28)' : 'rgba(255, 180, 171, 0.28)';
+          ctx.strokeStyle = isBull ? cssEmerald : cssCoral;
           ctx.lineWidth = 1;
           ctx.setLineDash([2, 4]);
           ctx.strokeRect(startX, origTop, zoneWidth, origHeight);
@@ -309,11 +374,11 @@ export const QuantChart: React.FC<QuantChartProps> = ({
       const height = Math.max(Math.abs(yLow - yHigh), 6);
 
       if (isBull) {
-        ctx.fillStyle = isPartial ? 'rgba(78, 222, 163, 0.12)' : 'rgba(78, 222, 163, 0.18)';
-        ctx.strokeStyle = isPartial ? '#34d399' : '#4edea3';
+        ctx.fillStyle = isPartial ? 'rgba(16, 185, 129, 0.13)' : 'rgba(16, 185, 129, 0.18)';
+        ctx.strokeStyle = cssEmerald;
       } else {
-        ctx.fillStyle = isPartial ? 'rgba(255, 180, 171, 0.12)' : 'rgba(255, 180, 171, 0.18)';
-        ctx.strokeStyle = isPartial ? '#fb7185' : '#ffb4ab';
+        ctx.fillStyle = isPartial ? 'rgba(244, 63, 94, 0.13)' : 'rgba(244, 63, 94, 0.18)';
+        ctx.strokeStyle = cssCoral;
       }
 
       ctx.fillRect(startX, top, zoneWidth, height);
@@ -330,7 +395,7 @@ export const QuantChart: React.FC<QuantChartProps> = ({
       // 50% Mean Threshold (Institutional Equilibrium)
       if (yMid !== null) {
         ctx.beginPath();
-        ctx.strokeStyle = isBull ? 'rgba(111, 251, 190, 0.75)' : 'rgba(255, 180, 171, 0.75)';
+        ctx.strokeStyle = isBull ? cssEmerald : cssCoral;
         ctx.lineWidth = 1;
         ctx.setLineDash([2, 3]);
         ctx.moveTo(startX, yMid);
@@ -353,13 +418,18 @@ export const QuantChart: React.FC<QuantChartProps> = ({
       const labelX = Math.max(12, startX + 6);
       const labelY = Math.max(14, top + 11);
 
-      // Subtle dark pill behind label for legibility
+      // High-contrast pill behind label for legibility
       ctx.font = '700 9px "JetBrains Mono", monospace';
       const textWidth = ctx.measureText(labelText).width;
-      ctx.fillStyle = 'rgba(11, 14, 20, 0.78)';
+      ctx.fillStyle = cssPillBg;
       ctx.fillRect(labelX - 3, labelY - 9, textWidth + 6, 12);
+      if (isLightMode) {
+        ctx.strokeStyle = isBull ? cssEmerald : cssCoral;
+        ctx.lineWidth = 0.75;
+        ctx.strokeRect(labelX - 3, labelY - 9, textWidth + 6, 12);
+      }
 
-      ctx.fillStyle = isBull ? '#6ffbbe' : '#ffb4ab';
+      ctx.fillStyle = isBull ? cssEmerald : cssCoral;
       ctx.fillText(labelText, labelX, labelY);
     };
 
@@ -399,7 +469,7 @@ export const QuantChart: React.FC<QuantChartProps> = ({
           ctx.fillStyle = 'rgba(16, 185, 129, 0.85)';
           ctx.fillRect(bidWidth, bTop, askWidth, bHeight);
 
-          ctx.strokeStyle = '#f59e0b';
+          ctx.strokeStyle = cssAmber;
           ctx.lineWidth = 1.5;
           ctx.strokeRect(0.5, bTop, Math.max(2, totalWidth), bHeight);
 
@@ -410,12 +480,12 @@ export const QuantChart: React.FC<QuantChartProps> = ({
             ctx.font = '700 8px "JetBrains Mono", monospace';
             const tagW = ctx.measureText(pocTag).width + 6;
             const tagX = Math.min(w - tagW - 60, totalWidth + 4);
-            ctx.fillStyle = 'rgba(11, 14, 20, 0.88)';
+            ctx.fillStyle = cssPillBg;
             ctx.fillRect(tagX, bTop - 2, tagW, bHeight + 4);
-            ctx.strokeStyle = '#f59e0b';
+            ctx.strokeStyle = cssAmber;
             ctx.lineWidth = 0.8;
             ctx.strokeRect(tagX, bTop - 2, tagW, bHeight + 4);
-            ctx.fillStyle = pocDelta >= 0 ? '#4edea3' : '#ffb4ab';
+            ctx.fillStyle = pocDelta >= 0 ? cssEmerald : cssCoral;
             ctx.fillText(pocTag, tagX + 3, yCoord + 2.5);
           }
         } else if (bucket.isValueArea) {
@@ -440,7 +510,7 @@ export const QuantChart: React.FC<QuantChartProps> = ({
         if (vahY !== null && valY !== null) {
           const topVa = Math.min(vahY, valY);
           const botVa = Math.max(vahY, valY);
-          ctx.strokeStyle = 'rgba(0, 240, 255, 0.65)';
+          ctx.strokeStyle = cssCyan;
           ctx.lineWidth = 2;
           ctx.beginPath();
           ctx.moveTo(1.5, topVa);
@@ -457,11 +527,11 @@ export const QuantChart: React.FC<QuantChartProps> = ({
     if (shouldDrawOptionsOverlay && currentOptions && currentOptions.zeroGammaLevel && currentOptions.zeroGammaLevel > 0) {
       const yZeroGamma = series.priceToCoordinate(currentOptions.zeroGammaLevel);
       if (yZeroGamma !== null && yZeroGamma >= 10 && yZeroGamma <= h - 20) {
-        ctx.fillStyle = 'rgba(0, 240, 255, 0.07)';
+        ctx.fillStyle = isLightMode ? 'rgba(2, 132, 199, 0.08)' : 'rgba(0, 240, 255, 0.07)';
         ctx.fillRect(0, yZeroGamma - 5, w, 10);
 
         ctx.beginPath();
-        ctx.strokeStyle = '#00f0ff';
+        ctx.strokeStyle = cssCyan;
         ctx.lineWidth = 1.25;
         ctx.setLineDash([6, 4]);
         ctx.moveTo(0, yZeroGamma);
@@ -474,9 +544,14 @@ export const QuantChart: React.FC<QuantChartProps> = ({
           ctx.font = '700 8px "JetBrains Mono", monospace';
           const zgW = ctx.measureText(zgLabel).width + 8;
           const zgX = Math.max(120, w * 0.36);
-          ctx.fillStyle = 'rgba(11, 14, 20, 0.85)';
+          ctx.fillStyle = cssPillBg;
           ctx.fillRect(zgX, yZeroGamma - 11, zgW, 11);
-          ctx.fillStyle = '#00f0ff';
+          if (isLightMode) {
+            ctx.strokeStyle = cssCyan;
+            ctx.lineWidth = 0.75;
+            ctx.strokeRect(zgX, yZeroGamma - 11, zgW, 11);
+          }
+          ctx.fillStyle = cssCyan;
           ctx.fillText(zgLabel, zgX + 4, yZeroGamma - 3);
         }
       }
@@ -497,7 +572,7 @@ export const QuantChart: React.FC<QuantChartProps> = ({
         const x = timeScale.timeToCoordinate(timeCoord as any);
         if (x === null || x < 0 || x > w) continue;
 
-        const stats = deltaStatsMapRef.current.get(k.time);
+        const stats = deltaStatsMapRef.current.get(timeCoord);
         const buyVol = k.takerBuyVolume ?? k.volume * 0.5;
         const sellVol = k.takerSellVolume ?? Math.max(0, k.volume - buyVol);
         const netDelta = stats ? stats.netDelta : (k.barDelta !== undefined ? k.barDelta : buyVol - sellVol);
@@ -551,14 +626,14 @@ export const QuantChart: React.FC<QuantChartProps> = ({
         if (netDelta >= 0) {
           ctx.fillStyle = isTwoSigmaAnomaly ? 'rgba(16, 185, 129, 0.32)' : 'rgba(16, 185, 129, 0.20)';
           ctx.fill();
-          ctx.strokeStyle = isTwoSigmaAnomaly ? '#6ffbbe' : '#10b981';
+          ctx.strokeStyle = cssEmerald;
           ctx.lineWidth = isTwoSigmaAnomaly ? 2 : 1.25;
           ctx.setLineDash([]);
           ctx.stroke();
         } else {
           ctx.fillStyle = isTwoSigmaAnomaly ? 'rgba(244, 63, 94, 0.32)' : 'rgba(244, 63, 94, 0.20)';
           ctx.fill();
-          ctx.strokeStyle = isTwoSigmaAnomaly ? '#ffb4ab' : '#f43f5e';
+          ctx.strokeStyle = cssCoral;
           ctx.lineWidth = isTwoSigmaAnomaly ? 2 : 1.25;
           ctx.setLineDash([]);
           ctx.stroke();
@@ -566,7 +641,7 @@ export const QuantChart: React.FC<QuantChartProps> = ({
 
         // Passive Limit Absorption Outer Ring (Amber for Passive Bid Absorption, Cyan for Passive Ask Absorption)
         if (hasAbsorption) {
-          const ringColor = isBullBidAbsorption ? '#f59e0b' : '#00f0ff';
+          const ringColor = isBullBidAbsorption ? cssAmber : cssCyan;
           ctx.beginPath();
           ctx.arc(x, y, r + (isMobile ? 2.5 : 3.5), 0, Math.PI * 2);
           ctx.strokeStyle = ringColor;
@@ -588,7 +663,7 @@ export const QuantChart: React.FC<QuantChartProps> = ({
         if (totalLiqUsd > 0) {
           ctx.font = '700 8px "JetBrains Mono", monospace';
           ctx.textAlign = 'center';
-          ctx.fillStyle = '#f59e0b';
+          ctx.fillStyle = cssAmber;
           ctx.fillText('⚡LIQ', x, y - r - 8);
           ctx.textAlign = 'start';
         }
@@ -598,14 +673,14 @@ export const QuantChart: React.FC<QuantChartProps> = ({
           ctx.font = '700 8px "JetBrains Mono", monospace';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillStyle = '#ffffff';
+          ctx.fillStyle = cssLabelText;
 
           const deltaStr = formatCompactVolume(netDelta);
           ctx.fillText(deltaStr, x, isTwoSigmaAnomaly && !isMobile ? y - 2.5 : y);
 
           if (isTwoSigmaAnomaly && !isMobile) {
             ctx.font = '700 6.5px "JetBrains Mono", monospace';
-            ctx.fillStyle = '#00f0ff';
+            ctx.fillStyle = cssCyan;
             ctx.fillText(`${deltaSigma.toFixed(1)}σ`, x, y + 5.5);
           }
 
@@ -615,11 +690,79 @@ export const QuantChart: React.FC<QuantChartProps> = ({
       }
     }
 
+    // 4b. Draw Stage 03 Live EMA 21, EMA 50, and Session VWAP Curves (When MA layer or Stage 03 is active)
+    if (
+      (currentLayers.ma || activeStrategyTabRef.current === 3) &&
+      currentKlines &&
+      currentKlines.length > 1
+    ) {
+      const visibleRange = timeScale.getVisibleLogicalRange();
+      const fromIdx = visibleRange ? Math.max(0, Math.floor(visibleRange.from)) : 0;
+      const toIdx = visibleRange
+        ? Math.min(currentKlines.length - 1, Math.ceil(visibleRange.to))
+        : currentKlines.length - 1;
+
+      const drawMaCurve = (
+        getter: (pt: { ema21: number; ema50: number; ema200: number; vwap: number }) => number,
+        color: string,
+        lineWidth: number,
+        dashed: boolean,
+        tagLabel: string
+      ) => {
+        ctx.beginPath();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineWidth;
+        ctx.setLineDash(dashed ? [4, 4] : []);
+        let started = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        for (let i = fromIdx; i <= toIdx; i++) {
+          const k = currentKlines[i];
+          if (!k) continue;
+          const normT = k.time > 1e11 ? Math.floor(k.time / 1000) : Math.floor(k.time);
+          const maPt = maSeriesMapRef.current.get(normT);
+          if (!maPt) continue;
+          const x = timeScale.timeToCoordinate(normT as any);
+          const y = series.priceToCoordinate(getter(maPt));
+          if (x === null || y === null || y < 4 || y > h - 16) continue;
+          if (!started) {
+            ctx.moveTo(x, y);
+            started = true;
+          } else {
+            ctx.lineTo(x, y);
+          }
+          lastX = x;
+          lastY = y;
+        }
+        if (started) {
+          ctx.stroke();
+          ctx.setLineDash([]);
+          if (lastX > 36) {
+            ctx.font = '700 8px "JetBrains Mono", monospace';
+            const tagW = ctx.measureText(tagLabel).width + 6;
+            const tagX = Math.min(w - tagW - (isMobile ? 48 : 56), lastX + 5);
+            ctx.fillStyle = cssPillBg;
+            ctx.fillRect(tagX, lastY - 6, tagW, 11);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 0.85;
+            ctx.strokeRect(tagX, lastY - 6, tagW, 11);
+            ctx.fillStyle = color;
+            ctx.fillText(tagLabel, tagX + 3, lastY + 2);
+          }
+        }
+      };
+
+      drawMaCurve((p) => p.ema50, cssAmber, 1.75, false, 'EMA50');
+      drawMaCurve((p) => p.ema21, cssCyan, 1.75, false, 'EMA21');
+      drawMaCurve((p) => p.vwap, cssPurple, 1.5, true, 'VWAP');
+    }
+
     // 5. Draw Visual Long/Short Risk-Reward Projection Box (Only if rrBox is active)
     const setup = setupBoxRef.current;
     if (
       currentLayers.rrBox &&
-      setup.showSetupOnChart &&
+      (setup.showSetupOnChart || activeStrategyTabRef.current === 6) &&
       setup.entryPrice > 0 &&
       setup.stopLoss > 0 &&
       setup.tp1Price > 0
@@ -643,7 +786,7 @@ export const QuantChart: React.FC<QuantChartProps> = ({
         ctx.fillRect(boxX, tpTop, boxWidth, tpHeight);
 
         ctx.beginPath();
-        ctx.strokeStyle = '#10b981';
+        ctx.strokeStyle = cssEmerald;
         ctx.lineWidth = 1.5;
         ctx.setLineDash([]);
         const targetBorderY = clampedTp1 < clampedEntry ? tpTop : tpTop + tpHeight;
@@ -658,7 +801,7 @@ export const QuantChart: React.FC<QuantChartProps> = ({
         ctx.fillRect(boxX, stopTop, boxWidth, stopHeight);
 
         ctx.beginPath();
-        ctx.strokeStyle = '#f43f5e';
+        ctx.strokeStyle = cssCoral;
         ctx.lineWidth = 1.5;
         ctx.setLineDash([]);
         const stopBorderY = clampedStop > clampedEntry ? stopTop + stopHeight : stopTop;
@@ -668,7 +811,7 @@ export const QuantChart: React.FC<QuantChartProps> = ({
 
         // Entry Line
         ctx.beginPath();
-        ctx.strokeStyle = '#00f0ff';
+        ctx.strokeStyle = cssCyan;
         ctx.lineWidth = 1.5;
         ctx.setLineDash([5, 4]);
         ctx.moveTo(boxX, clampedEntry);
@@ -680,21 +823,21 @@ export const QuantChart: React.FC<QuantChartProps> = ({
         ctx.font = '700 9px "JetBrains Mono", monospace';
         ctx.textAlign = 'left';
 
-        ctx.fillStyle = '#4edea3';
+        ctx.fillStyle = cssEmerald;
         ctx.fillText(
           `🎯 TP1: $${formatPrice(setup.tp1Price)}`,
           boxX + 5,
           clampedTp1 < clampedEntry ? tpTop + 10 : tpTop + tpHeight - 4
         );
 
-        ctx.fillStyle = '#00f0ff';
+        ctx.fillStyle = cssCyan;
         ctx.fillText(
           `⚡ ENTRY: $${formatPrice(setup.entryPrice)}`,
           boxX + 5,
           clampedEntry - 4
         );
 
-        ctx.fillStyle = '#ffb4ab';
+        ctx.fillStyle = cssCoral;
         ctx.fillText(
           `🛑 SL: $${formatPrice(setup.stopLoss)}`,
           boxX + 5,
@@ -708,26 +851,26 @@ export const QuantChart: React.FC<QuantChartProps> = ({
     if (hovered && hovered.price > 0) {
       const yHover = series.priceToCoordinate(hovered.price);
       if (yHover !== null && yHover >= 0 && yHover <= h) {
-        ctx.fillStyle = 'rgba(0, 240, 255, 0.14)';
+        ctx.fillStyle = isLightMode ? 'rgba(2, 132, 199, 0.14)' : 'rgba(0, 240, 255, 0.14)';
         ctx.fillRect(0, yHover - 8, w, 16);
 
         ctx.beginPath();
-        ctx.strokeStyle = '#00f0ff';
+        ctx.strokeStyle = cssCyan;
         ctx.lineWidth = 2;
         ctx.setLineDash([]);
         ctx.moveTo(0, yHover);
         ctx.lineTo(w, yHover);
         ctx.stroke();
 
-        ctx.fillStyle = '#0b0e14';
+        ctx.fillStyle = cssPillBg;
         const spotWidth = isMobile ? 180 : 230;
         ctx.fillRect(w * 0.25, Math.max(4, yHover - 18), spotWidth, 16);
-        ctx.strokeStyle = '#00f0ff';
+        ctx.strokeStyle = cssCyan;
         ctx.lineWidth = 1;
         ctx.strokeRect(w * 0.25, Math.max(4, yHover - 18), spotWidth, 16);
 
         ctx.font = '700 9px "JetBrains Mono", monospace';
-        ctx.fillStyle = '#00f0ff';
+        ctx.fillStyle = cssCyan;
         ctx.fillText(
           `✦ SPOTLIGHT: ${hovered.label} ($${formatPrice(hovered.price)})`,
           w * 0.25 + 6,
@@ -803,32 +946,40 @@ export const QuantChart: React.FC<QuantChartProps> = ({
       } catch {}
     };
 
+    const rootStyles = getComputedStyle(document.documentElement);
+    const isLightMode = document.documentElement.getAttribute('data-theme') === 'light';
+    const cssCyan = rootStyles.getPropertyValue('--chart-cyan').trim() || (isLightMode ? '#0284c7' : '#00f0ff');
+    const cssEmerald = rootStyles.getPropertyValue('--chart-emerald').trim() || (isLightMode ? '#047857' : '#4edea3');
+    const cssCoral = rootStyles.getPropertyValue('--chart-coral').trim() || (isLightMode ? '#b91c1c' : '#ffb4ab');
+    const cssAmber = rootStyles.getPropertyValue('--chart-amber').trim() || (isLightMode ? '#b45309' : '#f59e0b');
+    const cssPurple = rootStyles.getPropertyValue('--chart-purple').trim() || (isLightMode ? '#6d28d9' : '#c084fc');
+
     // 1. Volume Profile Price Lines (Prioritize POC first, then VAH & VAL)
     if (currentLayers.vp && currentVp) {
       if (currentVp.poc) {
-        addLine(currentVp.poc, `POC ${formatPriceShort(currentVp.poc)}`, '#f59e0b', LineStyle.Solid, 2);
+        addLine(currentVp.poc, `POC ${formatPriceShort(currentVp.poc)}`, cssAmber, LineStyle.Solid, 2);
       }
       if (currentVp.vah) {
-        addLine(currentVp.vah, `VAH ${formatPriceShort(currentVp.vah)}`, '#00dbe9', LineStyle.Dashed);
+        addLine(currentVp.vah, `VAH ${formatPriceShort(currentVp.vah)}`, cssCyan, LineStyle.Dashed);
       }
       if (currentVp.val) {
-        addLine(currentVp.val, `VAL ${formatPriceShort(currentVp.val)}`, '#00dbe9', LineStyle.Dashed);
+        addLine(currentVp.val, `VAL ${formatPriceShort(currentVp.val)}`, cssCyan, LineStyle.Dashed);
       }
     }
 
     // 2. S/R & Liquidity Price Lines (Prioritize S/R pivots then Resting Depth Walls)
     if (currentLayers.sr && currentLiquidity) {
       if (currentLiquidity.srHigh > 0) {
-        addLine(currentLiquidity.srHigh, `RES ${formatPriceShort(currentLiquidity.srHigh)}`, '#ffb4ab', LineStyle.Dotted, 1);
+        addLine(currentLiquidity.srHigh, `RES ${formatPriceShort(currentLiquidity.srHigh)}`, cssCoral, LineStyle.Dotted, 1);
       }
       if (currentLiquidity.srLow > 0) {
-        addLine(currentLiquidity.srLow, `SUP ${formatPriceShort(currentLiquidity.srLow)}`, '#4edea3', LineStyle.Dotted, 1);
+        addLine(currentLiquidity.srLow, `SUP ${formatPriceShort(currentLiquidity.srLow)}`, cssEmerald, LineStyle.Dotted, 1);
       }
       if (currentLiquidity.askLiquidityPrice > 0) {
-        addLine(currentLiquidity.askLiquidityPrice, `ASK ${formatPriceShort(currentLiquidity.askLiquidityPrice)}`, '#ffb4ab', LineStyle.Dashed, 1);
+        addLine(currentLiquidity.askLiquidityPrice, `ASK ${formatPriceShort(currentLiquidity.askLiquidityPrice)}`, cssCoral, LineStyle.Dashed, 1);
       }
       if (currentLiquidity.bidLiquidityPrice > 0) {
-        addLine(currentLiquidity.bidLiquidityPrice, `BID ${formatPriceShort(currentLiquidity.bidLiquidityPrice)}`, '#4edea3', LineStyle.Dashed, 1);
+        addLine(currentLiquidity.bidLiquidityPrice, `BID ${formatPriceShort(currentLiquidity.bidLiquidityPrice)}`, cssEmerald, LineStyle.Dashed, 1);
       }
     }
 
@@ -838,16 +989,16 @@ export const QuantChart: React.FC<QuantChartProps> = ({
       (currentOptions?.isDeribitNative !== false || manualOptionsOverrideRef.current);
     if (shouldDrawOptionsLines && currentOptions) {
       if (currentOptions.zeroGammaLevel && currentOptions.zeroGammaLevel > 0) {
-        addLine(currentOptions.zeroGammaLevel, `0-Γ ${formatPriceShort(currentOptions.zeroGammaLevel)}`, '#00f0ff', LineStyle.Dashed, 2);
+        addLine(currentOptions.zeroGammaLevel, `0-Γ ${formatPriceShort(currentOptions.zeroGammaLevel)}`, cssCyan, LineStyle.Dashed, 2);
       }
       if (currentOptions.callWall) {
-        addLine(currentOptions.callWall, `CW ${formatPriceShort(currentOptions.callWall)}`, '#842bd2', LineStyle.Dashed);
+        addLine(currentOptions.callWall, `CW ${formatPriceShort(currentOptions.callWall)}`, cssPurple, LineStyle.Dashed);
       }
       if (currentOptions.putWall) {
-        addLine(currentOptions.putWall, `PW ${formatPriceShort(currentOptions.putWall)}`, '#4edea3', LineStyle.Dashed);
+        addLine(currentOptions.putWall, `PW ${formatPriceShort(currentOptions.putWall)}`, cssEmerald, LineStyle.Dashed);
       }
       if (currentOptions.maxPain) {
-        addLine(currentOptions.maxPain, `MP ${formatPriceShort(currentOptions.maxPain)}`, '#ddb7ff', LineStyle.Dotted);
+        addLine(currentOptions.maxPain, `MP ${formatPriceShort(currentOptions.maxPain)}`, cssPurple, LineStyle.Dotted);
       }
     }
   }, []);
@@ -857,10 +1008,6 @@ export const QuantChart: React.FC<QuantChartProps> = ({
     if (!controlledLayers) return;
     layersRef.current = controlledLayers;
     setInternalLayers(controlledLayers);
-    if (controlledLayers.options) {
-      manualOptionsOverrideRef.current = true;
-      setManualOptionsOverride(true);
-    }
     syncPriceLines();
     requestAnimationFrame(drawOverlayCanvas);
   }, [controlledLayers, syncPriceLines, drawOverlayCanvas]);
@@ -872,24 +1019,22 @@ export const QuantChart: React.FC<QuantChartProps> = ({
     let targetLayers: ChartLayers = { ...DEFAULT_CHART_LAYERS };
     if (activeStrategyTab === 1) {
       // Stage 01 (Price & S/R): Pure candlesticks + clean Support/Resistance lines
-      targetLayers = { vp: false, ob: false, sr: true, bubbles: false, options: false, rrBox: false };
+      targetLayers = { vp: false, ob: false, sr: true, bubbles: false, options: false, rrBox: false, ma: false };
     } else if (activeStrategyTab === 2) {
       // Stage 02 (Volume & Value): Fades in Bid/Ask Volume Profile (POC, VAH, VAL) + S/R
-      targetLayers = { vp: true, ob: false, sr: true, bubbles: false, options: false, rrBox: false };
+      targetLayers = { vp: true, ob: false, sr: true, bubbles: false, options: false, rrBox: false, ma: false };
     } else if (activeStrategyTab === 3) {
-      // Stage 03 (Trend & MA): Clean auction & trend structure
-      targetLayers = { vp: true, ob: false, sr: true, bubbles: false, options: false, rrBox: false };
+      // Stage 03 (Trend & MA): Live EMA Ribbon (21/50/200) & Session VWAP curves + VP
+      targetLayers = { vp: true, ob: false, sr: false, bubbles: false, options: false, rrBox: false, ma: true };
     } else if (activeStrategyTab === 4) {
       // Stage 04 (Orderflow & SMC): Mitigated Order Blocks (50% MT) + Delta Bubbles / ABS Rings
-      targetLayers = { vp: true, ob: true, sr: false, bubbles: true, options: false, rrBox: false };
+      targetLayers = { vp: true, ob: true, sr: false, bubbles: true, options: false, rrBox: false, ma: false };
     } else if (activeStrategyTab === 5) {
       // Stage 05 (Quant & Options): Deribit Call Wall, Put Wall, 0-Gamma Flip, Max Pain
-      targetLayers = { vp: true, ob: false, sr: false, bubbles: false, options: true, rrBox: false };
-      manualOptionsOverrideRef.current = true;
-      setManualOptionsOverride(true);
+      targetLayers = { vp: true, ob: false, sr: false, bubbles: false, options: true, rrBox: false, ma: false };
     } else if (activeStrategyTab === 6) {
       // Stage 06 (Execute & Size): Visual R:R Projection Box (Entry, Stop, TP1) + VP + OB
-      targetLayers = { vp: true, ob: true, sr: false, bubbles: false, options: false, rrBox: true };
+      targetLayers = { vp: true, ob: true, sr: false, bubbles: false, options: false, rrBox: true, ma: false };
     }
 
     layersRef.current = targetLayers;
@@ -922,32 +1067,48 @@ export const QuantChart: React.FC<QuantChartProps> = ({
     requestAnimationFrame(drawOverlayCanvas);
   };
 
-  // Initialize Lightweight Charts
+  // Initialize Lightweight Charts & Dynamic CSS Variable Theme Synchronization
   useEffect(() => {
     if (!containerRef.current) return;
 
+    const getChartThemeVars = () => {
+      const styles = getComputedStyle(document.documentElement);
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      return {
+        bg: styles.getPropertyValue('--chart-bg').trim() || (isLight ? '#ffffff' : '#0b0e14'),
+        text: styles.getPropertyValue('--chart-text').trim() || (isLight ? '#334155' : '#849495'),
+        grid: styles.getPropertyValue('--chart-grid').trim() || (isLight ? '#e2e8f0' : '#191c22'),
+        border: styles.getPropertyValue('--chart-border').trim() || (isLight ? '#cbd5e1' : '#1e2433'),
+        crosshair: styles.getPropertyValue('--chart-crosshair').trim() || (isLight ? '#0284c7' : '#00f0ff'),
+        up: styles.getPropertyValue('--chart-up').trim() || (isLight ? '#059669' : '#4edea3'),
+        down: styles.getPropertyValue('--chart-down').trim() || (isLight ? '#dc2626' : '#ffb4ab'),
+      };
+    };
+
+    const initialTheme = getChartThemeVars();
+
     const chart = createChart(containerRef.current, {
       layout: {
-        background: { type: ColorType.Solid, color: '#0b0e14' },
-        textColor: '#849495',
+        background: { type: ColorType.Solid, color: initialTheme.bg },
+        textColor: initialTheme.text,
         fontFamily: "'JetBrains Mono', monospace",
         fontSize: 10,
       },
       grid: {
-        vertLines: { color: '#191c22' },
-        horzLines: { color: '#191c22' },
+        vertLines: { color: initialTheme.grid },
+        horzLines: { color: initialTheme.grid },
       },
       crosshair: {
         mode: CrosshairMode.Normal,
-        vertLine: { color: '#00f0ff', width: 1, style: LineStyle.Dashed },
-        horzLine: { color: '#00f0ff', width: 1, style: LineStyle.Dashed },
+        vertLine: { color: initialTheme.crosshair, width: 1, style: LineStyle.Dashed },
+        horzLine: { color: initialTheme.crosshair, width: 1, style: LineStyle.Dashed },
       },
       rightPriceScale: {
-        borderColor: '#1e2433',
+        borderColor: initialTheme.border,
         scaleMargins: { top: 0.1, bottom: 0.16 },
       },
       timeScale: {
-        borderColor: '#1e2433',
+        borderColor: initialTheme.border,
         timeVisible: true,
         secondsVisible: false,
       },
@@ -966,11 +1127,11 @@ export const QuantChart: React.FC<QuantChartProps> = ({
     const initialPrecision = getPricePrecision(initialSamplePrice);
 
     const candleSeries = chart.addSeries(CandlestickSeries, {
-      upColor: '#4edea3',
-      downColor: '#ffb4ab',
+      upColor: initialTheme.up,
+      downColor: initialTheme.down,
       borderVisible: false,
-      wickUpColor: '#4edea3',
-      wickDownColor: '#ffb4ab',
+      wickUpColor: initialTheme.up,
+      wickDownColor: initialTheme.down,
       priceFormat: {
         type: 'price',
         precision: initialPrecision.precision,
@@ -980,7 +1141,7 @@ export const QuantChart: React.FC<QuantChartProps> = ({
 
     // Pin volumeSeries strictly to bottom 12% with dedicated overlay scale 'volume_scale'
     const volumeSeries = chart.addSeries(HistogramSeries, {
-      color: '#4edea3',
+      color: initialTheme.up,
       priceFormat: { type: 'volume' },
       priceScaleId: 'volume_scale',
       lastValueVisible: false,
@@ -998,6 +1159,47 @@ export const QuantChart: React.FC<QuantChartProps> = ({
     chartRef.current = chart;
     candleSeriesRef.current = candleSeries;
     volumeSeriesRef.current = volumeSeries;
+
+    const applyDynamicChartTheme = () => {
+      if (!chartRef.current || !candleSeriesRef.current) return;
+      const t = getChartThemeVars();
+      chartRef.current.applyOptions({
+        layout: {
+          background: { type: ColorType.Solid, color: t.bg },
+          textColor: t.text,
+        },
+        grid: {
+          vertLines: { color: t.grid },
+          horzLines: { color: t.grid },
+        },
+        crosshair: {
+          vertLine: { color: t.crosshair, width: 1, style: LineStyle.Dashed },
+          horzLine: { color: t.crosshair, width: 1, style: LineStyle.Dashed },
+        },
+        rightPriceScale: { borderColor: t.border },
+        timeScale: { borderColor: t.border },
+      });
+      candleSeriesRef.current.applyOptions({
+        upColor: t.up,
+        downColor: t.down,
+        wickUpColor: t.up,
+        wickDownColor: t.down,
+      });
+      syncPriceLines();
+      requestAnimationFrame(drawOverlayCanvas);
+    };
+
+    window.addEventListener('inferno:theme-change', applyDynamicChartTheme);
+    let themeObserver: MutationObserver | null = null;
+    if (typeof MutationObserver !== 'undefined') {
+      themeObserver = new MutationObserver(() => {
+        applyDynamicChartTheme();
+      });
+      themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['data-theme'],
+      });
+    }
 
     // Range Change Listener
     const handleRangeChange = (range: any) => {
@@ -1048,6 +1250,10 @@ export const QuantChart: React.FC<QuantChartProps> = ({
     }
 
     return () => {
+      window.removeEventListener('inferno:theme-change', applyDynamicChartTheme);
+      if (themeObserver) {
+        themeObserver.disconnect();
+      }
       window.removeEventListener('resize', handleResize);
       if (resizeObserver) {
         resizeObserver.disconnect();
@@ -1489,7 +1695,21 @@ export const QuantChart: React.FC<QuantChartProps> = ({
             OPTIONS + 0Γ
           </button>
 
-          {/* 6. Risk-Reward Box */}
+          {/* 6. EMA Ribbon & Session VWAP */}
+          <button
+            type="button"
+            onClick={() => handleToggleLayer('ma')}
+            className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border transition-all cursor-pointer ${
+              layers.ma
+                ? 'bg-[#f59e0b]/20 text-[#fcd34d] border-[#f59e0b]/50 shadow-[0_0_8px_rgba(245,158,11,0.2)]'
+                : 'bg-[#191c22] text-[#849495] border-[#272a31] hover:text-[#e1e2eb]'
+            }`}
+            title="Toggle EMA Ribbon (21/50/200) & Session VWAP curves"
+          >
+            EMA + VWAP
+          </button>
+
+          {/* 7. Risk-Reward Box */}
           <button
             type="button"
             onClick={() => handleToggleLayer('rrBox')}

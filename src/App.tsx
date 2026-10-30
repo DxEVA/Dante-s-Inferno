@@ -269,6 +269,7 @@ export default function App() {
   const [riskUsdt, setRiskUsdt] = useState<number>(50);
   const [entryPrice, setEntryPrice] = useState<number>(88525);
   const [stopLoss, setStopLoss] = useState<number>(87450);
+  const [customTargets, setCustomTargets] = useState<{ tp1?: number; tp2?: number }>({});
   const [calcResult, setCalcResult] = useState<ExecutionCalculation>(() =>
     calculateExecution(50, 88525, 87450)
   );
@@ -413,11 +414,14 @@ export default function App() {
 
   const handleLoadSetup = useCallback(
     (entry: number, stop: number, tp1: number, tp2: number) => {
+      setCustomTargets({ tp1, tp2 });
       setEntryPrice(entry);
       setStopLoss(stop);
+      setShowSetupOnChart(true);
       const newCalc = calculateExecution(riskUsdt, entry, stop, tp1, tp2);
       setCalcResult(newCalc);
-      showToast(`SETUP LOADED: ENTRY $${entry} • STOP $${stop}`);
+      setActiveStrategyTab(6);
+      showToast(`SETUP LOADED INTO STAGE 06 SIZER: ENTRY $${entry} • STOP $${stop}`);
     },
     [riskUsdt, showToast]
   );
@@ -441,9 +445,15 @@ export default function App() {
 
   // Recalculate execution helper whenever inputs change
   useEffect(() => {
-    const res = calculateExecution(riskUsdt, entryPrice, stopLoss);
+    const res = calculateExecution(
+      riskUsdt,
+      entryPrice,
+      stopLoss,
+      customTargets.tp1,
+      customTargets.tp2
+    );
     setCalcResult(res);
-  }, [riskUsdt, entryPrice, stopLoss]);
+  }, [riskUsdt, entryPrice, stopLoss, customTargets]);
 
   // Load all Binance USDT perpetual pairs in background for full catalog search
   useEffect(() => {
@@ -828,8 +838,9 @@ export default function App() {
     setViewMode('terminal');
 
     // Pre-populate execution calculator with sensible offsets for the selected coin
-    const estEntry = Math.round(pair.price * 0.99 * 100) / 100;
-    const estStop = Math.round(pair.price * 0.978 * 100) / 100;
+    const estEntry = Number((pair.price * 0.99).toPrecision(5));
+    const estStop = Number((pair.price * 0.978).toPrecision(5));
+    setCustomTargets({});
     setEntryPrice(estEntry);
     setStopLoss(estStop);
     showToast(`LAUNCHING TERMINAL: ${pair.symbol}`);
@@ -849,8 +860,9 @@ export default function App() {
     setSearchQuery('');
 
     // Pre-populate execution calculator with sensible offsets for the selected coin
-    const estEntry = Math.round(pair.price * 0.99 * 100) / 100;
-    const estStop = Math.round(pair.price * 0.978 * 100) / 100;
+    const estEntry = Number((pair.price * 0.99).toPrecision(5));
+    const estStop = Number((pair.price * 0.978).toPrecision(5));
+    setCustomTargets({});
     setEntryPrice(estEntry);
     setStopLoss(estStop);
     showToast(`ACTIVE ASSET: ${pair.symbol}`);
@@ -1248,13 +1260,23 @@ export default function App() {
                   calcResult={calcResult}
                   onRiskChange={(r) => {
                     setRiskUsdt(r);
-                    setCalcResult(calculateExecution(r, entryPrice, stopLoss));
+                    setCalcResult(
+                      calculateExecution(
+                        r,
+                        entryPrice,
+                        stopLoss,
+                        customTargets.tp1,
+                        customTargets.tp2
+                      )
+                    );
                   }}
                   onEntryChange={(e) => {
+                    setCustomTargets({});
                     setEntryPrice(e);
                     setCalcResult(calculateExecution(riskUsdt, e, stopLoss));
                   }}
                   onStopChange={(s) => {
+                    setCustomTargets({});
                     setStopLoss(s);
                     setCalcResult(calculateExecution(riskUsdt, entryPrice, s));
                   }}

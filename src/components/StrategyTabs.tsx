@@ -288,25 +288,55 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
   const [filterOnlyKeyLevels, setFilterOnlyKeyLevels] = useState<boolean>(false);
   const [selectedSetupLensId, setSelectedSetupLensId] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [, setAcademyProgress] = useState<AcademyProgressState>(() => loadAcademyProgress());
-  const [openLearnStages, setOpenLearnStages] = useState<Record<number, boolean>>({});
+  const [openLearnStages, setOpenLearnStages] = useState<Record<number, boolean>>({
+    1: experienceMode === 'rookie',
+  });
+  const [isLight, setIsLight] = useState<boolean>(
+    () => typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light'
+  );
+
+  useEffect(() => {
+    const syncTheme = () => {
+      setIsLight(document.documentElement.getAttribute('data-theme') === 'light');
+    };
+    window.addEventListener('inferno:theme-change', syncTheme);
+    return () => window.removeEventListener('inferno:theme-change', syncTheme);
+  }, []);
+
+  const getReadableStatusColor = (dotHex: string) => {
+    if (!isLight) return dotHex;
+    if (dotHex === '#4edea3') return '#047857';
+    if (dotHex === '#f59e0b') return '#b45309';
+    if (dotHex === '#ffb4ab') return '#b91c1c';
+    return '#0284c7';
+  };
 
   const symbol = activeSymbol || (baseAsset ? `${baseAsset}USDT` : 'BTCUSDT');
+
+  const stageToLensMap: Record<number, 1 | 2 | 3 | 4 | 5> = {
+    1: 1,
+    2: 3,
+    3: 2,
+    4: 4,
+    5: 5,
+  };
 
   const handleStageSelect = (stageId: StageId) => {
     setInternalStage(stageId);
     onTabChange?.(stageId);
     if (stageId <= 5) {
-      // Map stage 1..5 to corresponding lensSetup id
-      const lensMap: Record<number, 1 | 2 | 3 | 4 | 5> = {
-        1: 1,
-        2: 3,
-        3: 2,
-        4: 4,
-        5: 5,
-      };
-      setSelectedSetupLensId(lensMap[stageId] || 1);
+      setSelectedSetupLensId(stageToLensMap[stageId] || 1);
     }
   };
+
+  useEffect(() => {
+    if (controlledActiveTab !== undefined) {
+      setInternalStage(controlledActiveTab);
+      if (controlledActiveTab <= 5) {
+        setSelectedSetupLensId(stageToLensMap[controlledActiveTab] || 1);
+      }
+    }
+  }, [controlledActiveTab]);
 
   // Sync external deck requests (from Mobile bottom nav or TrafficLightBanner X-Ray button)
   useEffect(() => {
@@ -657,8 +687,16 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
   ) => {
     const clampedPct = Math.max(4, Math.min(96, pct));
     return (
-      <div className="flex flex-col gap-1 pt-2 mt-1 border-t border-[#1e2636]/80">
-        <div className="relative w-full h-1.5 bg-[#090c12] border border-[#1e2636] overflow-hidden">
+      <div
+        className={`flex flex-col gap-1 pt-2 mt-1 border-t ${
+          isLight ? 'border-[#cbd5e1]' : 'border-[#1e2636]/80'
+        }`}
+      >
+        <div
+          className={`relative w-full h-1.5 border overflow-hidden ${
+            isLight ? 'bg-[#e2e8f0] border-[#cbd5e1]' : 'bg-[#090c12] border-[#1e2636]'
+          }`}
+        >
           <div
             className="absolute inset-y-0 left-0 opacity-25"
             style={{
@@ -674,9 +712,15 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
             }}
           />
         </div>
-        <div className="flex items-center justify-between font-mono text-[8.5px] text-[#849495] tabular-nums">
+        <div
+          className={`flex items-center justify-between font-mono text-[8.5px] tabular-nums ${
+            isLight ? 'text-[#475569]' : 'text-[#849495]'
+          }`}
+        >
           <span>{leftLabel}</span>
-          <span className="text-[#b9cacb] font-semibold">{centerLabel}</span>
+          <span className={`font-semibold ${isLight ? 'text-[#0f172a]' : 'text-[#b9cacb]'}`}>
+            {centerLabel}
+          </span>
           <span>{rightLabel}</span>
         </div>
       </div>
@@ -688,9 +732,15 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
     const evalData = stageEvaluations[stageDef.id as 1 | 2 | 3 | 4 | 5];
     const borderAccent =
       evalData.bias === 'BULLISH'
-        ? 'border-l-[#4edea3]'
+        ? isLight
+          ? 'border-l-[#059669]'
+          : 'border-l-[#4edea3]'
         : evalData.bias === 'BEARISH'
-        ? 'border-l-[#ffb4ab]'
+        ? isLight
+          ? 'border-l-[#dc2626]'
+          : 'border-l-[#ffb4ab]'
+        : isLight
+        ? 'border-l-[#0284c7]'
         : 'border-l-[#00f0ff]';
 
     return (
@@ -701,14 +751,28 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="flex flex-col gap-1 min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2 py-0.5 bg-[#0b0e14] border border-[#00f0ff]/40 font-mono text-[10px] font-bold text-[#00f0ff] tracking-wider">
+              <span
+                className={`px-2 py-0.5 border font-mono text-[10px] font-bold tracking-wider ${
+                  isLight
+                    ? 'bg-[#ffffff] border-[#0284c7]/40 text-[#0284c7]'
+                    : 'bg-[#0b0e14] border-[#00f0ff]/40 text-[#00f0ff]'
+                }`}
+              >
                 {stageDef.fullTitle}
               </span>
-              <span className="font-mono text-[10px] text-[#849495] uppercase">
+              <span
+                className={`font-mono text-[10px] uppercase ${
+                  isLight ? 'text-[#475569]' : 'text-[#849495]'
+                }`}
+              >
                 {stageDef.subtitle}
               </span>
             </div>
-            <h3 className="font-sans text-[13px] sm:text-[14px] font-semibold text-[#e1e2eb] leading-snug pt-0.5">
+            <h3
+              className={`font-sans text-[13px] sm:text-[14px] font-semibold leading-snug pt-0.5 ${
+                isLight ? 'text-[#0f172a]' : 'text-[#e1e2eb]'
+              }`}
+            >
               “{stageDef.question}”
             </h3>
           </div>
@@ -718,15 +782,21 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
             <div
               className={`px-2.5 py-1.5 border font-mono text-[11px] font-bold tabular-nums flex items-center gap-2 ${
                 evalData.bias === 'BULLISH'
-                  ? 'bg-[#4edea3]/10 text-[#4edea3] border-[#4edea3]/40'
+                  ? isLight
+                    ? 'bg-[#059669]/10 text-[#047857] border-[#059669]/40'
+                    : 'bg-[#4edea3]/10 text-[#4edea3] border-[#4edea3]/40'
                   : evalData.bias === 'BEARISH'
-                  ? 'bg-[#ffb4ab]/10 text-[#ffb4ab] border-[#ffb4ab]/40'
+                  ? isLight
+                    ? 'bg-[#dc2626]/10 text-[#b91c1c] border-[#dc2626]/40'
+                    : 'bg-[#ffb4ab]/10 text-[#ffb4ab] border-[#ffb4ab]/40'
+                  : isLight
+                  ? 'bg-[#d97706]/10 text-[#b45309] border-[#d97706]/40'
                   : 'bg-[#f59e0b]/10 text-[#fcd34d] border-[#f59e0b]/40'
               }`}
             >
               <span
                 className="w-2 h-2 rounded-full shrink-0"
-                style={{ backgroundColor: evalData.dotColor }}
+                style={{ backgroundColor: getReadableStatusColor(evalData.dotColor) }}
               />
               <span>
                 <ScrambleValue text={`${evalData.score}%`} /> {evalData.bias} ALIGNMENT
@@ -736,9 +806,23 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
         </div>
 
         {/* 1-Sentence Plain-English Takeaway */}
-        <div className="p-3 bg-[#090c12] border border-[#1e2636] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <p className="font-sans text-[12px] text-[#dbfcff] leading-relaxed flex-1">
-            <strong className="text-[#00f0ff] font-mono uppercase text-[10px] mr-1.5">
+        <div
+          className={`p-3 border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+            isLight
+              ? 'bg-[#ffffff] border-[#cbd5e1]'
+              : 'bg-[#090c12] border-[#1e2636]'
+          }`}
+        >
+          <p
+            className={`font-sans text-[12px] leading-relaxed flex-1 ${
+              isLight ? 'text-[#0f172a]' : 'text-[#dbfcff]'
+            }`}
+          >
+            <strong
+              className={`font-mono uppercase text-[10px] mr-1.5 ${
+                isLight ? 'text-[#0284c7]' : 'text-[#00f0ff]'
+              }`}
+            >
               STAGE {stageDef.stepCode} VERDICT:
             </strong>
             {evalData.takeaway}
@@ -757,7 +841,11 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
               }
               className={`px-2.5 py-1.5 border font-bold uppercase transition-colors cursor-pointer ${
                 isPriceTracked(evalData.setup.suggestedEntry)
-                  ? 'bg-[#00f0ff]/20 text-[#00f0ff] border-[#00f0ff]'
+                  ? isLight
+                    ? 'bg-[#0284c7]/15 text-[#0284c7] border-[#0284c7]'
+                    : 'bg-[#00f0ff]/20 text-[#00f0ff] border-[#00f0ff]'
+                  : isLight
+                  ? 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#1e293b] border-[#cbd5e1]'
                   : 'bg-[#141821] hover:bg-[#191c22] text-[#b9cacb] border-[#1e2636]'
               }`}
             >
@@ -768,14 +856,22 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
             <button
               type="button"
               onClick={() => {
+                if (stageDef.id <= 5) {
+                  setSelectedSetupLensId(stageToLensMap[stageDef.id] || 1);
+                }
                 onLoadSetup(
                   evalData.setup.suggestedEntry,
                   evalData.setup.invalidationPrice,
                   evalData.setup.target1Price,
                   evalData.setup.target2Price
                 );
+                handleStageSelect(6);
               }}
-              className="px-2.5 py-1.5 bg-[#00f0ff]/15 hover:bg-[#00f0ff]/25 text-[#00f0ff] border border-[#00f0ff]/40 font-bold uppercase transition-colors cursor-pointer"
+              className={`px-2.5 py-1.5 border font-bold uppercase transition-colors cursor-pointer ${
+                isLight
+                  ? 'bg-[#0284c7]/15 hover:bg-[#0284c7]/25 text-[#0284c7] border-[#0284c7]/40'
+                  : 'bg-[#00f0ff]/15 hover:bg-[#00f0ff]/25 text-[#00f0ff] border-[#00f0ff]/40'
+              }`}
               title="Load this stage's entry, stop loss, and targets into the Execution Sizer"
             >
               ⚡ LOAD SETUP
@@ -2061,10 +2157,20 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
         <div className="cyber-panel cyber-scan-active border-l-2 border-l-[#00f0ff] p-4 flex flex-col gap-3">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 bg-[#0b0e14] border border-[#00f0ff]/40 font-mono text-[10px] font-bold text-[#00f0ff]">
+              <span
+                className={`px-2 py-0.5 border font-mono text-[10px] font-bold ${
+                  isLight
+                    ? 'bg-[#ffffff] border-[#0284c7]/40 text-[#0284c7]'
+                    : 'bg-[#0b0e14] border-[#00f0ff]/40 text-[#00f0ff]'
+                }`}
+              >
                 STAGE 06 // FINAL FUNNEL SCORECARD &amp; EXECUTION
               </span>
-              <span className="font-mono text-[11px] font-bold text-[#dbfcff]">
+              <span
+                className={`font-mono text-[11px] font-bold ${
+                  isLight ? 'text-[#0f172a]' : 'text-[#dbfcff]'
+                }`}
+              >
                 <ScrambleValue text={`${stageEvaluations[6].score}%`} /> FUNNEL CONFLUENCE
               </span>
             </div>
@@ -2074,7 +2180,11 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
               onClick={() => setShowReverseXRay((prev) => !prev)}
               className={`px-3 py-1.5 font-mono text-[9.5px] font-bold uppercase border transition-all cursor-pointer ${
                 showReverseXRay
-                  ? 'bg-[#f59e0b]/20 text-[#fcd34d] border-[#f59e0b]'
+                  ? isLight
+                    ? 'bg-[#d97706]/15 text-[#b45309] border-[#d97706]'
+                    : 'bg-[#f59e0b]/20 text-[#fcd34d] border-[#f59e0b]'
+                  : isLight
+                  ? 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0284c7] border-[#0284c7]/40'
                   : 'bg-[#141821] hover:bg-[#191c22] text-[#00f0ff] border-[#00f0ff]/40'
               }`}
             >
@@ -2092,26 +2202,38 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                   key={sId}
                   type="button"
                   onClick={() => handleStageSelect(sId)}
-                  className="p-2.5 bg-[#090c12] hover:bg-[#141821] border border-[#1e2636] flex flex-col gap-1 text-left transition-colors cursor-pointer"
+                  className={`p-2.5 border flex flex-col gap-1 text-left transition-colors cursor-pointer ${
+                    isLight
+                      ? 'bg-[#ffffff] hover:bg-[#f1f5f9] border-[#cbd5e1]'
+                      : 'bg-[#090c12] hover:bg-[#141821] border-[#1e2636]'
+                  }`}
                   title={`Click to inspect Stage 0${sId} (${st.shortTitle})`}
                 >
                   <div className="flex items-center justify-between gap-1">
-                    <span className="font-mono text-[9px] text-[#849495] font-bold">
+                    <span
+                      className={`font-mono text-[9px] font-bold ${
+                        isLight ? 'text-[#475569]' : 'text-[#849495]'
+                      }`}
+                    >
                       {st.stepCode}. {st.shortTitle}
                     </span>
                     <span
                       className="w-2 h-2 rounded-full shrink-0"
-                      style={{ backgroundColor: ev.dotColor }}
+                      style={{ backgroundColor: getReadableStatusColor(ev.dotColor) }}
                     />
                   </div>
                   <div className="flex items-baseline justify-between">
                     <span
                       className="font-mono text-[13px] font-bold"
-                      style={{ color: ev.dotColor }}
+                      style={{ color: getReadableStatusColor(ev.dotColor) }}
                     >
                       {ev.score}%
                     </span>
-                    <span className="font-mono text-[8px] text-[#b9cacb] uppercase">
+                    <span
+                      className={`font-mono text-[8px] uppercase ${
+                        isLight ? 'text-[#334155]' : 'text-[#b9cacb]'
+                      }`}
+                    >
                       {ev.status}
                     </span>
                   </div>
@@ -2255,7 +2377,13 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
           currentSetup={activeSetup}
           experienceMode={experienceMode}
           paperTrades={paperTrades}
-          onAddPaperTrade={onAddPaperTrade}
+          onAddPaperTrade={(trade) =>
+            onAddPaperTrade({
+              ...trade,
+              strategyLensId: selectedSetupLensId,
+              strategyLensName: activeSetup?.lensTitle || `Stage 0${selectedSetupLensId}`,
+            } as any)
+          }
           onRemovePaperTrade={onRemovePaperTrade}
         />
 
@@ -2306,24 +2434,38 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
             <div
               key={st.id}
               className="cyber-panel p-4 flex flex-col gap-2.5 border-l-2"
-              style={{ borderLeftColor: ev.dotColor }}
+              style={{ borderLeftColor: getReadableStatusColor(ev.dotColor) }}
             >
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-2">
                   <span
                     className="w-2.5 h-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: ev.dotColor }}
+                    style={{ backgroundColor: getReadableStatusColor(ev.dotColor) }}
                   />
-                  <span className="font-mono text-[11px] font-bold text-[#00f0ff] uppercase">
+                  <span
+                    className={`font-mono text-[11px] font-bold uppercase ${
+                      isLight ? 'text-[#0284c7]' : 'text-[#00f0ff]'
+                    }`}
+                  >
                     {st.fullTitle}
                   </span>
-                  <span className="font-mono text-[9.5px] text-[#849495]">({st.subtitle})</span>
+                  <span
+                    className={`font-mono text-[9.5px] ${
+                      isLight ? 'text-[#475569]' : 'text-[#849495]'
+                    }`}
+                  >
+                    ({st.subtitle})
+                  </span>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <span
-                    className="px-2 py-0.5 bg-[#090c12] border border-[#1e2636] font-mono text-[10px] font-bold tabular-nums"
-                    style={{ color: ev.dotColor }}
+                    className={`px-2 py-0.5 border font-mono text-[10px] font-bold tabular-nums ${
+                      isLight
+                        ? 'bg-[#ffffff] border-[#cbd5e1]'
+                        : 'bg-[#090c12] border-[#1e2636]'
+                    }`}
+                    style={{ color: getReadableStatusColor(ev.dotColor) }}
                   >
                     {ev.score}% {ev.bias}
                   </span>
@@ -2333,15 +2475,29 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                       setViewMode('GUIDED');
                       handleStageSelect(st.id);
                     }}
-                    className="px-2.5 py-1 bg-[#141821] hover:bg-[#191c22] text-[#00f0ff] border border-[#00f0ff]/40 font-mono text-[9px] font-bold uppercase cursor-pointer"
+                    className={`px-2.5 py-1 border font-mono text-[9px] font-bold uppercase cursor-pointer ${
+                      isLight
+                        ? 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0284c7] border-[#0284c7]/40'
+                        : 'bg-[#141821] hover:bg-[#191c22] text-[#00f0ff] border-[#00f0ff]/40'
+                    }`}
                   >
                     JUMP TO STAGE {st.stepCode} →
                   </button>
                 </div>
               </div>
 
-              <div className="font-mono text-[11px] font-bold text-[#dbfcff]">{ev.headline}</div>
-              <p className="font-sans text-[11.5px] text-[#b9cacb] leading-relaxed">
+              <div
+                className={`font-mono text-[11px] font-bold ${
+                  isLight ? 'text-[#0f172a]' : 'text-[#dbfcff]'
+                }`}
+              >
+                {ev.headline}
+              </div>
+              <p
+                className={`font-sans text-[11.5px] leading-relaxed ${
+                  isLight ? 'text-[#1e293b]' : 'text-[#b9cacb]'
+                }`}
+              >
                 {ev.takeaway}
               </p>
             </div>
@@ -2352,30 +2508,62 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
   };
 
   return (
-    <div className="flex flex-col w-full bg-[#10131a]">
+    <div className={`flex flex-col w-full ${isLight ? 'bg-[#f1f5f9]' : 'bg-[#10131a]'}`}>
       {/* ========================================================================= */}
       {/* TOP PINNED 6-STAGE PROGRESSIVE TRADER PIPELINE STEPPER BAR                */}
       {/* ========================================================================= */}
-      <div className="sticky top-0 z-30 bg-[#0b0e14]/95 backdrop-blur-md border-b border-[#1e2636] flex flex-col">
+      <div
+        className={`sticky top-0 z-30 backdrop-blur-md border-b flex flex-col ${
+          isLight
+            ? 'bg-[#ffffff]/95 border-[#cbd5e1]'
+            : 'bg-[#0b0e14]/95 border-[#1e2636]'
+        }`}
+      >
         {/* Stepper Top Sub-Bar: Pipeline Title + View Mode Toggle (GUIDED FLOW | COMPACT ALL) */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-[#1e2636]/80 gap-2 flex-wrap">
+        <div
+          className={`flex items-center justify-between px-3 py-2 border-b gap-2 flex-wrap ${
+            isLight ? 'border-[#cbd5e1]/80' : 'border-[#1e2636]/80'
+          }`}
+        >
           <div className="flex items-center gap-2">
-            <span className="px-1.5 py-0.5 bg-[#00f0ff]/15 text-[#00f0ff] border border-[#00f0ff]/40 font-mono text-[9px] font-bold tracking-wider">
+            <span
+              className={`px-1.5 py-0.5 border font-mono text-[9px] font-bold tracking-wider ${
+                isLight
+                  ? 'bg-[#0284c7]/15 text-[#0284c7] border-[#0284c7]/40'
+                  : 'bg-[#00f0ff]/15 text-[#00f0ff] border-[#00f0ff]/40'
+              }`}
+            >
               6-STAGE FUNNEL
             </span>
-            <span className="font-mono text-[10px] text-[#e1e2eb] font-bold uppercase tracking-wider">
+            <span
+              className={`font-mono text-[10px] font-bold uppercase tracking-wider ${
+                isLight ? 'text-[#0f172a]' : 'text-[#e1e2eb]'
+              }`}
+            >
               PROGRESSIVE TRADER WORKFLOW
             </span>
           </div>
 
-          <div className="flex items-center gap-1 bg-[#10141d] p-0.5 border border-[#1e2636] font-mono text-[9px]">
-            <span className="px-1.5 text-[#849495] hidden sm:inline">👁️ VIEW:</span>
+          <div
+            className={`flex items-center gap-1 p-0.5 border font-mono text-[9px] ${
+              isLight
+                ? 'bg-[#f1f5f9] border-[#cbd5e1]'
+                : 'bg-[#10141d] border-[#1e2636]'
+            }`}
+          >
+            <span className={`px-1.5 hidden sm:inline ${isLight ? 'text-[#475569]' : 'text-[#849495]'}`}>
+              👁️ VIEW:
+            </span>
             <button
               type="button"
               onClick={() => setViewMode('GUIDED')}
               className={`px-2 py-1 font-bold uppercase transition-colors cursor-pointer ${
                 viewMode === 'GUIDED'
-                  ? 'bg-[#00f0ff]/20 text-[#00f0ff] border border-[#00f0ff]/50'
+                  ? isLight
+                    ? 'bg-[#0284c7]/15 text-[#0284c7] border border-[#0284c7]/50'
+                    : 'bg-[#00f0ff]/20 text-[#00f0ff] border border-[#00f0ff]/50'
+                  : isLight
+                  ? 'text-[#475569] hover:text-[#0f172a]'
                   : 'text-[#849495] hover:text-[#e1e2eb]'
               }`}
             >
@@ -2386,7 +2574,11 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
               onClick={() => setViewMode('COMPACT_ALL')}
               className={`px-2 py-1 font-bold uppercase transition-colors cursor-pointer ${
                 viewMode === 'COMPACT_ALL'
-                  ? 'bg-[#00f0ff]/20 text-[#00f0ff] border border-[#00f0ff]/50'
+                  ? isLight
+                    ? 'bg-[#0284c7]/15 text-[#0284c7] border border-[#0284c7]/50'
+                    : 'bg-[#00f0ff]/20 text-[#00f0ff] border border-[#00f0ff]/50'
+                  : isLight
+                  ? 'text-[#475569] hover:text-[#0f172a]'
                   : 'text-[#849495] hover:text-[#e1e2eb]'
               }`}
             >
@@ -2396,10 +2588,15 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
         </div>
 
         {/* 6 Connected Sequential Stage Pills */}
-        <div className="grid grid-cols-3 sm:grid-cols-6 divide-x divide-y sm:divide-y-0 divide-[#1e2636]">
+        <div
+          className={`grid grid-cols-3 sm:grid-cols-6 divide-x divide-y sm:divide-y-0 ${
+            isLight ? 'divide-[#cbd5e1]' : 'divide-[#1e2636]'
+          }`}
+        >
           {STAGES.map((stage) => {
             const isActive = viewMode === 'GUIDED' && activeStage === stage.id;
             const evalData = stageEvaluations[stage.id];
+            const readableDotColor = getReadableStatusColor(evalData.dotColor);
             return (
               <button
                 key={stage.id}
@@ -2410,17 +2607,33 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                 }}
                 className={`relative flex flex-col justify-between p-2.5 text-left transition-all cursor-pointer ${
                   isActive
-                    ? 'bg-[#141821] text-[#00f0ff]'
+                    ? isLight
+                      ? 'bg-[#e2e8f0] text-[#0284c7]'
+                      : 'bg-[#141821] text-[#00f0ff]'
+                    : isLight
+                    ? 'bg-[#ffffff] hover:bg-[#f8fafc] text-[#475569] hover:text-[#0f172a]'
                     : 'bg-[#0b0e14] hover:bg-[#11151f] text-[#849495] hover:text-[#e1e2eb]'
                 }`}
               >
                 {isActive && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#00f0ff] shadow-[0_0_8px_#00f0ff]" />
+                  <span
+                    className={`absolute bottom-0 left-0 right-0 h-0.5 ${
+                      isLight
+                        ? 'bg-[#0284c7] shadow-[0_0_8px_rgba(2,132,199,0.4)]'
+                        : 'bg-[#00f0ff] shadow-[0_0_8px_#00f0ff]'
+                    }`}
+                  />
                 )}
                 <div className="flex items-center justify-between gap-1 w-full">
                   <span
                     className={`font-mono text-[9px] font-bold tracking-wider ${
-                      isActive ? 'text-[#00f0ff]' : 'text-[#849495]'
+                      isActive
+                        ? isLight
+                          ? 'text-[#0284c7]'
+                          : 'text-[#00f0ff]'
+                        : isLight
+                        ? 'text-[#475569]'
+                        : 'text-[#849495]'
                     }`}
                   >
                     STAGE {stage.stepCode}
@@ -2428,8 +2641,8 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                   <span
                     className="w-2 h-2 rounded-full shrink-0"
                     style={{
-                      backgroundColor: evalData.dotColor,
-                      boxShadow: isActive ? `0 0 8px ${evalData.dotColor}` : 'none',
+                      backgroundColor: readableDotColor,
+                      boxShadow: isActive ? `0 0 8px ${readableDotColor}` : 'none',
                     }}
                     title={`Stage ${stage.stepCode}: ${evalData.score}% (${evalData.status})`}
                   />
@@ -2437,14 +2650,20 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                 <div className="flex items-baseline justify-between gap-1 mt-1 w-full">
                   <span
                     className={`font-mono text-[10.5px] font-bold truncate ${
-                      isActive ? 'text-[#dbfcff]' : 'text-[#e1e2eb]'
+                      isActive
+                        ? isLight
+                          ? 'text-[#0f172a]'
+                          : 'text-[#dbfcff]'
+                        : isLight
+                        ? 'text-[#1e293b]'
+                        : 'text-[#e1e2eb]'
                     }`}
                   >
                     {stage.shortTitle}
                   </span>
                   <span
                     className="font-mono text-[9px] font-bold tabular-nums"
-                    style={{ color: evalData.dotColor }}
+                    style={{ color: readableDotColor }}
                   >
                     {evalData.score}%
                   </span>

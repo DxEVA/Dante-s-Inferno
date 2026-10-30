@@ -1,13 +1,18 @@
 @import "tailwindcss";
 
 @layer base {
-  :root {
+  :root,
+  [data-theme="dark"] {
     --surface: #10131a;
     --surface-lowest: #0b0e14;
+    --surface-panel: #080b11;
+    --surface-elevated: #141821;
     --surface-low: #191c22;
     --surface-container: #1d2026;
     --surface-high: #272a31;
     --surface-highest: #32353c;
+    --border-subtle: #1e2433;
+    --border-panel: #1e2636;
     --primary: #dbfcff;
     --primary-container: #00f0ff;
     --secondary: #4edea3;
@@ -15,12 +20,72 @@
     --error: #ffb4ab;
     --error-container: #93000a;
     --amber: #f59e0b;
+    --purple: #c084fc;
     --tertiary: #fdf2ff;
     --tertiary-fixed: #f0dbff;
     --outline: #849495;
     --outline-variant: #3b494b;
     --on-surface: #e1e2eb;
     --on-surface-variant: #b9cacb;
+
+    /* Chart & Canvas Overlay Variables */
+    --chart-bg: #0b0e14;
+    --chart-grid: #191c22;
+    --chart-text: #849495;
+    --chart-border: #1e2433;
+    --chart-crosshair: #00f0ff;
+    --chart-up: #4edea3;
+    --chart-down: #ffb4ab;
+    --chart-pill-bg: rgba(11, 14, 20, 0.88);
+    --chart-label-text: #ffffff;
+    --chart-cyan: #00f0ff;
+    --chart-emerald: #4edea3;
+    --chart-coral: #ffb4ab;
+    --chart-amber: #f59e0b;
+    --chart-purple: #c084fc;
+  }
+
+  [data-theme="light"] {
+    --surface: #f1f5f9;
+    --surface-lowest: #ffffff;
+    --surface-panel: #f8fafc;
+    --surface-elevated: #e2e8f0;
+    --surface-low: #e2e8f0;
+    --surface-container: #cbd5e1;
+    --surface-high: #94a3b8;
+    --surface-highest: #64748b;
+    --border-subtle: #cbd5e1;
+    --border-panel: #94a3b8;
+    --primary: #0f172a;
+    --primary-container: #0284c7;
+    --secondary: #047857;
+    --secondary-container: #059669;
+    --error: #b91c1c;
+    --error-container: #fee2e2;
+    --amber: #b45309;
+    --purple: #6d28d9;
+    --tertiary: #0f172a;
+    --tertiary-fixed: #ede9fe;
+    --outline: #475569;
+    --outline-variant: #94a3b8;
+    --on-surface: #0f172a;
+    --on-surface-variant: #1e293b;
+
+    /* High-Contrast Light Mode Chart & Canvas Overlay Variables */
+    --chart-bg: #ffffff;
+    --chart-grid: #e2e8f0;
+    --chart-text: #334155;
+    --chart-border: #cbd5e1;
+    --chart-crosshair: #0284c7;
+    --chart-up: #059669;
+    --chart-down: #dc2626;
+    --chart-pill-bg: rgba(255, 255, 255, 0.94);
+    --chart-label-text: #0f172a;
+    --chart-cyan: #0284c7;
+    --chart-emerald: #047857;
+    --chart-coral: #b91c1c;
+    --chart-amber: #b45309;
+    --chart-purple: #6d28d9;
   }
 
   html,
@@ -28,11 +93,12 @@
     width: 100vw;
     margin: 0;
     padding: 0;
-    background-color: #10131a;
-    color: #e1e2eb;
+    background-color: var(--surface);
+    color: var(--on-surface);
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     overscroll-behavior: none;
     -webkit-tap-highlight-color: transparent;
+    transition: background-color 180ms ease, color 180ms ease;
   }
 
   /* Monospace tabular numbers everywhere for quant precision */
@@ -105,8 +171,8 @@ iframe[src*="netlify.com"] {
    ============================================================================ */
 .cyber-panel {
   position: relative;
-  background-color: #080b11;
-  border: 1px solid #1e2636;
+  background-color: var(--surface-panel);
+  border: 1px solid var(--border-panel);
   transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
 }
 
@@ -118,21 +184,22 @@ iframe[src*="netlify.com"] {
   font-family: 'JetBrains Mono', monospace;
   font-size: 9px;
   line-height: 1;
-  color: rgba(0, 240, 255, 0.35);
+  color: color-mix(in srgb, var(--primary-container) 35%, transparent);
   pointer-events: none;
 }
 
 .cyber-panel:hover {
-  border-color: rgba(0, 240, 255, 0.45);
+  border-color: color-mix(in srgb, var(--primary-container) 45%, transparent);
 }
 
 .cyber-panel-tracked {
-  border-color: #00f0ff !important;
-  box-shadow: 0 0 16px rgba(0, 240, 255, 0.22), inset 0 0 12px rgba(0, 240, 255, 0.08);
+  border-color: var(--primary-container) !important;
+  box-shadow: 0 0 16px color-mix(in srgb, var(--primary-container) 22%, transparent),
+    inset 0 0 12px color-mix(in srgb, var(--primary-container) 8%, transparent);
 }
 
 .cyber-grid-bg {
-  background-image: radial-gradient(rgba(0, 240, 255, 0.09) 1px, transparent 1px);
+  background-image: radial-gradient(color-mix(in srgb, var(--primary-container) 12%, transparent) 1px, transparent 1px);
   background-size: 16px 16px;
 }
 
@@ -160,10 +227,101 @@ iframe[src*="netlify.com"] {
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(0, 240, 255, 0.09) 50%,
+    color-mix(in srgb, var(--primary-container) 9%, transparent) 50%,
     transparent 100%
   );
   animation: cyberScanSweep 3.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   pointer-events: none;
 }
+
+/* ============================================================================
+   HIGH-CONTRAST LIGHT MODE DYNAMIC CSS VARIABLE MAPPING
+   ============================================================================ */
+[data-theme="light"] [class*="bg-[#06080d]"],
+[data-theme="light"] [class*="bg-[#07090e]"],
+[data-theme="light"] [class*="bg-[#080b11]"],
+[data-theme="light"] [class*="bg-[#090c12]"],
+[data-theme="light"] [class*="bg-[#0a0d14]"],
+[data-theme="light"] [class*="bg-[#0b0e14]"] {
+  background-color: var(--surface-lowest) !important;
+}
+
+[data-theme="light"] [class*="bg-[#0d111a]"],
+[data-theme="light"] [class*="bg-[#10131a]"],
+[data-theme="light"] [class*="bg-[#10141d]"],
+[data-theme="light"] [class*="bg-[#11151f]"],
+[data-theme="light"] [class*="bg-[#121620]"] {
+  background-color: var(--surface) !important;
+}
+
+[data-theme="light"] [class*="bg-[#141821]"],
+[data-theme="light"] [class*="bg-[#141822]"],
+[data-theme="light"] [class*="bg-[#161b26]"],
+[data-theme="light"] [class*="bg-[#191c22]"],
+[data-theme="light"] [class*="bg-[#1d2026]"],
+[data-theme="light"] [class*="bg-[#202530]"],
+[data-theme="light"] [class*="bg-[#272a31]"],
+[data-theme="light"] [class*="bg-[#32353c]"] {
+  background-color: var(--surface-elevated) !important;
+}
+
+[data-theme="light"] [class*="border-[#1e2433]"],
+[data-theme="light"] [class*="border-[#1e2636]"],
+[data-theme="light"] [class*="border-[#222838]"],
+[data-theme="light"] [class*="border-[#272a31]"],
+[data-theme="light"] [class*="border-[#2b3345]"],
+[data-theme="light"] [class*="border-[#2e3442]"],
+[data-theme="light"] [class*="border-[#32353c]"],
+[data-theme="light"] [class*="border-[#3b494b]"] {
+  border-color: var(--border-subtle) !important;
+}
+
+[data-theme="light"] [class*="text-[#e1e2eb]"],
+[data-theme="light"] [class*="text-[#dbfcff]"],
+[data-theme="light"] [class*="text-[#fdf2ff]"],
+[data-theme="light"] [class*="text-white"] {
+  color: var(--on-surface) !important;
+}
+
+[data-theme="light"] [class*="text-[#b9cacb]"],
+[data-theme="light"] [class*="text-[#cfd7e6]"],
+[data-theme="light"] [class*="text-[#a6b4c9]"],
+[data-theme="light"] [class*="text-[#c7d2fe]"] {
+  color: var(--on-surface-variant) !important;
+}
+
+[data-theme="light"] [class*="text-[#849495]"] {
+  color: var(--outline) !important;
+}
+
+[data-theme="light"] [class*="text-[#00f0ff]"],
+[data-theme="light"] [class*="text-[#00dbe9]"],
+[data-theme="light"] [class*="text-[#38bdf8]"] {
+  color: var(--primary-container) !important;
+}
+
+[data-theme="light"] [class*="text-[#4edea3]"],
+[data-theme="light"] [class*="text-[#6ffbbe]"],
+[data-theme="light"] [class*="text-[#10b981]"] {
+  color: var(--secondary) !important;
+}
+
+[data-theme="light"] [class*="text-[#ffb4ab]"],
+[data-theme="light"] [class*="text-[#f43f5e]"] {
+  color: var(--error) !important;
+}
+
+[data-theme="light"] [class*="text-[#f59e0b]"],
+[data-theme="light"] [class*="text-[#fcd34d]"] {
+  color: var(--amber) !important;
+}
+
+[data-theme="light"] [class*="text-[#c084fc]"],
+[data-theme="light"] [class*="text-[#ddb7ff]"],
+[data-theme="light"] [class*="text-[#f0dbff]"],
+[data-theme="light"] [class*="text-[#e879f9]"] {
+  color: var(--purple) !important;
+}
+
+
 

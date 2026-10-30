@@ -39,6 +39,31 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleVpMode,
 }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    try {
+      const saved = localStorage.getItem('inferno_theme');
+      if (saved === 'light' || saved === 'dark') {
+        document.documentElement.setAttribute('data-theme', saved);
+        return saved;
+      }
+    } catch {
+      // ignore storage errors
+    }
+    const currentAttr = document.documentElement.getAttribute('data-theme');
+    return currentAttr === 'light' ? 'light' : 'dark';
+  });
+
+  const handleToggleTheme = (nextTheme?: 'dark' | 'light') => {
+    const resolved = nextTheme || (theme === 'dark' ? 'light' : 'dark');
+    setTheme(resolved);
+    document.documentElement.setAttribute('data-theme', resolved);
+    try {
+      localStorage.setItem('inferno_theme', resolved);
+      window.dispatchEvent(new CustomEvent('inferno:theme-change', { detail: resolved }));
+    } catch {
+      // ignore storage errors
+    }
+  };
 
   return (
     <>
@@ -68,8 +93,26 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Desktop Right: The 4 Core Navigation Controls (Hidden on mobile to prevent crowding) */}
+          {/* Desktop Right: The Core Navigation Controls (Hidden on mobile to prevent crowding) */}
           <div className="hidden lg:flex items-center gap-2 shrink-0">
+            {/* 0. Global Theme Toggle (Dark vs High-Contrast Light Mode) */}
+            <button
+              type="button"
+              onClick={() => handleToggleTheme()}
+              className="px-2 py-1 rounded bg-[#191c22] hover:bg-[#272a31] text-[#b9cacb] hover:text-[#00f0ff] border border-[#272a31] hover:border-[#00f0ff]/40 font-mono text-[10px] font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
+              title={
+                theme === 'dark'
+                  ? 'Switch to High-Contrast Light Mode'
+                  : 'Switch to Cyber-Brutalist Dark Mode'
+              }
+              aria-label="Toggle Theme"
+            >
+              <span className="material-symbols-outlined text-[13px] text-[#00f0ff]">
+                {theme === 'dark' ? 'light_mode' : 'dark_mode'}
+              </span>
+              <span>{theme === 'dark' ? 'LIGHT' : 'DARK'}</span>
+            </button>
+
             {/* 1. Global [ 🎓 ROOKIE | ⚡ PRO ] Toggle */}
             {onToggleExperienceMode && (
               <div className="flex items-center p-0.5 rounded-lg bg-[#141821] border border-[#272a31] font-mono text-[10px]">
@@ -156,8 +199,24 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </div>
 
-          {/* Mobile Right: Compact Mode Pill + Journal Shortcut + Slide-Out Drawer Trigger */}
+          {/* Mobile Right: Theme Toggle + Compact Mode Pill + Journal Shortcut + Slide-Out Drawer Trigger */}
           <div className="flex lg:hidden items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => handleToggleTheme()}
+              aria-label="Toggle Theme"
+              className="w-8 h-8 rounded bg-[#141821] border border-[#272a31] text-[#00f0ff] flex items-center justify-center cursor-pointer"
+              title={
+                theme === 'dark'
+                  ? 'Switch to High-Contrast Light Mode'
+                  : 'Switch to Cyber-Brutalist Dark Mode'
+              }
+            >
+              <span className="material-symbols-outlined text-[15px]">
+                {theme === 'dark' ? 'light_mode' : 'dark_mode'}
+              </span>
+            </button>
+
             {onToggleExperienceMode && (
               <button
                 type="button"
@@ -228,6 +287,39 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   <span className="material-symbols-outlined text-[18px]">close</span>
                 </button>
+              </div>
+
+              {/* 0. Global Theme Selector */}
+              <div className="flex flex-col gap-1.5">
+                <span className="font-mono text-[9px] text-[#849495] uppercase font-bold tracking-wider">
+                  DISPLAY THEME AESTHETIC
+                </span>
+                <div className="grid grid-cols-2 gap-1.5 p-1 rounded-lg bg-[#141821] border border-[#272a31] font-mono text-[10px]">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleTheme('dark')}
+                    className={`min-h-[38px] rounded font-bold transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                      theme === 'dark'
+                        ? 'bg-[#00f0ff]/20 text-[#00f0ff] border border-[#00f0ff]/50'
+                        : 'text-[#849495]'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[14px]">dark_mode</span>
+                    <span>DARK</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleTheme('light')}
+                    className={`min-h-[38px] rounded font-bold transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                      theme === 'light'
+                        ? 'bg-[#00f0ff]/20 text-[#00f0ff] border border-[#00f0ff]/50'
+                        : 'text-[#849495]'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[14px]">light_mode</span>
+                    <span>LIGHT</span>
+                  </button>
+                </div>
               </div>
 
               {/* 1. Experience Mode Selector */}

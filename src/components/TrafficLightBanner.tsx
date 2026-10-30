@@ -61,6 +61,17 @@ export const TrafficLightBanner: React.FC<TrafficLightBannerProps> = ({
 }) => {
   const [showWhatIf, setShowWhatIf] = useState(false);
   const [whatIfOffsetPct, setWhatIfOffsetPct] = useState<number>(0);
+  const [isLight, setIsLight] = useState<boolean>(
+    () => typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light'
+  );
+
+  React.useEffect(() => {
+    const syncTheme = () => {
+      setIsLight(document.documentElement.getAttribute('data-theme') === 'light');
+    };
+    window.addEventListener('inferno:theme-change', syncTheme);
+    return () => window.removeEventListener('inferno:theme-change', syncTheme);
+  }, []);
 
   const simulatedPrice = useMemo(() => {
     if (!showWhatIf || whatIfOffsetPct === 0) return currentPrice;
@@ -219,21 +230,47 @@ export const TrafficLightBanner: React.FC<TrafficLightBannerProps> = ({
   ]);
 
   return (
-    <div className="flex flex-col bg-[#10131a] border-b border-[#272a31] px-3 py-2.5 gap-2">
+    <div
+      className={`flex flex-col border-b px-3 py-2.5 gap-2 ${
+        isLight
+          ? 'bg-[#f1f5f9] border-[#cbd5e1]'
+          : 'bg-[#10131a] border-[#272a31]'
+      }`}
+    >
       {/* Rookie Mode Step-by-Step Workflow Bar */}
       {experienceMode === 'rookie' && (
-        <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-lg bg-[#141821]/95 border border-[#00f0ff]/30 shadow-[0_4px_20px_rgba(0,240,255,0.08)]">
+        <div
+          className={`flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-lg border ${
+            isLight
+              ? 'bg-[#ffffff] border-[#0284c7]/35 shadow-sm'
+              : 'bg-[#141821]/95 border-[#00f0ff]/30 shadow-[0_4px_20px_rgba(0,240,255,0.08)]'
+          }`}
+        >
           <div className="flex flex-wrap items-center gap-1.5 font-mono text-[10px]">
-            <span className="px-2 py-0.5 rounded bg-[#00f0ff]/15 text-[#00f0ff] font-bold uppercase tracking-wider border border-[#00f0ff]/30">
+            <span
+              className={`px-2 py-0.5 rounded font-bold uppercase tracking-wider border ${
+                isLight
+                  ? 'bg-[#0284c7]/15 text-[#0284c7] border-[#0284c7]/30'
+                  : 'bg-[#00f0ff]/15 text-[#00f0ff] border-[#00f0ff]/30'
+              }`}
+            >
               🎓 ROOKIE WORKFLOW
             </span>
-            <span className="text-[#e1e2eb] font-semibold">Step 1: Check Traffic Light</span>
-            <span className="text-[#00f0ff]">➔</span>
-            <span className="text-[#e1e2eb] font-semibold">Step 2: Review Green Tabs (&gt;70%)</span>
-            <span className="text-[#00f0ff]">➔</span>
-            <span className="text-[#e1e2eb] font-semibold">Step 3: Verify Pre-Flight Checklist</span>
-            <span className="text-[#00f0ff]">➔</span>
-            <span className="text-[#4edea3] font-bold">Step 4: Size Risk in Calculator</span>
+            <span className={`font-semibold ${isLight ? 'text-[#0f172a]' : 'text-[#e1e2eb]'}`}>
+              Step 1: Check Traffic Light
+            </span>
+            <span className={isLight ? 'text-[#0284c7]' : 'text-[#00f0ff]'}>➔</span>
+            <span className={`font-semibold ${isLight ? 'text-[#0f172a]' : 'text-[#e1e2eb]'}`}>
+              Step 2: Review Green Tabs (&gt;70%)
+            </span>
+            <span className={isLight ? 'text-[#0284c7]' : 'text-[#00f0ff]'}>➔</span>
+            <span className={`font-semibold ${isLight ? 'text-[#0f172a]' : 'text-[#e1e2eb]'}`}>
+              Step 3: Verify Pre-Flight Checklist
+            </span>
+            <span className={isLight ? 'text-[#0284c7]' : 'text-[#00f0ff]'}>➔</span>
+            <span className={`font-bold ${isLight ? 'text-[#047857]' : 'text-[#4edea3]'}`}>
+              Step 4: Size Risk in Calculator
+            </span>
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
@@ -242,7 +279,11 @@ export const TrafficLightBanner: React.FC<TrafficLightBannerProps> = ({
               onClick={() => setShowWhatIf((prev) => !prev)}
               className={`px-2.5 py-1 rounded font-mono text-[10px] font-bold border transition-all cursor-pointer flex items-center gap-1 ${
                 showWhatIf
-                  ? 'bg-[#f59e0b]/20 text-[#fcd34d] border-[#f59e0b]/50'
+                  ? isLight
+                    ? 'bg-[#d97706]/15 text-[#b45309] border-[#d97706]/50'
+                    : 'bg-[#f59e0b]/20 text-[#fcd34d] border-[#f59e0b]/50'
+                  : isLight
+                  ? 'bg-[#f1f5f9] text-[#1e293b] border-[#cbd5e1] hover:border-[#0284c7]/50 hover:text-[#0284c7]'
                   : 'bg-[#191c22] text-[#b9cacb] border-[#272a31] hover:border-[#00f0ff]/40 hover:text-[#00f0ff]'
               }`}
             >
@@ -252,7 +293,11 @@ export const TrafficLightBanner: React.FC<TrafficLightBannerProps> = ({
             <button
               type="button"
               onClick={() => onToggleGlossaryModal(true)}
-              className="px-2.5 py-1 rounded bg-[#00f0ff]/15 hover:bg-[#00f0ff]/25 text-[#00f0ff] border border-[#00f0ff]/40 font-mono text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1"
+              className={`px-2.5 py-1 rounded border font-mono text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                isLight
+                  ? 'bg-[#0284c7]/15 hover:bg-[#0284c7]/25 text-[#0284c7] border-[#0284c7]/40'
+                  : 'bg-[#00f0ff]/15 hover:bg-[#00f0ff]/25 text-[#00f0ff] border border-[#00f0ff]/40'
+              }`}
             >
               <span>📖 JARGON GLOSSARY &amp; TOUR</span>
             </button>
@@ -262,18 +307,32 @@ export const TrafficLightBanner: React.FC<TrafficLightBannerProps> = ({
 
       {/* Traffic Light Actionability Banner */}
       <div
-        className={`relative overflow-hidden rounded-xl p-3.5 border backdrop-blur-md transition-all shadow-[0_8px_30px_rgb(0,0,0,0.4)] flex flex-col md:flex-row items-start md:items-center justify-between gap-3 ${
+        className={`relative overflow-hidden rounded-xl p-3.5 border backdrop-blur-md transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-3 ${
+          isLight ? 'shadow-sm' : 'shadow-[0_8px_30px_rgb(0,0,0,0.4)]'
+        } ${
           trafficState.light === 'GREEN'
-            ? 'bg-gradient-to-r from-[#00a572]/20 via-[#141821]/95 to-[#141821]/95 border-[#4edea3]/40'
+            ? isLight
+              ? 'bg-gradient-to-r from-[#059669]/15 via-[#ffffff]/95 to-[#f8fafc]/95 border-[#059669]/40'
+              : 'bg-gradient-to-r from-[#00a572]/20 via-[#141821]/95 to-[#141821]/95 border-[#4edea3]/40'
             : trafficState.light === 'YELLOW'
-            ? 'bg-gradient-to-r from-[#f59e0b]/20 via-[#141821]/95 to-[#141821]/95 border-[#f59e0b]/40'
+            ? isLight
+              ? 'bg-gradient-to-r from-[#d97706]/15 via-[#ffffff]/95 to-[#f8fafc]/95 border-[#d97706]/40'
+              : 'bg-gradient-to-r from-[#f59e0b]/20 via-[#141821]/95 to-[#141821]/95 border-[#f59e0b]/40'
+            : isLight
+            ? 'bg-gradient-to-r from-[#dc2626]/15 via-[#ffffff]/95 to-[#f8fafc]/95 border-[#dc2626]/40'
             : 'bg-gradient-to-r from-[#f43f5e]/20 via-[#141821]/95 to-[#141821]/95 border-[#ffb4ab]/40'
         }`}
       >
         {/* Left Traffic Light Housing + Dynamic Readout */}
         <div className="flex items-start sm:items-center gap-3.5">
           {/* 3-Lens Traffic Light Pod */}
-          <div className="flex flex-col items-center gap-1.5 p-1.5 rounded-lg bg-[#0b0e14] border border-white/10 shrink-0 shadow-inner">
+          <div
+            className={`flex flex-col items-center gap-1.5 p-1.5 rounded-lg border shrink-0 shadow-inner ${
+              isLight
+                ? 'bg-[#f1f5f9] border-[#cbd5e1]'
+                : 'bg-[#0b0e14] border-white/10'
+            }`}
+          >
             <span
               className={`w-3.5 h-3.5 rounded-full transition-all ${
                 trafficState.light === 'RED'
@@ -302,9 +361,15 @@ export const TrafficLightBanner: React.FC<TrafficLightBannerProps> = ({
               <span
                 className={`font-mono text-[13px] sm:text-[14px] font-bold tracking-tight ${
                   trafficState.light === 'GREEN'
-                    ? 'text-[#4edea3]'
+                    ? isLight
+                      ? 'text-[#047857]'
+                      : 'text-[#4edea3]'
                     : trafficState.light === 'YELLOW'
-                    ? 'text-[#fcd34d]'
+                    ? isLight
+                      ? 'text-[#b45309]'
+                      : 'text-[#fcd34d]'
+                    : isLight
+                    ? 'text-[#b91c1c]'
                     : 'text-[#ffb4ab]'
                 }`}
               >
@@ -319,9 +384,15 @@ export const TrafficLightBanner: React.FC<TrafficLightBannerProps> = ({
               <span
                 className={`font-mono text-[9px] font-bold px-2 py-0.5 rounded border tabular-nums ${
                   trafficState.light === 'GREEN'
-                    ? 'bg-[#4edea3]/15 text-[#4edea3] border-[#4edea3]/40'
+                    ? isLight
+                      ? 'bg-[#059669]/15 text-[#047857] border-[#059669]/40'
+                      : 'bg-[#4edea3]/15 text-[#4edea3] border-[#4edea3]/40'
                     : trafficState.light === 'YELLOW'
-                    ? 'bg-[#f59e0b]/15 text-[#fcd34d] border-[#f59e0b]/40'
+                    ? isLight
+                      ? 'bg-[#d97706]/15 text-[#b45309] border-[#d97706]/40'
+                      : 'bg-[#f59e0b]/15 text-[#fcd34d] border-[#f59e0b]/40'
+                    : isLight
+                    ? 'bg-[#dc2626]/15 text-[#b91c1c] border-[#dc2626]/40'
                     : 'bg-[#f43f5e]/15 text-[#ffb4ab] border-[#f43f5e]/40'
                 }`}
               >
@@ -329,13 +400,23 @@ export const TrafficLightBanner: React.FC<TrafficLightBannerProps> = ({
               </span>
 
               {showWhatIf && whatIfOffsetPct !== 0 && (
-                <span className="font-mono text-[9px] font-bold px-2 py-0.5 rounded bg-[#00f0ff]/20 text-[#00f0ff] border border-[#00f0ff]/40 tabular-nums">
+                <span
+                  className={`font-mono text-[9px] font-bold px-2 py-0.5 rounded border tabular-nums ${
+                    isLight
+                      ? 'bg-[#0284c7]/15 text-[#0284c7] border-[#0284c7]/40'
+                      : 'bg-[#00f0ff]/20 text-[#00f0ff] border-[#00f0ff]/40'
+                  }`}
+                >
                   SIMULATING {whatIfOffsetPct > 0 ? `+${whatIfOffsetPct.toFixed(1)}%` : `${whatIfOffsetPct.toFixed(1)}%`} (${formatP(simulatedPrice)})
                 </span>
               )}
             </div>
 
-            <p className="font-sans text-[12px] text-[#e1e2eb] leading-relaxed max-w-3xl">
+            <p
+              className={`font-sans text-[12px] leading-relaxed max-w-3xl ${
+                isLight ? 'text-[#0f172a]' : 'text-[#e1e2eb]'
+              }`}
+            >
               {trafficState.subtext}
             </p>
           </div>
@@ -343,12 +424,28 @@ export const TrafficLightBanner: React.FC<TrafficLightBannerProps> = ({
 
         {/* Right Quick Summary Pill & Deconstruct Signal Button */}
         <div className="flex items-center gap-2 flex-wrap shrink-0 self-end md:self-center">
-          <div className="flex flex-col items-end px-2.5 py-1.5 rounded-lg bg-[#0b0e14]/90 border border-white/[0.07] font-mono">
-            <span className="text-[9px] text-[#849495] uppercase">NEAREST KEY LEVEL</span>
-            <span className="text-[12px] font-bold text-[#00f0ff] tabular-nums">
+          <div
+            className={`flex flex-col items-end px-2.5 py-1.5 rounded-lg border font-mono ${
+              isLight
+                ? 'bg-[#f8fafc] border-[#cbd5e1]'
+                : 'bg-[#0b0e14]/90 border-white/[0.07]'
+            }`}
+          >
+            <span className={`text-[9px] uppercase ${isLight ? 'text-[#475569]' : 'text-[#849495]'}`}>
+              NEAREST KEY LEVEL
+            </span>
+            <span
+              className={`text-[12px] font-bold tabular-nums ${
+                isLight ? 'text-[#0284c7]' : 'text-[#00f0ff]'
+              }`}
+            >
               {trafficState.nearestLevel.name}: ${formatP(trafficState.nearestLevel.price)}
             </span>
-            <span className="text-[9px] text-[#b9cacb] tabular-nums">
+            <span
+              className={`text-[9px] tabular-nums ${
+                isLight ? 'text-[#334155]' : 'text-[#b9cacb]'
+              }`}
+            >
               {trafficState.nearestLevel.distPct.toFixed(2)}% away
             </span>
           </div>
@@ -357,7 +454,11 @@ export const TrafficLightBanner: React.FC<TrafficLightBannerProps> = ({
             <button
               type="button"
               onClick={onDeconstructSignal}
-              className="px-3 py-2 rounded-none bg-[#00f0ff]/15 hover:bg-[#00f0ff]/25 text-[#00f0ff] border border-[#00f0ff] font-mono text-[10px] font-bold uppercase tracking-wider transition-all shadow-[0_0_12px_rgba(0,240,255,0.2)] cursor-pointer whitespace-nowrap shrink-0"
+              className={`px-3 py-2 rounded-none border font-mono text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                isLight
+                  ? 'bg-[#0284c7]/15 hover:bg-[#0284c7]/25 text-[#0284c7] border-[#0284c7]'
+                  : 'bg-[#00f0ff]/15 hover:bg-[#00f0ff]/25 text-[#00f0ff] border-[#00f0ff] shadow-[0_0_12px_rgba(0,240,255,0.2)]'
+              }`}
               title="Open Reverse Signal X-Ray & 5-Level Live Curriculum in SYS.04"
             >
               [ 🔍 DECONSTRUCT THIS SIGNAL ]
@@ -368,7 +469,11 @@ export const TrafficLightBanner: React.FC<TrafficLightBannerProps> = ({
             <button
               type="button"
               onClick={() => setShowWhatIf((prev) => !prev)}
-              className="px-2.5 py-1.5 rounded-lg bg-[#0b0e14] hover:bg-[#191c22] text-[#00f0ff] border border-[#272a31] font-mono text-[10px] font-bold cursor-pointer"
+              className={`px-2.5 py-1.5 rounded-lg border font-mono text-[10px] font-bold cursor-pointer ${
+                isLight
+                  ? 'bg-[#ffffff] hover:bg-[#e2e8f0] text-[#0284c7] border-[#cbd5e1]'
+                  : 'bg-[#0b0e14] hover:bg-[#191c22] text-[#00f0ff] border-[#272a31]'
+              }`}
               title="Test What-If Price Scenarios"
             >
               🎛️ WHAT-IF

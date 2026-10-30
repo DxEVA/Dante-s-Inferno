@@ -24,6 +24,17 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
 }) => {
   // Per-card Learn & Benchmark drawer overrides (default open in Rookie, closed in Pro)
   const [drawerOverrides, setDrawerOverrides] = useState<Record<string, boolean>>({});
+  const [isLight, setIsLight] = useState<boolean>(
+    () => typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light'
+  );
+
+  React.useEffect(() => {
+    const syncTheme = () => {
+      setIsLight(document.documentElement.getAttribute('data-theme') === 'light');
+    };
+    window.addEventListener('inferno:theme-change', syncTheme);
+    return () => window.removeEventListener('inferno:theme-change', syncTheme);
+  }, []);
 
   const isDrawerOpen = (cardKey: string) => {
     if (cardKey in drawerOverrides) return drawerOverrides[cardKey];
@@ -105,7 +116,11 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
     const tracked = trackConfig ? isPriceTracked(trackConfig.price) : false;
 
     return (
-      <div className="flex flex-col gap-1.5 pt-1.5 mt-0.5 border-t border-[#1e2636] text-left">
+      <div
+        className={`flex flex-col gap-1.5 pt-1.5 mt-0.5 border-t text-left ${
+          isLight ? 'border-[#cbd5e1]' : 'border-[#1e2636]'
+        }`}
+      >
         {/* Interactive Control Row: [ 🎯 TRACK ] + [ 🎓 STD NORM & DECODE ▾ ] */}
         <div className="flex items-center justify-between gap-1 flex-wrap">
           {trackConfig && trackConfig.price > 0 ? (
@@ -115,7 +130,11 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
                 onClick={(e) => handleToggleTrackPrice(e, trackConfig.label, trackConfig.price)}
                 className={`px-1.5 py-0.5 font-mono text-[8px] uppercase font-bold border transition-all cursor-pointer ${
                   tracked
-                    ? 'bg-[#00f0ff]/20 border-[#00f0ff] text-[#00f0ff] shadow-[0_0_8px_rgba(0,240,255,0.25)]'
+                    ? isLight
+                      ? 'bg-[#0284c7]/15 border-[#0284c7] text-[#0284c7]'
+                      : 'bg-[#00f0ff]/20 border-[#00f0ff] text-[#00f0ff] shadow-[0_0_8px_rgba(0,240,255,0.25)]'
+                    : isLight
+                    ? 'bg-[#ffffff] hover:bg-[#e2e8f0] border-[#cbd5e1] text-[#475569] hover:text-[#0284c7]'
                     : 'bg-[#0b0e14] hover:bg-[#141821] border-[#1e2636] text-[#849495] hover:text-[#00f0ff]'
                 }`}
                 title="Lock or unlock this price level on the live candlestick chart"
@@ -144,7 +163,11 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
             onClick={(e) => toggleDrawer(e, metricKey)}
             className={`px-1.5 py-0.5 font-mono text-[8px] uppercase font-bold border transition-colors cursor-pointer ${
               open
-                ? 'bg-[#00f0ff]/15 border-[#00f0ff]/50 text-[#00f0ff]'
+                ? isLight
+                  ? 'bg-[#0284c7]/15 border-[#0284c7]/50 text-[#0284c7]'
+                  : 'bg-[#00f0ff]/15 border-[#00f0ff]/50 text-[#00f0ff]'
+                : isLight
+                ? 'bg-[#ffffff] hover:bg-[#e2e8f0] border-[#cbd5e1] text-[#1e293b] hover:text-[#0284c7]'
                 : 'bg-[#0b0e14] hover:bg-[#141821] border-[#1e2636] text-[#b9cacb] hover:text-[#00f0ff]'
             }`}
           >
@@ -162,7 +185,13 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
               transition={{ duration: 0.16, ease: 'easeOut' }}
               className="overflow-hidden flex flex-col gap-1.5 pt-1"
             >
-              <div className="p-1.5 bg-[#06080d] border border-[#1e2636] font-mono text-[8.5px] flex flex-col gap-1">
+              <div
+                className={`p-1.5 border font-mono text-[8.5px] flex flex-col gap-1 ${
+                  isLight
+                    ? 'bg-[#ffffff] border-[#cbd5e1]'
+                    : 'bg-[#06080d] border-[#1e2636]'
+                }`}
+              >
                 <div className="text-[#00f0ff] truncate" title={mentor.standardRangeGuide.normal}>
                   <strong>STD NORM:</strong> {mentor.standardRangeGuide.normal}
                 </div>
@@ -174,11 +203,21 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
                 </div>
               </div>
 
-              <p className="font-sans text-[9.5px] text-[#b9cacb] leading-snug">
+              <p
+                className={`font-sans text-[9.5px] leading-snug ${
+                  isLight ? 'text-[#1e293b]' : 'text-[#b9cacb]'
+                }`}
+              >
                 <strong className="text-[#fcd34d] font-mono">🔗 Analogy:</strong> {mentor.familiarBridge}
               </p>
 
-              <p className="font-sans text-[9px] text-[#dbfcff] bg-[#0b0e14] px-1.5 py-1 border-l-2 border-l-[#00f0ff] leading-snug">
+              <p
+                className={`font-sans text-[9px] px-1.5 py-1 border-l-2 border-l-[#00f0ff] leading-snug ${
+                  isLight
+                    ? 'text-[#0f172a] bg-[#ffffff]'
+                    : 'text-[#dbfcff] bg-[#0b0e14]'
+                }`}
+              >
                 <strong className="text-[#4edea3] font-mono">✓ DO:</strong> {mentor.rookieActionRule.doThis}{' '}
                 <strong className="text-[#ffb4ab] font-mono">• ✕ AVOID:</strong>{' '}
                 {mentor.rookieActionRule.avoidTrap}
@@ -224,7 +263,13 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
   );
 
   return (
-    <div className="flex flex-col px-3 py-3 gap-2.5 bg-[#080b11] cyber-grid-bg border-b border-[#1e2636]">
+    <div
+      className={`flex flex-col px-3 py-3 gap-2.5 cyber-grid-bg border-b ${
+        isLight
+          ? 'bg-[#f8fafc] border-[#cbd5e1]'
+          : 'bg-[#080b11] border-[#1e2636]'
+      }`}
+    >
       {/* Section Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
@@ -257,9 +302,19 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
 
       {/* Rookie Plain-English Takeaway Banner for Telemetry */}
       {experienceMode === 'rookie' && (
-        <div className="p-2.5 bg-[#10141d] border border-[#00f0ff]/35 border-l-2 border-l-[#00f0ff] flex items-start gap-2.5">
+        <div
+          className={`p-2.5 border border-l-2 border-l-[#00f0ff] flex items-start gap-2.5 ${
+            isLight
+              ? 'bg-[#ffffff] border-[#0284c7]/35'
+              : 'bg-[#10141d] border-[#00f0ff]/35'
+          }`}
+        >
           <span className="text-[15px] shrink-0">🎓</span>
-          <div className="font-sans text-[11px] text-[#dbfcff] leading-relaxed">
+          <div
+            className={`font-sans text-[11px] leading-relaxed ${
+              isLight ? 'text-[#0f172a]' : 'text-[#dbfcff]'
+            }`}
+          >
             <strong className="text-[#00f0ff] font-mono uppercase">
               What this means in plain English:{' '}
             </strong>
