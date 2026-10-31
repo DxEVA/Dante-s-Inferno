@@ -103,10 +103,12 @@ export default function App() {
     ts: number;
   } | null>(null);
   const [mobilePage, setMobilePage] = useState<'CHART' | 'RADAR' | 'LENSES' | 'EXECUTE' | 'ACADEMY'>('CHART');
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState<boolean>(false);
 
   const handleNavigateMobilePage = useCallback(
     (page: 'CHART' | 'RADAR' | 'LENSES' | 'EXECUTE' | 'ACADEMY') => {
       setMobilePage(page);
+      setIsMobileNavOpen(false);
       if (page === 'RADAR') {
         setActiveStrategyTab(5);
         setExternalDeckRequest({ deck: 'MTF_RADAR', ts: Date.now() });
@@ -1346,52 +1348,173 @@ export default function App() {
             </div>
           </main>
 
-          {/* Floating Chamfered 5-Tab Mobile Bottom Dock (< 1024px) */}
-          <nav
-            aria-label="Mobile Terminal Pages"
-            className="lg:hidden fixed bottom-2 left-2 right-2 z-[9999] bg-[#07090e]/95 backdrop-blur-xl border border-[#00f0ff]/35 shadow-[0_8px_32px_rgba(0,0,0,0.9)] grid grid-cols-5 h-14 px-1 pb-[env(safe-area-inset-bottom,4px)]"
-          >
-            {(
-              [
-                { id: 'CHART', label: 'CHART', icon: 'candlestick_chart', badge: selectedTf.toUpperCase() },
-                { id: 'LENSES', label: '6 STAGES', icon: 'layers', badge: `S0${activeStrategyTab}` },
-                { id: 'RADAR', label: 'RADAR', icon: 'radar', badge: `${confluence.score}%` },
-                { id: 'EXECUTE', label: 'EXECUTE', icon: 'calculate', badge: 'S06' },
-                { id: 'ACADEMY', label: 'X-RAY', icon: 'school', badge: 'LEARN' },
-              ] as const
-            ).map((item) => {
-              const isActive = mobilePage === item.id;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => handleNavigateMobilePage(item.id)}
-                  className={`relative flex flex-col items-center justify-center gap-0.5 font-mono transition-colors cursor-pointer ${
-                    isActive
-                      ? 'text-[#00f0ff] bg-[#141821]'
-                      : 'text-[#849495] hover:text-[#e1e2eb]'
-                  }`}
+          {/* Bottom-Left Floating Collapsible Command Pill & Fan-Out Menu (< 1024px) */}
+          {/* Anchored on bottom-left (left-3 bottom-4) so bottom-right badges (Netlify, etc.) never overlap */}
+          {(() => {
+            const mobileNavItems = [
+              {
+                id: 'CHART' as const,
+                label: 'CHART',
+                sub: 'Live Price & Overlays',
+                icon: 'candlestick_chart',
+                badge: selectedTf.toUpperCase(),
+              },
+              {
+                id: 'LENSES' as const,
+                label: '6 STAGES',
+                sub: 'Progressive Funnel & Playbooks',
+                icon: 'layers',
+                badge: `S0${activeStrategyTab}`,
+              },
+              {
+                id: 'RADAR' as const,
+                label: 'RADAR',
+                sub: 'MTF Matrix & GEX Regime',
+                icon: 'radar',
+                badge: `${confluence.score}%`,
+              },
+              {
+                id: 'EXECUTE' as const,
+                label: 'EXECUTE',
+                sub: 'Pre-Flight & Position Sizer',
+                icon: 'calculate',
+                badge: 'S06',
+              },
+              {
+                id: 'ACADEMY' as const,
+                label: 'X-RAY',
+                sub: 'Reverse Deconstructor',
+                icon: 'school',
+                badge: 'LEARN',
+              },
+            ];
+            const activeItem =
+              mobileNavItems.find((i) => i.id === mobilePage) || mobileNavItems[0];
+            const quickFlipTarget =
+              mobilePage === 'CHART' ? mobileNavItems[1] : mobileNavItems[0];
+
+            return (
+              <>
+                {isMobileNavOpen && (
+                  <div
+                    className="lg:hidden fixed inset-0 z-[9998] bg-black/40 backdrop-blur-[1px]"
+                    onClick={() => setIsMobileNavOpen(false)}
+                  />
+                )}
+
+                <nav
+                  aria-label="Mobile Terminal Command Pill"
+                  className="lg:hidden fixed bottom-4 left-3 z-[9999] flex flex-col items-start gap-2 pb-[env(safe-area-inset-bottom,0px)]"
                 >
-                  {isActive && (
-                    <span className="absolute top-0 left-2 right-2 h-0.5 bg-[#00f0ff]" />
+                  {/* Expanded Fan-Out Vertical Command Stack */}
+                  {isMobileNavOpen && (
+                    <div className="w-64 bg-[#07090e]/95 backdrop-blur-xl border border-[#00f0ff]/50 shadow-[0_12px_36px_rgba(0,0,0,0.92)] flex flex-col divide-y divide-[#1e2636] overflow-hidden">
+                      <div className="px-3 py-2 bg-[#10141d] flex items-center justify-between">
+                        <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-[#00f0ff]">
+                          ⚡ TERMINAL NAVIGATION
+                        </span>
+                        <span className="font-mono text-[8.5px] text-[#849495]">
+                          {activePair.symbol}
+                        </span>
+                      </div>
+
+                      {mobileNavItems.map((item) => {
+                        const isActive = mobilePage === item.id;
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => handleNavigateMobilePage(item.id)}
+                            className={`relative w-full px-3 py-2.5 flex items-center justify-between gap-2 text-left font-mono transition-colors cursor-pointer ${
+                              isActive
+                                ? 'bg-[#00f0ff]/15 text-[#00f0ff]'
+                                : 'text-[#e1e2eb] hover:bg-[#141821]'
+                            }`}
+                          >
+                            {isActive && (
+                              <span className="absolute left-0 top-0 bottom-0 w-1 bg-[#00f0ff]" />
+                            )}
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className="material-symbols-outlined text-[18px] shrink-0">
+                                {item.icon}
+                              </span>
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-[10.5px] font-bold tracking-tight leading-tight">
+                                  {item.label}
+                                </span>
+                                <span className="font-sans text-[9.5px] text-[#849495] truncate">
+                                  {item.sub}
+                                </span>
+                              </div>
+                            </div>
+
+                            <span
+                              className={`px-1.5 py-0.5 text-[8.5px] font-bold tabular-nums border shrink-0 ${
+                                isActive
+                                  ? 'bg-[#00f0ff]/20 text-[#00f0ff] border-[#00f0ff]/50'
+                                  : 'bg-[#141821] text-[#849495] border-[#1e2636]'
+                              }`}
+                            >
+                              {item.badge}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   )}
-                  <div className="flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[17px]">{item.icon}</span>
-                    <span
-                      className={`text-[8px] px-1 font-bold tabular-nums ${
-                        isActive
-                          ? 'bg-[#00f0ff]/20 text-[#00f0ff]'
-                          : 'bg-[#191c22] text-[#849495]'
+
+                  {/* Compact Bottom-Left Command Pill + 1-Tap Quick-Flip Button */}
+                  <div className="flex items-center gap-1.5 shadow-[0_8px_28px_rgba(0,0,0,0.9)]">
+                    <button
+                      type="button"
+                      onClick={() => setIsMobileNavOpen((prev) => !prev)}
+                      className={`h-11 px-3 bg-[#07090e]/95 backdrop-blur-xl border flex items-center gap-2 font-mono transition-all cursor-pointer ${
+                        isMobileNavOpen
+                          ? 'border-[#00f0ff] text-[#00f0ff]'
+                          : 'border-[#00f0ff]/45 text-[#dbfcff]'
                       }`}
+                      title="Open Mobile Workspace Menu"
                     >
-                      {item.badge}
-                    </span>
+                      <span className="material-symbols-outlined text-[18px] text-[#00f0ff]">
+                        {isMobileNavOpen ? 'close' : 'widgets'}
+                      </span>
+                      <div className="flex flex-col items-start leading-none">
+                        <span className="text-[7.5px] text-[#849495] uppercase tracking-wider">
+                          VIEW MENU
+                        </span>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <span className="text-[10px] font-bold tracking-tight">
+                            {activeItem.label}
+                          </span>
+                          <span className="px-1 py-0.2 bg-[#00f0ff]/20 text-[#00f0ff] text-[8px] font-bold tabular-nums">
+                            {activeItem.badge}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="material-symbols-outlined text-[15px] text-[#849495]">
+                        {isMobileNavOpen ? 'expand_more' : 'expand_less'}
+                      </span>
+                    </button>
+
+                    {/* 1-Tap Quick Flip between Chart and 6 Stages */}
+                    <button
+                      type="button"
+                      onClick={() => handleNavigateMobilePage(quickFlipTarget.id)}
+                      className="h-11 px-2.5 bg-[#07090e]/95 backdrop-blur-xl border border-[#1e2636] hover:border-[#00f0ff]/40 text-[#849495] hover:text-[#00f0ff] flex items-center gap-1 font-mono cursor-pointer transition-colors"
+                      title={`Quick switch to ${quickFlipTarget.label}`}
+                    >
+                      <span className="material-symbols-outlined text-[16px] text-[#00f0ff]">
+                        {quickFlipTarget.icon}
+                      </span>
+                      <span className="text-[9px] font-bold uppercase">
+                        {quickFlipTarget.label}
+                      </span>
+                    </button>
                   </div>
-                  <span className="text-[9px] font-bold tracking-tight">{item.label}</span>
-                </button>
-              );
-            })}
-          </nav>
+                </nav>
+              </>
+            );
+          })()}
 
           {/* Global Status Footer (Hidden on mobile where bottom nav bar is fixed) */}
           <div className="hidden lg:block">

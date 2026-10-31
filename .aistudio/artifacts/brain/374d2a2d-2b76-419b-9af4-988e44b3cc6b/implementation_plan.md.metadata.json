@@ -1,6 +1,6 @@
 {
-  "summary":  "Implementation plan for upgrading Project Inferno with the Gann Astro-Geometric, Lunar, Seasonal & Classical Telemetry Engine, expanding the Playbook Scanner to 14 world-renowned strategies across 4 eras, and adding the Best Available Setups Podium & Strategy Assessment Modal.",
-  "updatedAt":  "2026-10-31T00:21:16.509656946Z",
+  "summary":  "Implementation plan to replace the full-width bottom mobile dock with a modern floating collapsible command pill anchored on the bottom-left edge so the bottom-right Netlify badge never overlaps any navigation tabs, without modifying any other features.",
+  "updatedAt":  "2026-10-31T00:44:50.612173452Z",
   "requestFeedback":  true,
   "userFacing":  true
 }
