@@ -30,10 +30,17 @@ import { ReverseAcademyDeck } from './ReverseAcademyDeck';
 import { loadAcademyProgress, AcademyProgressState } from '../utils/reverseAcademyEngine';
 import { AsciiOrderflowBar, AsciiWaveSparkline, ScrambleValue } from './AsciiTelemetry';
 import { getRookieMentorGuide } from '../utils/metricBenchmarks';
+import {
+  calculateGannAndCyclesTelemetry,
+  evaluateFamousStrategies,
+  FamousStrategyEvaluation,
+  PlaybookEra,
+} from '../utils/famousStrategiesEngine';
 
 export type TacticalDeckMode = 'LENSES' | 'MTF_RADAR' | 'PREFLIGHT_SIZER' | 'REVERSE_ACADEMY';
 export type StageId = 1 | 2 | 3 | 4 | 5 | 6;
-type FlowViewMode = 'GUIDED' | 'COMPACT_ALL';
+type FlowViewMode = 'GUIDED' | 'COMPACT_ALL' | 'PLAYBOOKS';
+type PlaybookFilterType = 'ALL' | 'READY' | PlaybookEra;
 
 interface StrategyTabsProps {
   currentPrice: number;
@@ -291,6 +298,8 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
   const [openLearnStages, setOpenLearnStages] = useState<Record<number, boolean>>({
     1: experienceMode === 'rookie',
   });
+  const [playbookFilter, setPlaybookFilter] = useState<PlaybookFilterType>('ALL');
+  const [assessedStrategyId, setAssessedStrategyId] = useState<string | null>(null);
   const [isLight, setIsLight] = useState<boolean>(
     () => typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light'
   );
@@ -388,6 +397,70 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
     if (p < 1000) return p.toFixed(2);
     return p.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 });
   };
+
+  // Gann Astro-Geometric, Lunar Synodic & Classical Tape Telemetry
+  const gannCyclesTelemetry = useMemo(
+    () =>
+      calculateGannAndCyclesTelemetry(
+        currentPrice,
+        volumeProfile.poc || currentPrice,
+        Date.now(),
+        klines
+      ),
+    [currentPrice, volumeProfile.poc, klines]
+  );
+
+  // 14 World-Renowned Models across 4 Eras with 250-bar 20-candle forward walk-forward backtest
+  const famousStrategies = useMemo<FamousStrategyEvaluation[]>(
+    () =>
+      evaluateFamousStrategies({
+        symbol,
+        currentPrice,
+        klines,
+        volumeProfile,
+        bullOB,
+        bearOB,
+        optionsData,
+        liquidity,
+        telemetry,
+        candlestickResult,
+        maResult,
+        amdPhase,
+        confluence,
+        sharpeSortino,
+      }),
+    [
+      symbol,
+      currentPrice,
+      klines,
+      volumeProfile,
+      bullOB,
+      bearOB,
+      optionsData,
+      liquidity,
+      telemetry,
+      candlestickResult,
+      maResult,
+      amdPhase,
+      confluence,
+      sharpeSortino,
+    ]
+  );
+
+  const readyPlaybooksCount = useMemo(
+    () => famousStrategies.filter((s) => s.possibilityScore >= 70).length,
+    [famousStrategies]
+  );
+
+  const top3PodiumStrategies = useMemo(
+    () => famousStrategies.slice(0, 3),
+    [famousStrategies]
+  );
+
+  const assessedStrategy = useMemo(
+    () => famousStrategies.find((s) => s.id === assessedStrategyId) || null,
+    [famousStrategies, assessedStrategyId]
+  );
 
   // Underlying 5 Lens Confidences from quantEngine
   const lensConfidences = useMemo<Record<number, StrategyConfidence>>(
@@ -2275,6 +2348,79 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
           </AnimatePresence>
         </div>
 
+        {/* Shortcut Banner to 14-Model Playbooks & Gann/Lunar Scanner */}
+        <div
+          className={`cyber-panel border-l-2 border-l-[#f59e0b] p-3.5 flex items-center justify-between gap-3 flex-wrap ${
+            isLight ? 'bg-[#ffffff]' : 'bg-[#0b0e14]'
+          }`}
+        >
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span
+                className={`px-2 py-0.5 border font-mono text-[9.5px] font-bold uppercase ${
+                  isLight
+                    ? 'bg-[#d97706]/15 text-[#b45309] border-[#d97706]/40'
+                    : 'bg-[#f59e0b]/20 text-[#fcd34d] border-[#f59e0b]/40'
+                }`}
+              >
+                🏆 14 FAMOUS PLAYBOOKS &amp; GANN / LUNAR SCANNER
+              </span>
+              <span
+                className={`font-mono text-[10px] font-bold ${
+                  isLight ? 'text-[#047857]' : 'text-[#4edea3]'
+                }`}
+              >
+                {readyPlaybooksCount} HIGH-PROBABILITY SETUPS READY ON {symbol}
+              </span>
+            </div>
+            <span
+              className={`font-sans text-[11.5px] ${
+                isLight ? 'text-[#334155]' : 'text-[#b9cacb]'
+              }`}
+            >
+              Top Ranked Now:{' '}
+              <strong className={isLight ? 'text-[#0f172a]' : 'text-[#dbfcff]'}>
+                {top3PodiumStrategies[0]?.name} ({top3PodiumStrategies[0]?.possibilityScore}% Score •{' '}
+                {top3PodiumStrategies[0]?.backtest250Bars.winRatePct}% 250-Bar Win Rate)
+              </strong>
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            {top3PodiumStrategies[0] && (
+              <button
+                type="button"
+                onClick={() => {
+                  const top = top3PodiumStrategies[0];
+                  onLoadSetup(
+                    top.tradePlan.entryPrice,
+                    top.tradePlan.stopLoss,
+                    top.tradePlan.tp1Price,
+                    top.tradePlan.tp2Price
+                  );
+                }}
+                className={`px-3 py-1.5 border font-mono text-[9.5px] font-bold uppercase cursor-pointer ${
+                  isLight
+                    ? 'bg-[#059669]/15 hover:bg-[#059669]/25 text-[#047857] border-[#059669]/40'
+                    : 'bg-[#4edea3]/15 hover:bg-[#4edea3]/25 text-[#4edea3] border-[#4edea3]/40'
+                }`}
+              >
+                ⚡ LOAD #1 ({top3PodiumStrategies[0].name})
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setViewMode('PLAYBOOKS')}
+              className={`px-3 py-1.5 border font-mono text-[9.5px] font-bold uppercase cursor-pointer ${
+                isLight
+                  ? 'bg-[#d97706]/15 hover:bg-[#d97706]/25 text-[#b45309] border-[#d97706]/50'
+                  : 'bg-[#f59e0b]/20 hover:bg-[#f59e0b]/30 text-[#fcd34d] border-[#f59e0b]/50'
+              }`}
+            >
+              🏆 OPEN PLAYBOOKS &amp; GANN HUB →
+            </button>
+          </div>
+        </div>
+
         {/* Lens Setup Selector Pill — 1-Click Load Entry, Stop Loss & Targets from any Stage */}
         <div className="cyber-panel p-4 flex flex-col gap-3">
           <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -2507,8 +2653,1183 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
     );
   };
 
+  // ============================================================================
+  // PLAYBOOKS & GANN / LUNAR / CLASSICAL COMMAND HUB (VIEW MODE: 'PLAYBOOKS')
+  // ============================================================================
+  const renderPlaybooksAndGannHub = () => {
+    const sq9 = gannCyclesTelemetry.sq9Levels;
+    const filteredModels = famousStrategies.filter((s) => {
+      if (playbookFilter === 'ALL') return true;
+      if (playbookFilter === 'READY') return s.possibilityScore >= 70;
+      return s.era === playbookFilter;
+    });
+
+    const handleSpotlightAndLoadGannLevel = (
+      e: React.MouseEvent,
+      degreeLabel: string,
+      levelPrice: number,
+      isSupport: boolean
+    ) => {
+      toggleTrackPrice(e, `GANN SQ9 ${degreeLabel} ($${formatP(levelPrice)})`, levelPrice);
+      const atrDist = Math.max(Math.abs(sq9.res45 - sq9.sup45) * 0.5, currentPrice * 0.006);
+      const entry = levelPrice;
+      const stop = isSupport ? entry - atrDist : entry + atrDist;
+      const tp1 = isSupport ? sq9.res90 : sq9.sup90;
+      const tp2 = isSupport ? sq9.res180 : sq9.sup180;
+      onLoadSetup(entry, stop, tp1, tp2);
+    };
+
+    const getStrategyBadgeColors = (score: number) => {
+      if (score >= 70) {
+        return isLight
+          ? 'bg-[#059669]/15 text-[#047857] border-[#059669]/40'
+          : 'bg-[#4edea3]/15 text-[#4edea3] border-[#4edea3]/40';
+      }
+      if (score >= 50) {
+        return isLight
+          ? 'bg-[#d97706]/15 text-[#b45309] border-[#d97706]/40'
+          : 'bg-[#f59e0b]/15 text-[#fcd34d] border-[#f59e0b]/40';
+      }
+      return isLight
+        ? 'bg-[#dc2626]/15 text-[#b91c1c] border-[#dc2626]/40'
+        : 'bg-[#ffb4ab]/15 text-[#ffb4ab] border-[#ffb4ab]/40';
+    };
+
+    const getBiasBadgeColors = (bias: 'LONG' | 'SHORT' | 'NEUTRAL') => {
+      if (bias === 'LONG') {
+        return isLight
+          ? 'bg-[#059669]/15 text-[#047857] border-[#059669]/40'
+          : 'bg-[#4edea3]/15 text-[#4edea3] border-[#4edea3]/40';
+      }
+      if (bias === 'SHORT') {
+        return isLight
+          ? 'bg-[#dc2626]/15 text-[#b91c1c] border-[#dc2626]/40'
+          : 'bg-[#ffb4ab]/15 text-[#ffb4ab] border-[#ffb4ab]/40';
+      }
+      return isLight
+        ? 'bg-[#e2e8f0] text-[#334155] border-[#cbd5e1]'
+        : 'bg-[#141821] text-[#b9cacb] border-[#1e2636]';
+    };
+
+    return (
+      <div className="flex flex-col p-4 gap-4">
+        {/* Top Command Header */}
+        <div className="cyber-panel cyber-scan-active border-l-2 border-l-[#f59e0b] p-4 flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span
+                className={`px-2 py-0.5 border font-mono text-[9.5px] font-bold uppercase ${
+                  isLight
+                    ? 'bg-[#d97706]/15 text-[#b45309] border-[#d97706]/40'
+                    : 'bg-[#f59e0b]/20 text-[#fcd34d] border-[#f59e0b]/40'
+                }`}
+              >
+                🏆 MULTI-ERA QUANTITATIVE PLAYBOOK &amp; GANN / LUNAR SCANNER
+              </span>
+              <span
+                className={`font-mono text-[10.5px] font-bold ${
+                  isLight ? 'text-[#047857]' : 'text-[#4edea3]'
+                }`}
+              >
+                {readyPlaybooksCount} OF 14 MODELS READY TO TRADE ON {symbol}
+              </span>
+            </div>
+            <p
+              className={`font-sans text-[11.5px] ${
+                isLight ? 'text-[#334155]' : 'text-[#b9cacb]'
+              }`}
+            >
+              Live local calculation of W.D. Gann Square of 9 Harmonics, Astronomical Synodic Moon Cycles (Yuan et al. 2006), Classical Tape Legends (Turtle, Crabel NR7, DeMark TD9, Raschke), and SSRN Microstructure Models with 250-bar walk-forward backtests.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setViewMode('GUIDED');
+                handleStageSelect(6);
+              }}
+              className={`px-3 py-1.5 border font-mono text-[9.5px] font-bold uppercase cursor-pointer ${
+                isLight
+                  ? 'bg-[#0284c7]/15 hover:bg-[#0284c7]/25 text-[#0284c7] border-[#0284c7]/40'
+                  : 'bg-[#00f0ff]/15 hover:bg-[#00f0ff]/25 text-[#00f0ff] border-[#00f0ff]/40'
+              }`}
+            >
+              OPEN STAGE 06 SIZER →
+            </button>
+          </div>
+        </div>
+
+        {/* ==================================================================== */}
+        {/* SECTION 1: GANN ASTRO-GEOMETRIC, LUNAR & CLASSICAL TELEMETRY BAR      */}
+        {/* ==================================================================== */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 tabular-nums">
+          {/* Card 1: Lunar Synodic Phase (Yuan, Zheng & Zhu 2006 SSRN) */}
+          <div className="cyber-panel p-3.5 flex flex-col justify-between gap-2 border-t-2 border-t-[#c084fc]">
+            <div className="flex items-center justify-between gap-1">
+              <span
+                className={`font-mono text-[9.5px] font-bold uppercase ${
+                  isLight ? 'text-[#7e22ce]' : 'text-[#c084fc]'
+                }`}
+              >
+                🌙 LUNAR SYNODIC CYCLE (SSRN)
+              </span>
+              <span
+                className={`px-1.5 py-0.5 border font-mono text-[8.5px] font-bold ${
+                  gannCyclesTelemetry.isLunarInflectionWindow
+                    ? isLight
+                      ? 'bg-[#059669]/15 text-[#047857] border-[#059669]/40'
+                      : 'bg-[#4edea3]/15 text-[#4edea3] border-[#4edea3]/40'
+                    : isLight
+                    ? 'bg-[#f1f5f9] text-[#475569] border-[#cbd5e1]'
+                    : 'bg-[#141821] text-[#849495] border-[#1e2636]'
+                }`}
+              >
+                {gannCyclesTelemetry.isLunarInflectionWindow ? 'INFLECTION ACTIVE' : 'MID-CYCLE'}
+              </span>
+            </div>
+
+            <div className="flex items-baseline justify-between gap-2">
+              <span
+                className={`font-mono text-[14px] font-bold ${
+                  isLight ? 'text-[#0f172a]' : 'text-[#dbfcff]'
+                }`}
+              >
+                {gannCyclesTelemetry.phaseEmoji} {gannCyclesTelemetry.phaseName}
+              </span>
+              <span
+                className={`font-mono text-[11px] font-bold ${
+                  isLight ? 'text-[#7e22ce]' : 'text-[#c084fc]'
+                }`}
+              >
+                {gannCyclesTelemetry.illuminationPct}% ILLUM
+              </span>
+            </div>
+
+            <div
+              className={`grid grid-cols-2 gap-1.5 pt-1.5 border-t font-mono text-[9px] ${
+                isLight ? 'border-[#cbd5e1] text-[#334155]' : 'border-[#1e2636] text-[#b9cacb]'
+              }`}
+            >
+              <div>
+                <span className="block text-[8px] opacity-75">MOON AGE</span>
+                <strong>{gannCyclesTelemetry.lunarAgeDays}d / 29.5d</strong>
+              </div>
+              <div>
+                <span className="block text-[8px] opacity-75">
+                  NEXT {gannCyclesTelemetry.nextInflectionType}
+                </span>
+                <strong>In {gannCyclesTelemetry.daysToNextInflection}d</strong>
+              </div>
+            </div>
+            <span
+              className={`font-mono text-[8.5px] truncate ${
+                isLight ? 'text-[#475569]' : 'text-[#849495]'
+              }`}
+              title={gannCyclesTelemetry.lunarBiasNote}
+            >
+              {gannCyclesTelemetry.lunarBiasNote}
+            </span>
+          </div>
+
+          {/* Card 2: W.D. Gann Solar Seasonal Cycle & Cardinal Dates */}
+          <div className="cyber-panel p-3.5 flex flex-col justify-between gap-2 border-t-2 border-t-[#f59e0b]">
+            <div className="flex items-center justify-between gap-1">
+              <span
+                className={`font-mono text-[9.5px] font-bold uppercase ${
+                  isLight ? 'text-[#b45309]' : 'text-[#fcd34d]'
+                }`}
+              >
+                ☀️ GANN SOLAR SEASONAL CYCLE
+              </span>
+              <span
+                className={`px-1.5 py-0.5 border font-mono text-[8.5px] font-bold ${
+                  gannCyclesTelemetry.daysToCardinalDate <= 5
+                    ? isLight
+                      ? 'bg-[#d97706]/15 text-[#b45309] border-[#d97706]/40'
+                      : 'bg-[#f59e0b]/20 text-[#fcd34d] border-[#f59e0b]/40'
+                    : isLight
+                    ? 'bg-[#f1f5f9] text-[#475569] border-[#cbd5e1]'
+                    : 'bg-[#141821] text-[#849495] border-[#1e2636]'
+                }`}
+              >
+                {gannCyclesTelemetry.solarLongitudeDeg}° ECLIPTIC
+              </span>
+            </div>
+
+            <div className="flex items-baseline justify-between gap-2">
+              <span
+                className={`font-mono text-[12.5px] font-bold truncate ${
+                  isLight ? 'text-[#0f172a]' : 'text-[#dbfcff]'
+                }`}
+              >
+                {gannCyclesTelemetry.activeQuadrant}
+              </span>
+            </div>
+
+            <div
+              className={`grid grid-cols-2 gap-1.5 pt-1.5 border-t font-mono text-[9px] ${
+                isLight ? 'border-[#cbd5e1] text-[#334155]' : 'border-[#1e2636] text-[#b9cacb]'
+              }`}
+            >
+              <div>
+                <span className="block text-[8px] opacity-75">NEXT CARDINAL DATE</span>
+                <strong className="truncate block">{gannCyclesTelemetry.nearestCardinalLabel}</strong>
+              </div>
+              <div>
+                <span className="block text-[8px] opacity-75">TIME WINDOW</span>
+                <strong
+                  className={
+                    gannCyclesTelemetry.daysToCardinalDate <= 5
+                      ? isLight
+                        ? 'text-[#047857]'
+                        : 'text-[#4edea3]'
+                      : ''
+                  }
+                >
+                  In {gannCyclesTelemetry.daysToCardinalDate} days
+                </strong>
+              </div>
+            </div>
+            <span
+              className={`font-mono text-[8.5px] truncate ${
+                isLight ? 'text-[#475569]' : 'text-[#849495]'
+              }`}
+              title={gannCyclesTelemetry.seasonalBiasNote}
+            >
+              {gannCyclesTelemetry.seasonalBiasNote}
+            </span>
+          </div>
+
+          {/* Card 3: W.D. Gann Square of 9 Harmonics (Clickable Chart-Tracking + 1-Click Sizer Load) */}
+          <div className="cyber-panel p-3.5 flex flex-col justify-between gap-2 border-t-2 border-t-[#00f0ff]">
+            <div className="flex items-center justify-between gap-1">
+              <span
+                className={`font-mono text-[9.5px] font-bold uppercase ${
+                  isLight ? 'text-[#0284c7]' : 'text-[#00f0ff]'
+                }`}
+              >
+                📐 GANN SQUARE OF 9 HARMONICS
+              </span>
+              <span
+                className={`px-1.5 py-0.5 border font-mono text-[8.5px] font-bold ${
+                  sq9.distanceToNearestSq9Pct <= 0.35
+                    ? isLight
+                      ? 'bg-[#059669]/15 text-[#047857] border-[#059669]/40'
+                      : 'bg-[#4edea3]/15 text-[#4edea3] border-[#4edea3]/40'
+                    : isLight
+                    ? 'bg-[#f1f5f9] text-[#475569] border-[#cbd5e1]'
+                    : 'bg-[#141821] text-[#849495] border-[#1e2636]'
+                }`}
+              >
+                {sq9.nearestSq9Label} ({sq9.distanceToNearestSq9Pct.toFixed(2)}%)
+              </span>
+            </div>
+
+            {/* 4 Clickable Harmonic Pills: Spotlights on Chart & Loads Sizer */}
+            <div className="grid grid-cols-2 gap-1.5 font-mono text-[9px]">
+              <button
+                type="button"
+                onClick={(e) =>
+                  handleSpotlightAndLoadGannLevel(e, '-90° SUP', sq9.sup90, true)
+                }
+                className={`px-2 py-1 border text-left transition-all cursor-pointer flex items-center justify-between ${
+                  isPriceTracked(sq9.sup90)
+                    ? 'bg-[#4edea3]/25 border-[#4edea3] text-[#4edea3]'
+                    : isLight
+                    ? 'bg-[#f8fafc] hover:bg-[#e2e8f0] border-[#cbd5e1] text-[#047857]'
+                    : 'bg-[#090c12] hover:bg-[#141821] border-[#1e2636] text-[#4edea3]'
+                }`}
+                title="Click to spotlight -90° Gann Support on Chart & load into Stage 06 Sizer"
+              >
+                <span>-90° SUP</span>
+                <strong>${formatP(sq9.sup90)}</strong>
+              </button>
+
+              <button
+                type="button"
+                onClick={(e) =>
+                  handleSpotlightAndLoadGannLevel(e, '+90° RES', sq9.res90, false)
+                }
+                className={`px-2 py-1 border text-left transition-all cursor-pointer flex items-center justify-between ${
+                  isPriceTracked(sq9.res90)
+                    ? 'bg-[#ffb4ab]/25 border-[#ffb4ab] text-[#ffb4ab]'
+                    : isLight
+                    ? 'bg-[#f8fafc] hover:bg-[#e2e8f0] border-[#cbd5e1] text-[#b91c1c]'
+                    : 'bg-[#090c12] hover:bg-[#141821] border-[#1e2636] text-[#ffb4ab]'
+                }`}
+                title="Click to spotlight +90° Gann Resistance on Chart & load into Stage 06 Sizer"
+              >
+                <span>+90° RES</span>
+                <strong>${formatP(sq9.res90)}</strong>
+              </button>
+
+              <button
+                type="button"
+                onClick={(e) =>
+                  handleSpotlightAndLoadGannLevel(e, '-180° OP', sq9.sup180, true)
+                }
+                className={`px-2 py-1 border text-left transition-all cursor-pointer flex items-center justify-between ${
+                  isPriceTracked(sq9.sup180)
+                    ? 'bg-[#4edea3]/25 border-[#4edea3] text-[#4edea3]'
+                    : isLight
+                    ? 'bg-[#f8fafc] hover:bg-[#e2e8f0] border-[#cbd5e1] text-[#047857]'
+                    : 'bg-[#090c12] hover:bg-[#141821] border-[#1e2636] text-[#4edea3]'
+                }`}
+                title="Click to spotlight -180° Gann Opposition Support on Chart & load into Stage 06 Sizer"
+              >
+                <span>-180° SUP</span>
+                <strong>${formatP(sq9.sup180)}</strong>
+              </button>
+
+              <button
+                type="button"
+                onClick={(e) =>
+                  handleSpotlightAndLoadGannLevel(e, '+180° OP', sq9.res180, false)
+                }
+                className={`px-2 py-1 border text-left transition-all cursor-pointer flex items-center justify-between ${
+                  isPriceTracked(sq9.res180)
+                    ? 'bg-[#ffb4ab]/25 border-[#ffb4ab] text-[#ffb4ab]'
+                    : isLight
+                    ? 'bg-[#f8fafc] hover:bg-[#e2e8f0] border-[#cbd5e1] text-[#b91c1c]'
+                    : 'bg-[#090c12] hover:bg-[#141821] border-[#1e2636] text-[#ffb4ab]'
+                }`}
+                title="Click to spotlight +180° Gann Opposition Resistance on Chart & load into Stage 06 Sizer"
+              >
+                <span>+180° RES</span>
+                <strong>${formatP(sq9.res180)}</strong>
+              </button>
+            </div>
+
+            <span
+              className={`font-mono text-[8.5px] ${
+                isLight ? 'text-[#475569]' : 'text-[#849495]'
+              }`}
+            >
+              Click any harmonic pill to spotlight on chart &amp; load sizer
+            </span>
+          </div>
+
+          {/* Card 4: Classical Tape Counters (DeMark TD9, Crabel NR7/NR4, Williams %R) */}
+          <div className="cyber-panel p-3.5 flex flex-col justify-between gap-2 border-t-2 border-t-[#4edea3]">
+            <div className="flex items-center justify-between gap-1">
+              <span
+                className={`font-mono text-[9.5px] font-bold uppercase ${
+                  isLight ? 'text-[#047857]' : 'text-[#4edea3]'
+                }`}
+              >
+                🏛️ CLASSICAL TAPE COUNTERS
+              </span>
+              <span
+                className={`px-1.5 py-0.5 border font-mono text-[8.5px] font-bold ${
+                  gannCyclesTelemetry.isNR7 || Math.abs(gannCyclesTelemetry.tdSequentialCount) >= 7
+                    ? isLight
+                      ? 'bg-[#059669]/15 text-[#047857] border-[#059669]/40'
+                      : 'bg-[#4edea3]/15 text-[#4edea3] border-[#4edea3]/40'
+                    : isLight
+                    ? 'bg-[#f1f5f9] text-[#475569] border-[#cbd5e1]'
+                    : 'bg-[#141821] text-[#849495] border-[#1e2636]'
+                }`}
+              >
+                {gannCyclesTelemetry.isNR7
+                  ? 'NR7 COIL ACTIVE'
+                  : gannCyclesTelemetry.isNR4
+                  ? 'NR4 COIL'
+                  : 'STANDARD RANGE'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-1.5 font-mono text-[9px]">
+              <div
+                className={`p-1.5 border ${
+                  isLight ? 'bg-[#f8fafc] border-[#cbd5e1]' : 'bg-[#090c12] border-[#1e2636]'
+                }`}
+              >
+                <span className="block text-[8px] opacity-75">TD SEQ (9)</span>
+                <strong
+                  className={
+                    gannCyclesTelemetry.tdSequentialCount <= -7
+                      ? isLight
+                        ? 'text-[#047857]'
+                        : 'text-[#4edea3]'
+                      : gannCyclesTelemetry.tdSequentialCount >= 7
+                      ? isLight
+                        ? 'text-[#b91c1c]'
+                        : 'text-[#ffb4ab]'
+                      : isLight
+                      ? 'text-[#0f172a]'
+                      : 'text-[#dbfcff]'
+                  }
+                >
+                  {gannCyclesTelemetry.tdSequentialCount > 0
+                    ? `+${gannCyclesTelemetry.tdSequentialCount} SELL`
+                    : gannCyclesTelemetry.tdSequentialCount < 0
+                    ? `${gannCyclesTelemetry.tdSequentialCount} BUY`
+                    : '0 NEUT'}
+                </strong>
+              </div>
+
+              <div
+                className={`p-1.5 border ${
+                  isLight ? 'bg-[#f8fafc] border-[#cbd5e1]' : 'bg-[#090c12] border-[#1e2636]'
+                }`}
+              >
+                <span className="block text-[8px] opacity-75">CRABEL NR</span>
+                <strong
+                  className={
+                    gannCyclesTelemetry.isNR7
+                      ? isLight
+                        ? 'text-[#047857]'
+                        : 'text-[#4edea3]'
+                      : isLight
+                      ? 'text-[#0f172a]'
+                      : 'text-[#dbfcff]'
+                  }
+                >
+                  {gannCyclesTelemetry.isNR7 ? 'NR7 COIL' : gannCyclesTelemetry.isNR4 ? 'NR4' : 'WIDE'}
+                </strong>
+              </div>
+
+              <div
+                className={`p-1.5 border ${
+                  isLight ? 'bg-[#f8fafc] border-[#cbd5e1]' : 'bg-[#090c12] border-[#1e2636]'
+                }`}
+              >
+                <span className="block text-[8px] opacity-75">WILLIAMS %R</span>
+                <strong
+                  className={
+                    gannCyclesTelemetry.williamsR14 <= -80
+                      ? isLight
+                        ? 'text-[#047857]'
+                        : 'text-[#4edea3]'
+                      : gannCyclesTelemetry.williamsR14 >= -20
+                      ? isLight
+                        ? 'text-[#b91c1c]'
+                        : 'text-[#ffb4ab]'
+                      : isLight
+                      ? 'text-[#0f172a]'
+                      : 'text-[#dbfcff]'
+                  }
+                >
+                  {gannCyclesTelemetry.williamsR14.toFixed(1)}
+                </strong>
+              </div>
+            </div>
+
+            <span
+              className={`font-mono text-[8.5px] ${
+                isLight ? 'text-[#475569]' : 'text-[#849495]'
+              }`}
+            >
+              20-Bar Donchian: ${formatP(gannCyclesTelemetry.donchian20Low)} – $
+              {formatP(gannCyclesTelemetry.donchian20High)}
+            </span>
+          </div>
+        </div>
+
+        {/* ==================================================================== */}
+        {/* SECTION 2: 🎯 TOP 3 BEST AVAILABLE SETUPS TO ASSESS RIGHT NOW         */}
+        {/* ==================================================================== */}
+        <div className="cyber-panel p-4 flex flex-col gap-3 border-l-2 border-l-[#4edea3]">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span
+                className={`px-2 py-0.5 border font-mono text-[9.5px] font-bold uppercase ${
+                  isLight
+                    ? 'bg-[#059669]/15 text-[#047857] border-[#059669]/40'
+                    : 'bg-[#4edea3]/15 text-[#4edea3] border-[#4edea3]/40'
+                }`}
+              >
+                🎯 BEST AVAILABLE SETUPS TO ASSESS RIGHT NOW
+              </span>
+              <span
+                className={`font-mono text-[10px] ${
+                  isLight ? 'text-[#475569]' : 'text-[#849495]'
+                }`}
+              >
+                Ranked by Composite Edge (65% Live Confluence + 35% 250-Bar Asset Backtest Win Rate)
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 tabular-nums">
+            {top3PodiumStrategies.map((strat, idx) => {
+              const rankLabels = ['#1 BEST EDGE NOW', '#2 RUNNER-UP', '#3 ALTERNATIVE'];
+              const rankBorderColors = [
+                'border-t-2 border-t-[#4edea3]',
+                'border-t-2 border-t-[#00f0ff]',
+                'border-t-2 border-t-[#f59e0b]',
+              ];
+              return (
+                <div
+                  key={strat.id}
+                  className={`p-3.5 border flex flex-col justify-between gap-3 ${
+                    rankBorderColors[idx]
+                  } ${
+                    isLight
+                      ? 'bg-[#ffffff] border-[#cbd5e1]'
+                      : 'bg-[#090c12] border-[#1e2636]'
+                  }`}
+                >
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between gap-1.5 flex-wrap">
+                      <span
+                        className={`px-1.5 py-0.5 font-mono text-[8.5px] font-bold uppercase border ${
+                          idx === 0
+                            ? isLight
+                              ? 'bg-[#059669]/15 text-[#047857] border-[#059669]/40'
+                              : 'bg-[#4edea3]/20 text-[#4edea3] border-[#4edea3]/50'
+                            : isLight
+                            ? 'bg-[#0284c7]/15 text-[#0284c7] border-[#0284c7]/40'
+                            : 'bg-[#00f0ff]/15 text-[#00f0ff] border-[#00f0ff]/40'
+                        }`}
+                      >
+                        {rankLabels[idx]} • {strat.era}
+                      </span>
+
+                      <div className="flex items-center gap-1">
+                        <span
+                          className={`px-1.5 py-0.5 border font-mono text-[9px] font-bold ${getBiasBadgeColors(
+                            strat.direction
+                          )}`}
+                        >
+                          {strat.direction}
+                        </span>
+                        <span
+                          className={`px-1.5 py-0.5 border font-mono text-[9.5px] font-bold ${getStrategyBadgeColors(
+                            strat.possibilityScore
+                          )}`}
+                        >
+                          {strat.possibilityScore}% SCORE
+                        </span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div
+                        className={`font-mono text-[12px] font-bold ${
+                          isLight ? 'text-[#0f172a]' : 'text-[#dbfcff]'
+                        }`}
+                      >
+                        {strat.name}
+                      </div>
+                      <div
+                        className={`font-mono text-[9.5px] ${
+                          isLight ? 'text-[#475569]' : 'text-[#849495]'
+                        }`}
+                      >
+                        {strat.authorOrPaper} • 250-Bar Win Rate:{' '}
+                        <strong className={isLight ? 'text-[#047857]' : 'text-[#4edea3]'}>
+                          {strat.backtest250Bars.winRatePct}% (N={strat.backtest250Bars.signalsCount},{' '}
+                          {strat.backtest250Bars.avgRealizedR}R)
+                        </strong>
+                      </div>
+                    </div>
+
+                    <p
+                      className={`font-sans text-[11px] leading-snug ${
+                        isLight ? 'text-[#1e293b]' : 'text-[#b9cacb]'
+                      }`}
+                    >
+                      {strat.tradePlan.triggerNote}
+                    </p>
+
+                    {/* Compact Trade Geometry Strip */}
+                    <div
+                      className={`grid grid-cols-4 gap-1 p-2 border font-mono text-[9px] ${
+                        isLight ? 'bg-[#f8fafc] border-[#cbd5e1]' : 'bg-[#0b0e14] border-[#1e2636]'
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={(e) =>
+                          toggleTrackPrice(
+                            e,
+                            `${strat.name} ENTRY`,
+                            strat.tradePlan.entryPrice
+                          )
+                        }
+                        className="text-left cursor-pointer hover:opacity-80"
+                        title="Click to spotlight Entry on Chart"
+                      >
+                        <span className="block text-[7.5px] opacity-70">ENTRY 🎯</span>
+                        <strong className={isLight ? 'text-[#0284c7]' : 'text-[#00f0ff]'}>
+                          ${formatP(strat.tradePlan.entryPrice)}
+                        </strong>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) =>
+                          toggleTrackPrice(
+                            e,
+                            `${strat.name} STOP`,
+                            strat.tradePlan.stopLoss
+                          )
+                        }
+                        className="text-left cursor-pointer hover:opacity-80"
+                        title="Click to spotlight Stop Loss on Chart"
+                      >
+                        <span className="block text-[7.5px] opacity-70">STOP 🎯</span>
+                        <strong className={isLight ? 'text-[#b91c1c]' : 'text-[#ffb4ab]'}>
+                          ${formatP(strat.tradePlan.stopLoss)}
+                        </strong>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) =>
+                          toggleTrackPrice(e, `${strat.name} TP1`, strat.tradePlan.tp1Price)
+                        }
+                        className="text-left cursor-pointer hover:opacity-80"
+                        title="Click to spotlight TP1 on Chart"
+                      >
+                        <span className="block text-[7.5px] opacity-70">TP1 🎯</span>
+                        <strong className={isLight ? 'text-[#047857]' : 'text-[#4edea3]'}>
+                          ${formatP(strat.tradePlan.tp1Price)}
+                        </strong>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) =>
+                          toggleTrackPrice(e, `${strat.name} TP2`, strat.tradePlan.tp2Price)
+                        }
+                        className="text-left cursor-pointer hover:opacity-80"
+                        title="Click to spotlight TP2 on Chart"
+                      >
+                        <span className="block text-[7.5px] opacity-70">TP2 🎯</span>
+                        <strong className={isLight ? 'text-[#047857]' : 'text-[#4edea3]'}>
+                          ${formatP(strat.tradePlan.tp2Price)}
+                        </strong>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons: Assess Rules Modal + 1-Click Load into Stage 06 Sizer */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setAssessedStrategyId(strat.id)}
+                      className={`flex-1 px-2.5 py-1.5 border font-mono text-[9.5px] font-bold uppercase transition-colors cursor-pointer ${
+                        isLight
+                          ? 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0284c7] border-[#0284c7]/40'
+                          : 'bg-[#141821] hover:bg-[#191c22] text-[#00f0ff] border-[#00f0ff]/40'
+                      }`}
+                    >
+                      🔍 ASSESS RULES
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onLoadSetup(
+                          strat.tradePlan.entryPrice,
+                          strat.tradePlan.stopLoss,
+                          strat.tradePlan.tp1Price,
+                          strat.tradePlan.tp2Price
+                        );
+                        setViewMode('GUIDED');
+                        handleStageSelect(6);
+                      }}
+                      className={`flex-1 px-2.5 py-1.5 border font-mono text-[9.5px] font-bold uppercase transition-colors cursor-pointer ${
+                        isLight
+                          ? 'bg-[#059669]/15 hover:bg-[#059669]/25 text-[#047857] border-[#059669]/40'
+                          : 'bg-[#4edea3]/15 hover:bg-[#4edea3]/25 text-[#4edea3] border-[#4edea3]/40'
+                      }`}
+                    >
+                      ⚡ LOAD INTO SIZER →
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ==================================================================== */}
+        {/* SECTION 3: FULL 14-MODEL RESEARCH LIBRARY WITH ERA FILTERS           */}
+        {/* ==================================================================== */}
+        <div className="cyber-panel p-4 flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <span
+              className={`font-mono text-[10px] font-bold uppercase tracking-wider ${
+                isLight ? 'text-[#0284c7]' : 'text-[#00f0ff]'
+              }`}
+            >
+              📚 14-MODEL QUANTITATIVE &amp; HISTORICAL STRATEGY LIBRARY ({filteredModels.length} SHOWN)
+            </span>
+
+            {/* Era Filter Tabs */}
+            <div className="flex items-center gap-1 flex-wrap font-mono text-[9px]">
+              {(
+                [
+                  { id: 'ALL', label: `ALL (${famousStrategies.length})` },
+                  { id: 'READY', label: `🟢 READY TO TRADE (${readyPlaybooksCount})` },
+                  { id: 'GANN & CYCLICAL', label: '🌙 GANN & CYCLICAL' },
+                  { id: 'CLASSICAL LEGENDS', label: '🏛️ CLASSICAL LEGENDS' },
+                  { id: 'SSRN ACADEMIC', label: '📄 SSRN ACADEMIC' },
+                  { id: 'OPTIONS & DEALER', label: '⚡ OPTIONS & ORDERFLOW' },
+                ] as const
+              ).map((tab) => {
+                const active = playbookFilter === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setPlaybookFilter(tab.id)}
+                    className={`px-2.5 py-1 border font-bold uppercase transition-colors cursor-pointer ${
+                      active
+                        ? isLight
+                          ? 'bg-[#0284c7]/15 text-[#0284c7] border-[#0284c7]'
+                          : 'bg-[#00f0ff]/20 text-[#00f0ff] border-[#00f0ff]'
+                        : isLight
+                        ? 'bg-[#f8fafc] hover:bg-[#e2e8f0] text-[#475569] border-[#cbd5e1]'
+                        : 'bg-[#090c12] hover:bg-[#141821] text-[#849495] border-[#1e2636]'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 tabular-nums">
+            {filteredModels.map((model) => (
+              <div
+                key={model.id}
+                className={`p-4 border flex flex-col justify-between gap-3 ${
+                  isLight ? 'bg-[#ffffff] border-[#cbd5e1]' : 'bg-[#090c12] border-[#1e2636]'
+                }`}
+              >
+                <div className="flex flex-col gap-2.5">
+                  {/* Header: Era Badge + Bias + Possibility Score */}
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span
+                        className={`px-1.5 py-0.5 border font-mono text-[8.5px] font-bold uppercase ${
+                          isLight
+                            ? 'bg-[#f1f5f9] text-[#334155] border-[#cbd5e1]'
+                            : 'bg-[#141821] text-[#b9cacb] border-[#1e2636]'
+                        }`}
+                      >
+                        {model.era}
+                      </span>
+                      <span
+                        className={`font-mono text-[9.5px] ${
+                          isLight ? 'text-[#475569]' : 'text-[#849495]'
+                        }`}
+                      >
+                        {model.authorOrPaper}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={`px-2 py-0.5 border font-mono text-[9px] font-bold ${getBiasBadgeColors(
+                          model.direction
+                        )}`}
+                      >
+                        {model.direction}
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 border font-mono text-[9.5px] font-bold ${getStrategyBadgeColors(
+                          model.possibilityScore
+                        )}`}
+                      >
+                        {model.possibilityScore}% ({model.status.replace('_', ' ')})
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Title & Live Verdict */}
+                  <div>
+                    <div
+                      className={`font-mono text-[12.5px] font-bold ${
+                        isLight ? 'text-[#0f172a]' : 'text-[#dbfcff]'
+                      }`}
+                    >
+                      {model.name}
+                    </div>
+                    <p
+                      className={`font-sans text-[11.5px] mt-0.5 leading-snug ${
+                        isLight ? 'text-[#1e293b]' : 'text-[#b9cacb]'
+                      }`}
+                    >
+                      {model.tradePlan.triggerNote}
+                    </p>
+                  </div>
+
+                  {/* 4-Rule Live Telemetry Checklist */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    {model.rules.map((r, rIdx) => (
+                      <div
+                        key={rIdx}
+                        className={`p-2 border flex flex-col gap-0.5 font-mono text-[9px] ${
+                          r.passed
+                            ? isLight
+                              ? 'bg-[#059669]/10 border-[#059669]/30'
+                              : 'bg-[#4edea3]/10 border-[#4edea3]/30'
+                            : isLight
+                            ? 'bg-[#f8fafc] border-[#cbd5e1]'
+                            : 'bg-[#0b0e14] border-[#1e2636]'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <span
+                            className={`font-bold ${
+                              r.passed
+                                ? isLight
+                                  ? 'text-[#047857]'
+                                  : 'text-[#4edea3]'
+                                : isLight
+                                ? 'text-[#475569]'
+                                : 'text-[#849495]'
+                            }`}
+                          >
+                            {r.passed ? '✓' : '○'} {r.label}
+                          </span>
+                          <span className="text-[8px] opacity-75">+25%</span>
+                        </div>
+                        <span
+                          className={`text-[8.5px] truncate ${
+                            isLight ? 'text-[#0f172a]' : 'text-[#dbfcff]'
+                          }`}
+                        >
+                          Live: <strong>{r.liveReading}</strong>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* 250-Bar Rolling Walk-Forward Backtest Strip */}
+                  <div
+                    className={`p-2 border flex items-center justify-between flex-wrap gap-2 font-mono text-[9px] ${
+                      isLight ? 'bg-[#f8fafc] border-[#cbd5e1]' : 'bg-[#0b0e14] border-[#1e2636]'
+                    }`}
+                  >
+                    <span>
+                      📊 250-BAR WALK-FORWARD BACKTEST:{' '}
+                      <strong className={isLight ? 'text-[#047857]' : 'text-[#4edea3]'}>
+                        {model.backtest250Bars.winRatePct}% WIN RATE
+                      </strong>{' '}
+                      (N={model.backtest250Bars.signalsCount} signals • {model.backtest250Bars.avgRealizedR}R Avg)
+                    </span>
+                    <a
+                      href={model.referenceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`underline font-bold ${
+                        isLight ? 'text-[#0284c7]' : 'text-[#00f0ff]'
+                      }`}
+                    >
+                      📖 {model.referenceSourceLabel} ↗
+                    </a>
+                  </div>
+
+                  {/* Rookie vs Pro Explanation */}
+                  <p
+                    className={`font-sans text-[11px] leading-relaxed ${
+                      isLight ? 'text-[#334155]' : 'text-[#94a3b8]'
+                    }`}
+                  >
+                    <strong className="font-mono text-[9.5px] uppercase">
+                      {experienceMode === 'rookie' ? '🎓 ROOKIE GUIDE: ' : '🏛️ QUANT DESK THESIS: '}
+                    </strong>
+                    {experienceMode === 'rookie' ? model.rookieExplanation : model.corePhilosophy}
+                  </p>
+                </div>
+
+                {/* Action Footer */}
+                <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#1e2636]/40 flex-wrap">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={(e) =>
+                        toggleTrackPrice(
+                          e,
+                          `${model.name} ENTRY ($${formatP(model.tradePlan.entryPrice)})`,
+                          model.tradePlan.entryPrice
+                        )
+                      }
+                      className={`px-2.5 py-1.5 border font-mono text-[9px] font-bold uppercase cursor-pointer ${
+                        isPriceTracked(model.tradePlan.entryPrice)
+                          ? 'bg-[#00f0ff]/25 border-[#00f0ff] text-[#00f0ff]'
+                          : isLight
+                          ? 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#334155] border-[#cbd5e1]'
+                          : 'bg-[#141821] hover:bg-[#191c22] text-[#b9cacb] border-[#1e2636]'
+                      }`}
+                    >
+                      🎯 TRACK ENTRY (${formatP(model.tradePlan.entryPrice)})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAssessedStrategyId(model.id)}
+                      className={`px-2.5 py-1.5 border font-mono text-[9px] font-bold uppercase cursor-pointer ${
+                        isLight
+                          ? 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0284c7] border-[#0284c7]/40'
+                          : 'bg-[#141821] hover:bg-[#191c22] text-[#00f0ff] border-[#00f0ff]/40'
+                      }`}
+                    >
+                      🔍 ASSESS RULES
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onLoadSetup(
+                        model.tradePlan.entryPrice,
+                        model.tradePlan.stopLoss,
+                        model.tradePlan.tp1Price,
+                        model.tradePlan.tp2Price
+                      );
+                      setViewMode('GUIDED');
+                      handleStageSelect(6);
+                    }}
+                    className={`px-3 py-1.5 border font-mono text-[9.5px] font-bold uppercase cursor-pointer ${
+                      isLight
+                        ? 'bg-[#059669]/15 hover:bg-[#059669]/25 text-[#047857] border-[#059669]/40'
+                        : 'bg-[#4edea3]/15 hover:bg-[#4edea3]/25 text-[#4edea3] border-[#4edea3]/40'
+                    }`}
+                  >
+                    ⚡ APPLY TO SIZER →
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ============================================================================
+  // DEDICATED STRATEGY ASSESSMENT MODAL OVERLAY
+  // ============================================================================
+  const renderStrategyAssessmentModal = () => {
+    if (!assessedStrategy) return null;
+    const s = assessedStrategy;
+    const sq9 = gannCyclesTelemetry.sq9Levels;
+
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm"
+        onClick={() => setAssessedStrategyId(null)}
+      >
+        <div
+          className={`w-full max-w-2xl border-2 p-5 flex flex-col gap-4 max-h-[90vh] overflow-y-auto tabular-nums ${
+            isLight
+              ? 'bg-[#ffffff] border-[#0284c7] text-[#0f172a]'
+              : 'bg-[#0b0e14] border-[#00f0ff] text-[#e1e2eb]'
+          }`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Modal Header */}
+          <div className="flex items-start justify-between gap-3 border-b pb-3 border-[#1e2636]/50">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span
+                  className={`px-2 py-0.5 border font-mono text-[9px] font-bold uppercase ${
+                    isLight
+                      ? 'bg-[#0284c7]/15 text-[#0284c7] border-[#0284c7]/40'
+                      : 'bg-[#00f0ff]/15 text-[#00f0ff] border-[#00f0ff]/40'
+                  }`}
+                >
+                  🔍 STRATEGY ASSESSMENT DIAGNOSTIC // {s.era}
+                </span>
+                <span className="font-mono text-[10px] opacity-80">{s.authorOrPaper}</span>
+              </div>
+              <h3 className="font-mono text-[15px] font-bold">{s.name}</h3>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setAssessedStrategyId(null)}
+              className="px-2.5 py-1 border font-mono text-[10px] font-bold uppercase cursor-pointer hover:opacity-80"
+            >
+              ✕ CLOSE
+            </button>
+          </div>
+
+          {/* Score + Backtest + Bias Summary Strip */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-[10px]">
+            <div
+              className={`p-2.5 border ${
+                isLight ? 'bg-[#f8fafc] border-[#cbd5e1]' : 'bg-[#090c12] border-[#1e2636]'
+              }`}
+            >
+              <span className="block text-[8.5px] opacity-70">POSSIBILITY SCORE</span>
+              <strong className="text-[14px] text-[#4edea3]">
+                {s.possibilityScore}% ({s.status.replace('_', ' ')})
+              </strong>
+            </div>
+            <div
+              className={`p-2.5 border ${
+                isLight ? 'bg-[#f8fafc] border-[#cbd5e1]' : 'bg-[#090c12] border-[#1e2636]'
+              }`}
+            >
+              <span className="block text-[8.5px] opacity-70">DIRECTIONAL BIAS</span>
+              <strong
+                className={`text-[14px] ${
+                  s.direction === 'LONG'
+                    ? 'text-[#4edea3]'
+                    : s.direction === 'SHORT'
+                    ? 'text-[#ffb4ab]'
+                    : 'text-[#00f0ff]'
+                }`}
+              >
+                {s.direction}
+              </strong>
+            </div>
+            <div
+              className={`p-2.5 border ${
+                isLight ? 'bg-[#f8fafc] border-[#cbd5e1]' : 'bg-[#090c12] border-[#1e2636]'
+              }`}
+            >
+              <span className="block text-[8.5px] opacity-70">250-BAR WIN RATE</span>
+              <strong className="text-[14px] text-[#00f0ff]">
+                {s.backtest250Bars.winRatePct}% (N={s.backtest250Bars.signalsCount})
+              </strong>
+            </div>
+            <div
+              className={`p-2.5 border ${
+                isLight ? 'bg-[#f8fafc] border-[#cbd5e1]' : 'bg-[#090c12] border-[#1e2636]'
+              }`}
+            >
+              <span className="block text-[8.5px] opacity-70">COMPOSITE EDGE</span>
+              <strong className="text-[14px] text-[#fcd34d]">{s.compositeScore}%</strong>
+            </div>
+          </div>
+
+          {/* 4-Rule Live Telemetry Breakdown */}
+          <div className="flex flex-col gap-2">
+            <span className="font-mono text-[10px] font-bold uppercase text-[#00f0ff]">
+              4-POINT LIVE TELEMETRY RULE AUDIT
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {s.rules.map((r, idx) => (
+                <div
+                  key={idx}
+                  className={`p-3 border flex flex-col gap-1 font-mono text-[9.5px] ${
+                    r.passed
+                      ? isLight
+                        ? 'bg-[#059669]/10 border-[#059669]/40'
+                        : 'bg-[#4edea3]/10 border-[#4edea3]/40'
+                      : isLight
+                      ? 'bg-[#f8fafc] border-[#cbd5e1]'
+                      : 'bg-[#090c12] border-[#1e2636]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold">
+                      {r.passed ? '✓ PASS' : '○ WAIT'} // {r.label}
+                    </span>
+                    <span className="text-[8.5px] opacity-75">Weight: +25%</span>
+                  </div>
+                  <div>
+                    Live Reading: <strong>{r.liveReading}</strong>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Clickable Trade Geometry & Gann Context */}
+          <div className="flex flex-col gap-2">
+            <span className="font-mono text-[10px] font-bold uppercase text-[#00f0ff]">
+              CLICKABLE CHART LEVEL SPOTLIGHT &amp; EXECUTION GEOMETRY ({s.backtest250Bars.avgRealizedR}R AVG)
+            </span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-[10px]">
+              <button
+                type="button"
+                onClick={(e) => toggleTrackPrice(e, `${s.name} ENTRY`, s.tradePlan.entryPrice)}
+                className="p-2.5 border border-[#00f0ff]/40 bg-[#00f0ff]/10 text-left cursor-pointer hover:bg-[#00f0ff]/20"
+              >
+                <span className="block text-[8px] opacity-75">SUGGESTED ENTRY 🎯</span>
+                <strong className="text-[#00f0ff]">${formatP(s.tradePlan.entryPrice)}</strong>
+              </button>
+              <button
+                type="button"
+                onClick={(e) => toggleTrackPrice(e, `${s.name} STOP`, s.tradePlan.stopLoss)}
+                className="p-2.5 border border-[#ffb4ab]/40 bg-[#ffb4ab]/10 text-left cursor-pointer hover:bg-[#ffb4ab]/20"
+              >
+                <span className="block text-[8px] opacity-75">INVALIDATION STOP 🎯</span>
+                <strong className="text-[#ffb4ab]">${formatP(s.tradePlan.stopLoss)}</strong>
+              </button>
+              <button
+                type="button"
+                onClick={(e) => toggleTrackPrice(e, `${s.name} TP1`, s.tradePlan.tp1Price)}
+                className="p-2.5 border border-[#4edea3]/40 bg-[#4edea3]/10 text-left cursor-pointer hover:bg-[#4edea3]/20"
+              >
+                <span className="block text-[8px] opacity-75">TARGET 1 (TP1) 🎯</span>
+                <strong className="text-[#4edea3]">${formatP(s.tradePlan.tp1Price)}</strong>
+              </button>
+              <button
+                type="button"
+                onClick={(e) => toggleTrackPrice(e, `${s.name} TP2`, s.tradePlan.tp2Price)}
+                className="p-2.5 border border-[#4edea3]/40 bg-[#4edea3]/10 text-left cursor-pointer hover:bg-[#4edea3]/20"
+              >
+                <span className="block text-[8px] opacity-75">TARGET 2 (TP2) 🎯</span>
+                <strong className="text-[#4edea3]">${formatP(s.tradePlan.tp2Price)}</strong>
+              </button>
+            </div>
+            <div className="font-mono text-[9px] opacity-80">
+              Gann Sq9 Context: Nearest {sq9.nearestSq9Label} (${formatP(sq9.nearestSq9Price)}) • -90° Sup ${formatP(sq9.sup90)} • +90° Res ${formatP(sq9.res90)} • Lunar: {gannCyclesTelemetry.phaseEmoji} {gannCyclesTelemetry.phaseName} ({gannCyclesTelemetry.lunarAgeDays}d)
+            </div>
+          </div>
+
+          {/* Thesis & Academic Source */}
+          <div className="p-3 border border-[#1e2636] bg-[#090c12]/50 flex flex-col gap-1.5">
+            <div className="font-mono text-[9.5px] font-bold text-[#fcd34d]">
+              INSTITUTIONAL &amp; ROOKIE DECONSTRUCTION
+            </div>
+            <p className="font-sans text-[11.5px] leading-relaxed">{s.corePhilosophy}</p>
+            <p className="font-sans text-[11px] opacity-85 leading-relaxed">
+              <strong>Rookie Summary:</strong> {s.rookieExplanation}
+            </p>
+            <a
+              href={s.referenceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-[9.5px] text-[#00f0ff] underline font-bold mt-1"
+            >
+              📖 Primary Literature: {s.referenceSourceLabel} ↗
+            </a>
+          </div>
+
+          {/* Modal Footer Actions */}
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#1e2636]/50">
+            <button
+              type="button"
+              onClick={() => setAssessedStrategyId(null)}
+              className="px-3 py-2 border font-mono text-[10px] font-bold uppercase cursor-pointer"
+            >
+              CLOSE
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                onLoadSetup(
+                  s.tradePlan.entryPrice,
+                  s.tradePlan.stopLoss,
+                  s.tradePlan.tp1Price,
+                  s.tradePlan.tp2Price
+                );
+                setAssessedStrategyId(null);
+                setViewMode('GUIDED');
+                handleStageSelect(6);
+              }}
+              className="px-4 py-2 bg-[#4edea3]/20 hover:bg-[#4edea3]/30 text-[#4edea3] border border-[#4edea3] font-mono text-[10px] font-bold uppercase cursor-pointer"
+            >
+              ⚡ APPLY TO CHART &amp; STAGE 06 SIZER →
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className={`flex flex-col w-full ${isLight ? 'bg-[#f1f5f9]' : 'bg-[#10131a]'}`}>
+      {renderStrategyAssessmentModal()}
       {/* ========================================================================= */}
       {/* TOP PINNED 6-STAGE PROGRESSIVE TRADER PIPELINE STEPPER BAR                */}
       {/* ========================================================================= */}
@@ -2519,7 +3840,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
             : 'bg-[#0b0e14]/95 border-[#1e2636]'
         }`}
       >
-        {/* Stepper Top Sub-Bar: Pipeline Title + View Mode Toggle (GUIDED FLOW | COMPACT ALL) */}
+        {/* Stepper Top Sub-Bar: Pipeline Title + View Mode Toggle (GUIDED FLOW | COMPACT ALL | PLAYBOOKS) */}
         <div
           className={`flex items-center justify-between px-3 py-2 border-b gap-2 flex-wrap ${
             isLight ? 'border-[#cbd5e1]/80' : 'border-[#1e2636]/80'
@@ -2545,7 +3866,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
           </div>
 
           <div
-            className={`flex items-center gap-1 p-0.5 border font-mono text-[9px] ${
+            className={`flex items-center gap-1 p-0.5 border font-mono text-[9px] flex-wrap ${
               isLight
                 ? 'bg-[#f1f5f9] border-[#cbd5e1]'
                 : 'bg-[#10141d] border-[#1e2636]'
@@ -2583,6 +3904,21 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
               }`}
             >
               COMPACT ALL
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('PLAYBOOKS')}
+              className={`px-2 py-1 font-bold uppercase transition-colors cursor-pointer ${
+                viewMode === 'PLAYBOOKS'
+                  ? isLight
+                    ? 'bg-[#d97706]/20 text-[#b45309] border border-[#d97706]'
+                    : 'bg-[#f59e0b]/25 text-[#fcd34d] border border-[#f59e0b]'
+                  : isLight
+                  ? 'text-[#b45309] hover:bg-[#d97706]/10'
+                  : 'text-[#fcd34d] hover:bg-[#f59e0b]/10'
+              }`}
+            >
+              🏆 BEST SETUPS &amp; PLAYBOOKS ({readyPlaybooksCount} READY)
             </button>
           </div>
         </div>
@@ -2675,10 +4011,20 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
       </div>
 
       {/* ========================================================================= */}
-      {/* ACTIVE STAGE BODY OR COMPACT ALL VERTICAL STACK                           */}
+      {/* ACTIVE STAGE BODY, COMPACT ALL STACK, OR PLAYBOOKS & GANN COMMAND HUB     */}
       {/* ========================================================================= */}
       <AnimatePresence mode="wait">
-        {viewMode === 'COMPACT_ALL' ? (
+        {viewMode === 'PLAYBOOKS' ? (
+          <motion.div
+            key="playbooks-gann-view"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+          >
+            {renderPlaybooksAndGannHub()}
+          </motion.div>
+        ) : viewMode === 'COMPACT_ALL' ? (
           <motion.div
             key="compact-all-view"
             initial={{ opacity: 0, y: 6 }}
