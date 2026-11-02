@@ -453,10 +453,21 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
   );
 
   const top3PodiumStrategies = useMemo(() => {
-    const positiveExpectancySetups = famousStrategies.filter(
-      (s) => s.backtest250Bars.winRatePct >= 40 && s.backtest250Bars.avgRealizedR >= 0
+    const strictEligible = famousStrategies.filter(
+      (s) =>
+        s.possibilityScore >= 50 &&
+        s.status !== 'WRONG_REGIME' &&
+        s.backtest250Bars.avgRealizedR >= 0
     );
-    const pool = positiveExpectancySetups.length >= 3 ? positiveExpectancySetups : famousStrategies;
+    const regimeEligible = famousStrategies.filter(
+      (s) => s.possibilityScore >= 50 && s.status !== 'WRONG_REGIME'
+    );
+    const pool =
+      strictEligible.length >= 3
+        ? strictEligible
+        : regimeEligible.length >= 3
+        ? regimeEligible
+        : famousStrategies;
     return [...pool]
       .sort((a, b) => b.compositeScore - a.compositeScore)
       .slice(0, 3);
@@ -3215,7 +3226,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                             strat.possibilityScore
                           )}`}
                         >
-                          {strat.possibilityScore}% SCORE
+                          {strat.possibilityScore}% MATCH
                         </span>
                       </div>
                     </div>
@@ -3449,7 +3460,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                           model.possibilityScore
                         )}`}
                       >
-                        {model.possibilityScore}% ({model.status.replace('_', ' ')})
+                        {model.possibilityScore}% MATCH ({model.status.replace('_', ' ')})
                       </span>
                     </div>
                   </div>
@@ -3671,9 +3682,9 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                 isLight ? 'bg-[#f8fafc] border-[#cbd5e1]' : 'bg-[#090c12] border-[#1e2636]'
               }`}
             >
-              <span className="block text-[8.5px] opacity-70">POSSIBILITY SCORE</span>
+              <span className="block text-[8.5px] opacity-70">LIVE MATCH SCORE</span>
               <strong className="text-[14px] text-[#4edea3]">
-                {s.possibilityScore}% ({s.status.replace('_', ' ')})
+                {s.possibilityScore}% MATCH ({s.status.replace('_', ' ')})
               </strong>
             </div>
             <div

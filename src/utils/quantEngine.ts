@@ -66,16 +66,27 @@ export function calculateSessionNormalizedRVOL(klines: KlineData[]): SessionRvol
   const prevTimeSec = prev.time > 1e11 ? Math.floor(prev.time / 1000) : Math.floor(prev.time);
   const barIntervalSec =
     klines.length >= 2 ? Math.max(60, lastTimeSec - prevTimeSec) : 3600;
-  const elapsedSec = Math.max(15, Math.floor(Date.now() / 1000) - lastTimeSec);
+  const rawElapsedSec = Math.floor(Date.now() / 1000) - lastTimeSec;
+  const elapsedSec = rawElapsedSec > 0 && rawElapsedSec <= barIntervalSec * 2 ? rawElapsedSec : barIntervalSec;
 
-  // If the current bar is less than 45% elapsed, evaluate RVOL using the last completed bar (or time-projected volume bounded by the prior completed bar)
-  const isUnfinishedEarlyBar = elapsedSec < barIntervalSec * 0.45 && klines.length >= 2;
+  // Baseline average volume of the 20 completed bars prior to the latest bar
+  const completedWindow = klines.slice(Math.max(0, klines.length - 21), Math.max(1, klines.length - 1));
+  const baselineAvgVol =
+    completedWindow.length > 0
+      ? completedWindow.reduce((acc, k) => acc + k.volume, 0) / completedWindow.length
+      : prev.volume || last.volume || 1;
+
+  // If the current bar is less than 45% elapsed OR its raw volume is still below 0.20x of the completed baseline,
+  // evaluate RVOL using the last completed bar (klines[klines.length - 2])
+  const isUnfinishedEarlyBar =
+    klines.length >= 2 &&
+    (elapsedSec < barIntervalSec * 0.45 ||
+      (baselineAvgVol > 0 && last.volume / baselineAvgVol < 0.2));
+
   const evalBar = isUnfinishedEarlyBar ? prev : last;
   const evalBarTimeSec =
     evalBar.time > 1e11 ? Math.floor(evalBar.time / 1000) : Math.floor(evalBar.time);
-  const evalVolume = isUnfinishedEarlyBar
-    ? Math.max(prev.volume, Math.min(prev.volume * 1.25, last.volume * (barIntervalSec / elapsedSec)))
-    : last.volume;
+  const evalVolume = evalBar.volume;
 
   const currentSession = getUtcTradingSession(evalBarTimeSec);
 
@@ -101,11 +112,12 @@ export function calculateSessionNormalizedRVOL(klines: KlineData[]): SessionRvol
       ? sameSessionBars.reduce((acc, k) => acc + k.volume, 0) / sameSessionBars.length
       : rawAvg20;
 
-  const sessionRvol = sessionAvgVolume > 0 ? evalVolume / sessionAvgVolume : rawRvol20;
+  const rawSessionRvol = sessionAvgVolume > 0 ? evalVolume / sessionAvgVolume : rawRvol20;
+  const sessionRvol = Math.max(0.2, rawSessionRvol);
 
   return {
     sessionRvol: Math.round(sessionRvol * 100) / 100,
-    rawRvol20: Math.round(rawRvol20 * 100) / 100,
+    rawRvol20: Math.round(Math.max(0.2, rawRvol20) * 100) / 100,
     sessionName: currentSession,
     isVduActive: sessionRvol <= 0.48,
     isIgnitionActive: sessionRvol >= 1.85,

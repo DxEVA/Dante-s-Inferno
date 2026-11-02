@@ -11,6 +11,7 @@ import {
   MovingAverageAnalysisResult,
   SharpeSortinoMetrics,
 } from '../types';
+import { calculateSessionNormalizedRVOL } from './quantEngine';
 
 export interface StrategyRuleCheck {
   label: string;
@@ -658,7 +659,19 @@ export function evaluateFamousStrategies(params: {
 
   const hurst = telemetry.hurstExponent ?? telemetry.marketRegime?.hurstExponent ?? 0.51;
   const adx = telemetry.adx14 ?? telemetry.marketRegime?.adx14 ?? 24.0;
-  const sessionRvol = telemetry.sessionRvol ?? volumeProfile.sessionRvol ?? 1.15;
+  const closedBarRvolInfo = calculateSessionNormalizedRVOL(
+    klines.length >= 2 ? klines.slice(0, -1) : klines
+  );
+  const currentBarRvolInfo = calculateSessionNormalizedRVOL(klines);
+  const liveSessionRvol =
+    telemetry.sessionRvol && telemetry.sessionRvol >= 0.2
+      ? telemetry.sessionRvol
+      : currentBarRvolInfo.sessionRvol >= 0.2
+      ? currentBarRvolInfo.sessionRvol
+      : Math.max(0.2, closedBarRvolInfo.sessionRvol || 0.85);
+  const sessionRvol = liveSessionRvol;
+  const activeSessionName =
+    telemetry.sessionName || volumeProfile.sessionName || currentBarRvolInfo.sessionName || 'NY';
   const sharpe = sharpeSortino?.sharpeRatio ?? telemetry.sharpeRatio ?? 0.85;
   const zScore = telemetry.zScore ?? 0;
   const vwma50 = telemetry.vwma50 || poc;
@@ -683,7 +696,7 @@ export function evaluateFamousStrategies(params: {
 
   const buildStatus = (score: number): FamousStrategyEvaluation['status'] => {
     if (score >= 70) return 'TRIGGER_ACTIVE';
-    if (score >= 48) return 'STALKING_SETUP';
+    if (score >= 50) return 'STALKING_SETUP';
     return 'WRONG_REGIME';
   };
 
@@ -755,13 +768,13 @@ export function evaluateFamousStrategies(params: {
     possibilityScore: number,
     backtest250Bars: FamousStrategyEvaluation['backtest250Bars']
   ): number => {
-    const expectancyBonus = Math.max(-25, Math.min(25, backtest250Bars.avgRealizedR * 25));
-    const winRateScore =
-      backtest250Bars.signalsCount >= 3 ? backtest250Bars.winRatePct : 50;
-    const lowWinPenalty =
-      backtest250Bars.winRatePct < 42 || backtest250Bars.avgRealizedR < 0 ? -18 : 0;
+    const n = backtest250Bars.signalsCount;
+    const shrunkWinRate = (backtest250Bars.winRatePct * n + 50 * 5) / (n + 5);
+    const shrunkAvgR = (backtest250Bars.avgRealizedR * n + 0) / (n + 5);
     return Math.round(
-      possibilityScore * 0.55 + winRateScore * 0.45 + expectancyBonus + lowWinPenalty
+      possibilityScore * 0.65 +
+        shrunkWinRate * 0.35 +
+        Math.max(-15, Math.min(20, shrunkAvgR * 20))
     );
   };
 
@@ -1109,7 +1122,7 @@ export function evaluateFamousStrategies(params: {
       },
       {
         label: 'VDU Contraction or RVOL Ignition',
-        liveReading: `Session RVOL ${sessionRvol.toFixed(2)}x (${volumeProfile.sessionName || 'NY'})`,
+        liveReading: `Session RVOL ${sessionRvol.toFixed(2)}x (${activeSessionName})`,
         passed: r2Pass,
       },
       {
@@ -1398,7 +1411,7 @@ export function evaluateFamousStrategies(params: {
     const rules: StrategyRuleCheck[] = [
       {
         label: 'Session RVOL >= 1.35x ("Asset in Play")',
-        liveReading: `Session RVOL = ${sessionRvol.toFixed(2)}x (${volumeProfile.sessionName || 'NY'})`,
+        liveReading: `Session RVOL = ${sessionRvol.toFixed(2)}x (${activeSessionName})`,
         passed: r1Pass,
       },
       {
@@ -1585,11 +1598,14 @@ export function evaluateFamousStrategies(params: {
     const e9 = maResult.mas.ema9.price;
     const e21 = maResult.mas.ema21.price;
     const e50 = maResult.mas.ema50.price;
-    const isBullStack = e9 >= e21 && e21 >= e50;
-    const isBearStack = e9 <= e21 && e21 <= e50;
-    const dir: 'LONG' | 'SHORT' = isBearStack ? 'SHORT' : 'LONG';
+    const isCompression =
+      (maResult.ribbonAlignment || '').toUpperCase().includes('COMPRESSION') ||
+      maResult.ribbonBias === 'NEUTRAL';
+    const isBullStack = !isCompression && e9 > e21 && e21 > e50;
+    const isBearStack = !isCompression && e9 < e21 && e21 < e50;
+    const dir: 'LONG' | 'SHORT' = isBearStack || e9 < e21 ? 'SHORT' : 'LONG';
 
-    const r1Pass = isBullStack || isBearStack;
+    const r1Pass = dir === 'LONG' ? isBullStack : isBearStack;
     const r2Pass = hurst >= 0.51 && Math.abs(sharpe) >= 0.45;
     const r3Pass = Math.abs(maResult.stretchScoreAtr) <= 2.15;
     const r4Pass = confluence.score >= 58;
@@ -1624,18 +1640,29 @@ export function evaluateFamousStrategies(params: {
     const bt = runWalkForward250BarBacktest(
       klines,
       (idx, _barAtr, ema9Arr, ema21Arr, ema50Arr) => {
-        if (idx < 25) return null;
+        if (idx < 16) return null;
+        let hi12 = -Infinity;
+        let lo12 = Infinity;
+        for (let k = idx - 12; k < idx; k++) {
+          if (klines[k].high > hi12) hi12 = klines[k].high;
+          if (klines[k].low < lo12) lo12 = klines[k].low;
+        }
+        const cur = klines[idx];
         if (
           ema9Arr[idx] > ema21Arr[idx] &&
-          ema21Arr[idx] > ema50Arr[idx] &&
-          ema9Arr[idx - 1] <= ema21Arr[idx - 1]
+          (cur.close >= hi12 ||
+            (ema21Arr[idx] > ema50Arr[idx] &&
+              cur.low <= ema21Arr[idx] * 1.003 &&
+              cur.close > ema9Arr[idx]))
         ) {
           return 'LONG';
         }
         if (
           ema9Arr[idx] < ema21Arr[idx] &&
-          ema21Arr[idx] < ema50Arr[idx] &&
-          ema9Arr[idx - 1] >= ema21Arr[idx - 1]
+          (cur.close <= lo12 ||
+            (ema21Arr[idx] < ema50Arr[idx] &&
+              cur.high >= ema21Arr[idx] * 0.997 &&
+              cur.close < ema9Arr[idx]))
         ) {
           return 'SHORT';
         }
@@ -1650,6 +1677,10 @@ export function evaluateFamousStrategies(params: {
     const risk = Math.abs(entry - stop) || atr;
     const tp1 = dir === 'LONG' ? entry + risk * 1.8 : entry - risk * 1.8;
     const tp2 = dir === 'LONG' ? entry + risk * 3.0 : entry - risk * 3.0;
+    const triggerNoteText =
+      isCompression || !r1Pass
+        ? `Awaiting EMA 9/21/50 expansion out of compression coil ($${formatPrice(e9)} / $${formatPrice(e21)} / $${formatPrice(e50)}) before trailing EMA 21.`
+        : `Trend-following ${dir} entry with ${maResult.ribbonBias} ribbon alignment; trail stop behind EMA 21.`;
     const plan = sanitizeTradePlan(
       dir,
       entry,
@@ -1657,7 +1688,7 @@ export function evaluateFamousStrategies(params: {
       tp1,
       tp2,
       atr,
-      `Trend-following entry with ${maResult.ribbonBias} ribbon alignment; trail stop behind EMA 21.`
+      triggerNoteText
     );
 
     strategies.push({
@@ -2263,5 +2294,10 @@ export function evaluateFamousStrategies(params: {
     });
   }
 
-  return strategies.sort((a, b) => b.compositeScore - a.compositeScore);
+  return strategies.sort((a, b) => {
+    const aEligible = a.possibilityScore >= 50 && a.backtest250Bars.avgRealizedR >= 0 ? 1 : 0;
+    const bEligible = b.possibilityScore >= 50 && b.backtest250Bars.avgRealizedR >= 0 ? 1 : 0;
+    if (aEligible !== bEligible) return bEligible - aEligible;
+    return b.compositeScore - a.compositeScore;
+  });
 }

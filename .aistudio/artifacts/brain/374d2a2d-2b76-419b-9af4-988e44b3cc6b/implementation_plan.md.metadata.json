@@ -1,6 +1,6 @@
 {
-  "summary": "Implementation plan for the 4 surgical fixes in famousStrategiesEngine.ts and StrategyTabs.tsx: strict LONG/SHORT trade plan geometry sanitization, directional Orderflow/CVD rule validation, Raschke Holy Grail walk-forward backtest & compositeEdgeScore podium ranking, and vertical Gann Sq9 harmonic button layout + wrapped seasonal/lunar labels.",
-  "updatedAt": "2026-11-02T19:54:10.375920122Z",
+  "summary": "Implementation plan to resolve unfinished-candle 0.07x Session RVOL readings, apply Bayesian sample-size shrinkage and strict Podium regime filtering (>=50% match), fix EMA Compression false-passes in Barbon Donchian Trend, and unify Podium and Strategy Card score badges.",
+  "updatedAt": "2026-11-02T22:23:02.020911233Z",
   "requestFeedback": true,
   "userFacing": true
 }
