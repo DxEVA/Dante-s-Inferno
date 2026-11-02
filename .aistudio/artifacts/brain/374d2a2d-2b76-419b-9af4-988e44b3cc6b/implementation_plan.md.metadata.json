@@ -1,6 +1,6 @@
 {
-  "summary":  "Implementation plan to replace the full-width bottom mobile dock with a modern floating collapsible command pill anchored on the bottom-left edge so the bottom-right Netlify badge never overlaps any navigation tabs, without modifying any other features.",
-  "updatedAt":  "2026-10-31T00:44:50.612173452Z",
-  "requestFeedback":  true,
-  "userFacing":  true
+  "summary": "Implementation plan for the 4 surgical fixes in famousStrategiesEngine.ts and StrategyTabs.tsx: strict LONG/SHORT trade plan geometry sanitization, directional Orderflow/CVD rule validation, Raschke Holy Grail walk-forward backtest & compositeEdgeScore podium ranking, and vertical Gann Sq9 harmonic button layout + wrapped seasonal/lunar labels.",
+  "updatedAt": "2026-11-02T19:54:10.375920122Z",
+  "requestFeedback": true,
+  "userFacing": true
 }

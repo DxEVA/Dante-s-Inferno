@@ -452,10 +452,15 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
     [famousStrategies]
   );
 
-  const top3PodiumStrategies = useMemo(
-    () => famousStrategies.slice(0, 3),
-    [famousStrategies]
-  );
+  const top3PodiumStrategies = useMemo(() => {
+    const positiveExpectancySetups = famousStrategies.filter(
+      (s) => s.backtest250Bars.winRatePct >= 40 && s.backtest250Bars.avgRealizedR >= 0
+    );
+    const pool = positiveExpectancySetups.length >= 3 ? positiveExpectancySetups : famousStrategies;
+    return [...pool]
+      .sort((a, b) => b.compositeScore - a.compositeScore)
+      .slice(0, 3);
+  }, [famousStrategies]);
 
   const assessedStrategy = useMemo(
     () => famousStrategies.find((s) => s.id === assessedStrategyId) || null,
@@ -2823,7 +2828,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
               </div>
             </div>
             <span
-              className={`font-mono text-[8.5px] truncate ${
+              className={`font-mono text-[10px] leading-snug break-words ${
                 isLight ? 'text-[#475569]' : 'text-[#849495]'
               }`}
               title={gannCyclesTelemetry.lunarBiasNote}
@@ -2859,7 +2864,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
 
             <div className="flex items-baseline justify-between gap-2">
               <span
-                className={`font-mono text-[12.5px] font-bold truncate ${
+                className={`font-mono text-[11.5px] font-bold leading-snug break-words ${
                   isLight ? 'text-[#0f172a]' : 'text-[#dbfcff]'
                 }`}
               >
@@ -2874,7 +2879,9 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
             >
               <div>
                 <span className="block text-[8px] opacity-75">NEXT CARDINAL DATE</span>
-                <strong className="truncate block">{gannCyclesTelemetry.nearestCardinalLabel}</strong>
+                <strong className="block text-[10px] leading-snug break-words">
+                  {gannCyclesTelemetry.nearestCardinalLabel}
+                </strong>
               </div>
               <div>
                 <span className="block text-[8px] opacity-75">TIME WINDOW</span>
@@ -2892,7 +2899,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
               </div>
             </div>
             <span
-              className={`font-mono text-[8.5px] truncate ${
+              className={`font-mono text-[10px] leading-snug break-words ${
                 isLight ? 'text-[#475569]' : 'text-[#849495]'
               }`}
               title={gannCyclesTelemetry.seasonalBiasNote}
@@ -2927,13 +2934,13 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
             </div>
 
             {/* 4 Clickable Harmonic Pills: Spotlights on Chart & Loads Sizer */}
-            <div className="grid grid-cols-2 gap-1.5 font-mono text-[9px]">
+            <div className="grid grid-cols-2 gap-1.5 font-mono">
               <button
                 type="button"
                 onClick={(e) =>
                   handleSpotlightAndLoadGannLevel(e, '-90° SUP', sq9.sup90, true)
                 }
-                className={`px-2 py-1 border text-left transition-all cursor-pointer flex items-center justify-between ${
+                className={`flex flex-col items-start p-2 gap-0.5 overflow-hidden border text-left transition-all cursor-pointer ${
                   isPriceTracked(sq9.sup90)
                     ? 'bg-[#4edea3]/25 border-[#4edea3] text-[#4edea3]'
                     : isLight
@@ -2942,8 +2949,10 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                 }`}
                 title="Click to spotlight -90° Gann Support on Chart & load into Stage 06 Sizer"
               >
-                <span>-90° SUP</span>
-                <strong>${formatP(sq9.sup90)}</strong>
+                <span className="text-[8.5px] opacity-80">-90° SUP</span>
+                <strong className="text-[11.5px] font-bold tabular-nums truncate w-full">
+                  ${formatP(sq9.sup90)}
+                </strong>
               </button>
 
               <button
@@ -2951,7 +2960,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                 onClick={(e) =>
                   handleSpotlightAndLoadGannLevel(e, '+90° RES', sq9.res90, false)
                 }
-                className={`px-2 py-1 border text-left transition-all cursor-pointer flex items-center justify-between ${
+                className={`flex flex-col items-start p-2 gap-0.5 overflow-hidden border text-left transition-all cursor-pointer ${
                   isPriceTracked(sq9.res90)
                     ? 'bg-[#ffb4ab]/25 border-[#ffb4ab] text-[#ffb4ab]'
                     : isLight
@@ -2960,8 +2969,10 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                 }`}
                 title="Click to spotlight +90° Gann Resistance on Chart & load into Stage 06 Sizer"
               >
-                <span>+90° RES</span>
-                <strong>${formatP(sq9.res90)}</strong>
+                <span className="text-[8.5px] opacity-80">+90° RES</span>
+                <strong className="text-[11.5px] font-bold tabular-nums truncate w-full">
+                  ${formatP(sq9.res90)}
+                </strong>
               </button>
 
               <button
@@ -2969,7 +2980,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                 onClick={(e) =>
                   handleSpotlightAndLoadGannLevel(e, '-180° OP', sq9.sup180, true)
                 }
-                className={`px-2 py-1 border text-left transition-all cursor-pointer flex items-center justify-between ${
+                className={`flex flex-col items-start p-2 gap-0.5 overflow-hidden border text-left transition-all cursor-pointer ${
                   isPriceTracked(sq9.sup180)
                     ? 'bg-[#4edea3]/25 border-[#4edea3] text-[#4edea3]'
                     : isLight
@@ -2978,8 +2989,10 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                 }`}
                 title="Click to spotlight -180° Gann Opposition Support on Chart & load into Stage 06 Sizer"
               >
-                <span>-180° SUP</span>
-                <strong>${formatP(sq9.sup180)}</strong>
+                <span className="text-[8.5px] opacity-80">-180° SUP</span>
+                <strong className="text-[11.5px] font-bold tabular-nums truncate w-full">
+                  ${formatP(sq9.sup180)}
+                </strong>
               </button>
 
               <button
@@ -2987,7 +3000,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                 onClick={(e) =>
                   handleSpotlightAndLoadGannLevel(e, '+180° OP', sq9.res180, false)
                 }
-                className={`px-2 py-1 border text-left transition-all cursor-pointer flex items-center justify-between ${
+                className={`flex flex-col items-start p-2 gap-0.5 overflow-hidden border text-left transition-all cursor-pointer ${
                   isPriceTracked(sq9.res180)
                     ? 'bg-[#ffb4ab]/25 border-[#ffb4ab] text-[#ffb4ab]'
                     : isLight
@@ -2996,8 +3009,10 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                 }`}
                 title="Click to spotlight +180° Gann Opposition Resistance on Chart & load into Stage 06 Sizer"
               >
-                <span>+180° RES</span>
-                <strong>${formatP(sq9.res180)}</strong>
+                <span className="text-[8.5px] opacity-80">+180° RES</span>
+                <strong className="text-[11.5px] font-bold tabular-nums truncate w-full">
+                  ${formatP(sq9.res180)}
+                </strong>
               </button>
             </div>
 
