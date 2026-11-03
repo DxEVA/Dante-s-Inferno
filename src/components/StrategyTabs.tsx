@@ -38,7 +38,12 @@ import {
 } from '../utils/famousStrategiesEngine';
 import { InfernoCodexHub } from './InfernoCodexHub';
 
-export type TacticalDeckMode = 'LENSES' | 'MTF_RADAR' | 'PREFLIGHT_SIZER' | 'REVERSE_ACADEMY';
+export type TacticalDeckMode =
+  | 'LENSES'
+  | 'MTF_RADAR'
+  | 'PLAYBOOKS'
+  | 'PREFLIGHT_SIZER'
+  | 'REVERSE_ACADEMY';
 export type StageId = 1 | 2 | 3 | 4 | 5 | 6;
 type FlowViewMode = 'GUIDED' | 'COMPACT_ALL' | 'PLAYBOOKS' | 'CODEX';
 type PlaybookFilterType = 'ALL' | 'READY' | PlaybookEra;
@@ -78,7 +83,11 @@ interface StrategyTabsProps {
   activeTab?: StageId;
   onTabChange?: (tab: StageId) => void;
   externalDeckRequest?: { deck: TacticalDeckMode; ts: number } | null;
-  onNavigateMobilePage?: (page: 'CHART' | 'RADAR' | 'LENSES' | 'EXECUTE' | 'ACADEMY') => void;
+  onNavigateMobilePage?: (
+    page: 'CHART' | 'RADAR' | 'LENSES' | 'PLAYBOOKS' | 'EXECUTE' | 'ACADEMY'
+  ) => void;
+  isWorkspaceExpanded?: boolean;
+  onToggleWorkspaceExpand?: (expanded: boolean) => void;
   onHoverLevel?: (level: { label: string; price: number } | null) => void;
   highlightedLevel?: { label: string; price: number } | null;
 }
@@ -283,6 +292,8 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
   onTabChange,
   externalDeckRequest,
   onNavigateMobilePage,
+  isWorkspaceExpanded = false,
+  onToggleWorkspaceExpand,
   onHoverLevel,
   highlightedLevel,
 }) => {
@@ -355,16 +366,24 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
       setViewMode('GUIDED');
       setShowReverseXRay(false);
       handleStageSelect(6);
+      onToggleWorkspaceExpand?.(false);
+    } else if (externalDeckRequest.deck === 'PLAYBOOKS') {
+      setViewMode('PLAYBOOKS');
+      setShowReverseXRay(false);
+      onToggleWorkspaceExpand?.(true);
     } else if (externalDeckRequest.deck === 'REVERSE_ACADEMY') {
       setViewMode('CODEX');
       setShowReverseXRay(true);
+      onToggleWorkspaceExpand?.(true);
     } else if (externalDeckRequest.deck === 'MTF_RADAR') {
       setViewMode('GUIDED');
       setShowReverseXRay(false);
       handleStageSelect(5);
+      onToggleWorkspaceExpand?.(false);
     } else if (externalDeckRequest.deck === 'LENSES') {
       setViewMode('GUIDED');
       setShowReverseXRay(false);
+      onToggleWorkspaceExpand?.(false);
       if (activeStage === 6) {
         handleStageSelect(1);
       }
@@ -841,7 +860,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
           <div className="flex flex-col gap-1 min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <span
-                className={`px-2 py-0.5 border font-mono text-[10px] font-bold tracking-wider ${
+                className={`px-2.5 py-0.5 rounded-md border font-mono text-[10px] font-bold tracking-wider ${
                   isLight
                     ? 'bg-[#ffffff] border-[#0284c7]/40 text-[#0284c7]'
                     : 'bg-[#0b0e14] border-[#00f0ff]/40 text-[#00f0ff]'
@@ -858,8 +877,8 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
               </span>
             </div>
             <h3
-              className={`font-sans text-[13px] sm:text-[14px] font-semibold leading-snug pt-0.5 ${
-                isLight ? 'text-[#0f172a]' : 'text-[#e1e2eb]'
+              className={`font-sans text-[15px] sm:text-[16px] font-bold tracking-tight leading-snug pt-0.5 ${
+                isLight ? 'text-[#0f172a]' : 'text-white'
               }`}
             >
               “{stageDef.question}”
@@ -869,7 +888,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
           {/* Live Stage Score & Bias Badge */}
           <div className="flex items-center gap-2 shrink-0">
             <div
-              className={`px-2.5 py-1.5 border font-mono text-[11px] font-bold tabular-nums flex items-center gap-2 ${
+              className={`px-3 py-1.5 rounded-lg border font-mono text-[11px] font-bold tabular-nums flex items-center gap-2 ${
                 evalData.bias === 'BULLISH'
                   ? isLight
                     ? 'bg-[#059669]/10 text-[#047857] border-[#059669]/40'
@@ -896,19 +915,19 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
 
         {/* 1-Sentence Plain-English Takeaway */}
         <div
-          className={`p-3 border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+          className={`rounded-xl p-4 border shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
             isLight
               ? 'bg-[#ffffff] border-[#cbd5e1]'
-              : 'bg-[#090c12] border-[#1e2636]'
+              : 'bg-[#0d121d]/90 border-white/[0.08]'
           }`}
         >
           <p
-            className={`font-sans text-[12px] leading-relaxed flex-1 ${
-              isLight ? 'text-[#0f172a]' : 'text-[#dbfcff]'
+            className={`font-sans text-[13px] leading-relaxed flex-1 ${
+              isLight ? 'text-[#0f172a]' : 'text-[#cbd5e1]'
             }`}
           >
             <strong
-              className={`font-mono uppercase text-[10px] mr-1.5 ${
+              className={`font-mono uppercase text-[11px] mr-1.5 ${
                 isLight ? 'text-[#0284c7]' : 'text-[#00f0ff]'
               }`}
             >
@@ -918,7 +937,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
           </p>
 
           {/* Quick Action Buttons to Track Stage Entry or Load into Sizer */}
-          <div className="flex items-center gap-1.5 shrink-0 font-mono text-[9px]">
+          <div className="flex items-center gap-2 shrink-0 font-mono">
             <button
               type="button"
               onClick={(e) =>
@@ -928,14 +947,14 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                   evalData.setup.suggestedEntry
                 )
               }
-              className={`px-2.5 py-1.5 border font-bold uppercase transition-colors cursor-pointer ${
+              className={`text-[11px] sm:text-[12px] font-semibold px-3.5 py-2 rounded-lg border uppercase transition-all shadow-sm cursor-pointer ${
                 isPriceTracked(evalData.setup.suggestedEntry)
                   ? isLight
                     ? 'bg-[#0284c7]/15 text-[#0284c7] border-[#0284c7]'
                     : 'bg-[#00f0ff]/20 text-[#00f0ff] border-[#00f0ff]'
                   : isLight
                   ? 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#1e293b] border-[#cbd5e1]'
-                  : 'bg-[#141821] hover:bg-[#191c22] text-[#b9cacb] border-[#1e2636]'
+                  : 'bg-[#141821] hover:bg-[#191c22] text-[#e1e2eb] border-white/15'
               }`}
             >
               {isPriceTracked(evalData.setup.suggestedEntry)
@@ -956,14 +975,14 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                 );
                 handleStageSelect(6);
               }}
-              className={`px-2.5 py-1.5 border font-bold uppercase transition-colors cursor-pointer ${
+              className={`text-[11px] sm:text-[12px] font-semibold px-3.5 py-2 rounded-lg border uppercase transition-all shadow-sm cursor-pointer ${
                 isLight
                   ? 'bg-[#0284c7]/15 hover:bg-[#0284c7]/25 text-[#0284c7] border-[#0284c7]/40'
                   : 'bg-[#00f0ff]/15 hover:bg-[#00f0ff]/25 text-[#00f0ff] border-[#00f0ff]/40'
               }`}
               title="Load this stage's entry, stop loss, and targets into the Execution Sizer"
             >
-              ⚡ LOAD SETUP
+              ⚡ LOAD INTO SIZER
             </button>
           </div>
         </div>
@@ -980,16 +999,16 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
     return (
       <div className="flex flex-col gap-3 pt-1">
         {/* Collapsible Learn This Layer & Study Links Accordion */}
-        <div className="cyber-panel border border-[#1e2636] overflow-hidden">
+        <div className="cyber-panel overflow-hidden">
           <button
             type="button"
             onClick={() => toggleStageLearn(stageDef.id)}
-            className="w-full px-4 py-2.5 bg-[#0b0e14] hover:bg-[#141821] flex items-center justify-between gap-2 font-mono text-[10px] text-[#00f0ff] font-bold uppercase tracking-wider transition-colors cursor-pointer"
+            className="w-full px-4 py-3 bg-[#0d121d]/90 hover:bg-[#141821] flex items-center justify-between gap-2 font-mono text-[11px] text-[#00f0ff] font-bold uppercase tracking-wider transition-colors cursor-pointer"
           >
             <span className="flex items-center gap-2">
               <span>🎓 LEARN STAGE {stageDef.stepCode} ({stageDef.shortTitle}) &amp; STUDY LINKS</span>
               {experienceMode === 'rookie' && (
-                <span className="px-1.5 py-0.5 bg-[#00f0ff]/15 border border-[#00f0ff]/40 text-[8px] text-[#dbfcff]">
+                <span className="px-2 py-0.5 rounded bg-[#00f0ff]/15 border border-[#00f0ff]/40 text-[9px] text-[#dbfcff]">
                   ROOKIE GUIDE
                 </span>
               )}
@@ -1004,7 +1023,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
                 transition={{ duration: 0.18, ease: 'easeOut' }}
-                className="overflow-hidden border-t border-[#1e2636] bg-[#090c12] p-4 flex flex-col gap-3"
+                className="overflow-hidden border-t border-white/[0.08] bg-[#090d16]/90 p-4 flex flex-col gap-3"
               >
                 <div className="grid grid-cols-1 gap-3">
                   {stageDef.mentorKeys.map((mKey) => {
@@ -1012,26 +1031,26 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                     return (
                       <div
                         key={mKey}
-                        className="p-3 bg-[#10141d] border border-[#1e2636] flex flex-col gap-2"
+                        className="rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg flex flex-col gap-2"
                       >
                         <div className="flex items-center justify-between gap-2 flex-wrap">
-                          <span className="font-mono text-[10px] font-bold text-[#00f0ff] uppercase">
+                          <span className="font-mono text-[11px] font-bold text-[#00f0ff] uppercase">
                             🧠 {mKey.replace(/_/g, ' ')} — MENTAL MODEL
                           </span>
-                          <span className="font-mono text-[9px] text-[#849495]">
+                          <span className="font-mono text-[10px] text-[#849495]">
                             STD NORM: {mentor.standardRangeGuide.normal}
                           </span>
                         </div>
-                        <p className="font-sans text-[11px] text-[#b9cacb] leading-relaxed">
+                        <p className="font-sans text-[13px] text-[#cbd5e1] leading-relaxed">
                           <strong className="text-[#fcd34d] font-mono">Analogy: </strong>
                           {mentor.familiarBridge}
                         </p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 font-sans text-[10.5px] pt-1">
-                          <div className="p-2 bg-[#0b0e14] border-l-2 border-l-[#4edea3] text-[#dbfcff]">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 font-sans text-[12px] pt-1">
+                          <div className="rounded-lg p-3 bg-[#090c12] border-l-2 border-l-[#4edea3] text-[#dbfcff]">
                             <strong className="text-[#4edea3] font-mono">✓ DO THIS: </strong>
                             {mentor.rookieActionRule.doThis}
                           </div>
-                          <div className="p-2 bg-[#0b0e14] border-l-2 border-l-[#ffb4ab] text-[#dbfcff]">
+                          <div className="rounded-lg p-3 bg-[#090c12] border-l-2 border-l-[#ffb4ab] text-[#dbfcff]">
                             <strong className="text-[#ffb4ab] font-mono">✕ AVOID TRAP: </strong>
                             {mentor.rookieActionRule.avoidTrap}
                           </div>
@@ -1042,9 +1061,9 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                 </div>
 
                 {/* Curated External Study Links + Interactive Reverse X-Ray Quiz Shortcut */}
-                <div className="flex items-center justify-between gap-2 flex-wrap pt-1 border-t border-[#1e2636]">
+                <div className="flex items-center justify-between gap-2 flex-wrap pt-2 border-t border-white/[0.08]">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-[9px] text-[#849495] uppercase">
+                    <span className="font-mono text-[10px] text-[#849495] uppercase">
                       EXTERNAL STUDY REFERENCES:
                     </span>
                     {stageDef.studyLinks.map((link, idx) => (
@@ -1053,7 +1072,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                         href={link.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-2 py-1 bg-[#141821] hover:bg-[#191c22] border border-[#00f0ff]/30 text-[#00f0ff] font-mono text-[9px] font-bold transition-colors"
+                        className="px-2.5 py-1.5 rounded-lg bg-[#141821] hover:bg-[#191c22] border border-[#00f0ff]/30 text-[#00f0ff] font-mono text-[10px] font-semibold transition-colors"
                       >
                         📖 {link.label} ({link.source}) ↗
                       </a>
@@ -1063,12 +1082,13 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                   <button
                     type="button"
                     onClick={() => {
+                      setViewMode('CODEX');
                       setShowReverseXRay(true);
-                      handleStageSelect(6);
+                      onToggleWorkspaceExpand?.(true);
                     }}
-                    className="px-2.5 py-1 bg-[#f59e0b]/15 hover:bg-[#f59e0b]/25 border border-[#f59e0b]/40 text-[#fcd34d] font-mono text-[9px] font-bold uppercase cursor-pointer"
+                    className="text-[11px] font-semibold px-3.5 py-2 rounded-lg bg-[#c084fc]/15 hover:bg-[#c084fc]/25 border border-[#c084fc]/40 text-[#e9d5ff] font-mono uppercase cursor-pointer transition-all shadow-sm"
                   >
-                    🔍 OPEN REVERSE X-RAY &amp; QUIZ →
+                    📚 OPEN CODEX &amp; LIVE X-RAY →
                   </button>
                 </div>
               </motion.div>
@@ -1077,18 +1097,20 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
         </div>
 
         {/* Sequential Stage Stepper Buttons */}
-        <div className="flex items-center justify-between gap-2 flex-wrap bg-[#0b0e14] border border-[#1e2636] p-3 font-mono text-[10px]">
+        <div className="flex items-center justify-between gap-2 flex-wrap rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-3.5 shadow-lg font-mono">
           <div>
             {prevStage ? (
               <button
                 type="button"
                 onClick={() => handleStageSelect(prevStage.id)}
-                className="px-3 py-2 bg-[#141821] hover:bg-[#191c22] text-[#b9cacb] hover:text-[#e1e2eb] border border-[#1e2636] font-bold uppercase transition-colors cursor-pointer"
+                className="text-[11px] sm:text-[12px] font-semibold px-3.5 py-2 rounded-lg bg-[#141821] hover:bg-[#191c22] text-[#e1e2eb] border border-white/15 uppercase transition-all shadow-sm cursor-pointer"
               >
-                ← PREV: {prevStage.stepCode} {prevStage.shortTitle}
+                ← PREV STAGE ({prevStage.stepCode} {prevStage.shortTitle})
               </button>
             ) : (
-              <span className="text-[#849495] px-2">FUNNEL START // STAGE 01</span>
+              <span className="text-[11px] text-[#849495] px-2 font-semibold">
+                FUNNEL START // STAGE 01
+              </span>
             )}
           </div>
 
@@ -1099,10 +1121,11 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                 onClick={() => {
                   setShowReverseXRay(false);
                   handleStageSelect(6);
+                  onToggleWorkspaceExpand?.(false);
                 }}
-                className="px-3 py-2 bg-[#141821] hover:bg-[#191c22] text-[#4edea3] border border-[#4edea3]/40 font-bold uppercase transition-colors cursor-pointer"
+                className="text-[11px] sm:text-[12px] font-semibold px-3.5 py-2 rounded-lg bg-[#4edea3]/15 hover:bg-[#4edea3]/25 text-[#4edea3] border border-[#4edea3]/40 uppercase transition-all shadow-sm cursor-pointer"
               >
-                ⚡ JUMP TO EXECUTION SIZER
+                🎯 EXECUTE &amp; SIZER
               </button>
             )}
 
@@ -1110,9 +1133,9 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
               <button
                 type="button"
                 onClick={() => handleStageSelect(nextStage.id)}
-                className="px-4 py-2 bg-[#00f0ff]/15 hover:bg-[#00f0ff]/25 text-[#00f0ff] border border-[#00f0ff]/50 font-bold uppercase tracking-wider shadow-[0_0_14px_rgba(0,240,255,0.18)] transition-all cursor-pointer"
+                className="text-[11px] sm:text-[12px] font-semibold px-4 py-2 rounded-lg bg-[#00f0ff]/15 hover:bg-[#00f0ff]/25 text-[#00f0ff] border border-[#00f0ff]/50 uppercase tracking-wider shadow-[0_0_14px_rgba(0,240,255,0.18)] transition-all cursor-pointer"
               >
-                NEXT: STAGE {nextStage.stepCode} ({nextStage.shortTitle}) →
+                NEXT STAGE: {nextStage.stepCode} {nextStage.shortTitle} →
               </button>
             )}
           </div>
@@ -1175,10 +1198,10 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
           {candlestickResult.primaryPattern ? (
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between flex-wrap gap-2">
-                <h4 className="font-mono text-[15px] font-bold text-[#dbfcff]">
+                <h4 className="font-mono text-[15px] sm:text-[16px] font-bold tracking-tight text-white">
                   {candlestickResult.primaryPattern.name}
                 </h4>
-                <span className="font-mono text-[10px] text-[#849495] tabular-nums">
+                <span className="font-mono text-[10.5px] text-[#849495] tabular-nums">
                   {candlestickResult.primaryPattern.barsAgo === 0
                     ? 'Active Bar'
                     : `${candlestickResult.primaryPattern.barsAgo} Bars Ago`}{' '}
@@ -1188,40 +1211,40 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                   </strong>
                 </span>
               </div>
-              <p className="font-sans text-[12px] text-[#b9cacb] leading-relaxed">
+              <p className="font-sans text-[13px] text-[#cbd5e1] leading-relaxed">
                 {candlestickResult.primaryPattern.description}
               </p>
             </div>
           ) : (
-            <div className="font-mono text-[11px] text-[#849495]">
+            <div className="font-mono text-[12px] text-[#849495]">
               No high-conviction candlestick reversal or continuation pattern on the immediate bar.
             </div>
           )}
 
           {/* 3-Metric Wick Anatomy Strip */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 tabular-nums">
-            <div className="p-3 bg-[#090c12] border border-[#1e2636] flex flex-col justify-between">
+            <div className="rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <span className="font-mono text-[9px] text-[#849495] uppercase">
+                <span className="font-mono text-[10px] text-[#849495] uppercase">
                   WICK REJECTION RATIO
                 </span>
-                <span className="font-mono text-[14px] font-bold text-[#4edea3]">{wickPct}%</span>
+                <span className="font-mono text-[15px] font-bold text-[#4edea3]">{wickPct}%</span>
               </div>
-              <span className="font-mono text-[8.5px] text-[#849495] mt-1">
+              <span className="font-mono text-[9.5px] text-[#849495] mt-1">
                 {wickPct >= 55
                   ? 'Strong liquidity sweep & rejection tail'
                   : 'Standard intrabar shadow proportion'}
               </span>
             </div>
 
-            <div className="p-3 bg-[#090c12] border border-[#1e2636] flex flex-col justify-between">
+            <div className="rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <span className="font-mono text-[9px] text-[#849495] uppercase">
+                <span className="font-mono text-[10px] text-[#849495] uppercase">
                   CLOSE LOCATION (CLV)
                 </span>
-                <span className="font-mono text-[14px] font-bold text-[#dbfcff]">{clvPct}%</span>
+                <span className="font-mono text-[15px] font-bold text-[#dbfcff]">{clvPct}%</span>
               </div>
-              <span className="font-mono text-[8.5px] text-[#849495] mt-1">
+              <span className="font-mono text-[9.5px] text-[#849495] mt-1">
                 {clvPct >= 70
                   ? 'Buyers closed near bar high'
                   : clvPct <= 30
@@ -1230,16 +1253,16 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
               </span>
             </div>
 
-            <div className="p-3 bg-[#090c12] border border-[#1e2636] flex flex-col justify-between">
+            <div className="rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <span className="font-mono text-[9px] text-[#849495] uppercase">
+                <span className="font-mono text-[10px] text-[#849495] uppercase">
                   BODY / 14-BAR ATR
                 </span>
-                <span className="font-mono text-[14px] font-bold text-[#f59e0b]">
+                <span className="font-mono text-[15px] font-bold text-[#f59e0b]">
                   {bodyAtr.toFixed(2)}x
                 </span>
               </div>
-              <span className="font-mono text-[8.5px] text-[#849495] mt-1">
+              <span className="font-mono text-[9.5px] text-[#849495] mt-1">
                 {bodyAtr >= 1.35
                   ? 'Expansion displacement candle'
                   : bodyAtr <= 0.4
@@ -1569,15 +1592,15 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center tabular-nums">
-            <div className="p-3.5 bg-[#090c12] border border-[#1e2636] flex items-center justify-between">
+            <div className="rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg flex items-center justify-between">
               <div className="flex flex-col gap-1">
-                <span className="font-mono text-[9px] text-[#849495] uppercase">
+                <span className="font-mono text-[10px] text-[#849495] uppercase">
                   LIVE SESSION RVOL MULTIPLIER
                 </span>
                 <div className="font-mono text-[22px] font-bold text-[#dbfcff]">
                   <ScrambleValue text={`${sesRvol.toFixed(2)}x`} />
                 </div>
-                <span className="font-mono text-[9px] text-[#849495]">
+                <span className="font-mono text-[9.5px] text-[#849495]">
                   Normalized against active UTC session baseline
                 </span>
               </div>
@@ -1588,16 +1611,16 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
               />
             </div>
 
-            <div className="p-3.5 bg-[#090c12] border border-[#1e2636] flex flex-col gap-1.5 font-sans text-[11.5px] text-[#b9cacb]">
-              <div className="flex items-center justify-between font-mono text-[10px]">
+            <div className="rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg flex flex-col gap-1.5 font-sans text-[12px] text-[#cbd5e1]">
+              <div className="flex items-center justify-between font-mono text-[10.5px]">
                 <span className="text-[#00f0ff] font-bold">💧 VDU (&le; 0.45x):</span>
                 <span>Seller exhaustion at pullbacks (Spring setup)</span>
               </div>
-              <div className="flex items-center justify-between font-mono text-[10px]">
+              <div className="flex items-center justify-between font-mono text-[10.5px]">
                 <span className="text-[#fcd34d] font-bold">🔥 IGNITION (&ge; 2.0x):</span>
                 <span>Institutional breakout displacement</span>
               </div>
-              <div className="flex items-center justify-between font-mono text-[10px]">
+              <div className="flex items-center justify-between font-mono text-[10.5px]">
                 <span className="text-[#849495] font-bold">NORMAL (0.8x–1.5x):</span>
                 <span>Standard two-sided rotation</span>
               </div>
@@ -1880,8 +1903,8 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 tabular-nums">
-            <div className="p-3 bg-[#090c12] border border-[#1e2636] flex flex-col justify-between">
-              <span className="font-mono text-[9px] text-[#849495] uppercase">
+            <div className="rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg flex flex-col justify-between">
+              <span className="font-mono text-[10px] text-[#849495] uppercase">
                 CUMULATIVE VOLUME DELTA (CVD)
               </span>
               <div
@@ -1892,13 +1915,13 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                 {telemetry.cvdDelta >= 0 ? '+' : ''}
                 {Math.round(telemetry.cvdDelta).toLocaleString()}
               </div>
-              <span className="font-mono text-[8.5px] text-[#849495] mt-0.5">
+              <span className="font-mono text-[9.5px] text-[#849495] mt-0.5">
                 {telemetry.divergenceBias}
               </span>
             </div>
 
-            <div className="p-3 bg-[#090c12] border border-[#1e2636] flex flex-col justify-between">
-              <span className="font-mono text-[9px] text-[#849495] uppercase">
+            <div className="rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg flex flex-col justify-between">
+              <span className="font-mono text-[10px] text-[#849495] uppercase">
                 SPOT Δ VS PERP Δ FLOW
               </span>
               <div className="font-mono text-[13px] font-bold text-[#dbfcff] mt-1 flex items-center gap-2">
@@ -1912,14 +1935,14 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                   {perpDelta.toFixed(1)}%
                 </span>
               </div>
-              <span className="font-mono text-[8.5px] text-[#fcd34d] mt-0.5">
+              <span className="font-mono text-[9.5px] text-[#fcd34d] mt-0.5">
                 Perp-Spot Basis: {basisBps >= 0 ? '+' : ''}
                 {basisBps.toFixed(1)} bps
               </span>
             </div>
 
-            <div className="p-3 bg-[#090c12] border border-[#1e2636] flex flex-col justify-between">
-              <span className="font-mono text-[9px] text-[#849495] uppercase">
+            <div className="rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg flex flex-col justify-between">
+              <span className="font-mono text-[10px] text-[#849495] uppercase">
                 LIVE ORDERBOOK TUG-OF-WAR
               </span>
               <div className="mt-1.5">
@@ -1928,7 +1951,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                   width={14}
                 />
               </div>
-              <span className="font-mono text-[8.5px] text-[#849495] mt-1">
+              <span className="font-mono text-[9.5px] text-[#849495] mt-1">
                 500-Depth Bid vs Ask Resting Walls
               </span>
             </div>
@@ -1938,19 +1961,19 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 tabular-nums">
             <div
               onClick={(e) => toggleTrackPrice(e, 'ORDERBOOK BID WALL', bidWallPrice)}
-              className={`p-3 bg-[#090c12] border border-[#1e2636] border-l-2 border-l-[#4edea3] flex items-center justify-between cursor-pointer ${
+              className={`rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg border-l-2 border-l-[#4edea3] flex items-center justify-between cursor-pointer ${
                 isPriceTracked(bidWallPrice) ? 'cyber-panel-tracked' : ''
               }`}
             >
               <div>
-                <span className="font-mono text-[9px] text-[#4edea3] font-bold uppercase block">
+                <span className="font-mono text-[10px] text-[#4edea3] font-bold uppercase block">
                   500-DEPTH BID WALL (SUPPORT)
                 </span>
-                <span className="font-mono text-[14px] font-bold text-[#dbfcff]">
+                <span className="font-mono text-[15px] font-bold text-[#dbfcff]">
                   ${formatP(bidWallPrice)}
                 </span>
               </div>
-              <span className="font-mono text-[9px] text-[#4edea3] font-bold">
+              <span className="font-mono text-[10px] text-[#4edea3] font-bold">
                 {liquidity?.bidLiquidityQty
                   ? `${liquidity.bidLiquidityQty.toFixed(1)} ${baseAsset} 🎯`
                   : '🎯 TRACK'}
@@ -1959,19 +1982,19 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
 
             <div
               onClick={(e) => toggleTrackPrice(e, 'ORDERBOOK ASK WALL', askWallPrice)}
-              className={`p-3 bg-[#090c12] border border-[#1e2636] border-l-2 border-l-[#ffb4ab] flex items-center justify-between cursor-pointer ${
+              className={`rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg border-l-2 border-l-[#ffb4ab] flex items-center justify-between cursor-pointer ${
                 isPriceTracked(askWallPrice) ? 'cyber-panel-tracked' : ''
               }`}
             >
               <div>
-                <span className="font-mono text-[9px] text-[#ffb4ab] font-bold uppercase block">
+                <span className="font-mono text-[10px] text-[#ffb4ab] font-bold uppercase block">
                   500-DEPTH ASK WALL (SUPPLY)
                 </span>
-                <span className="font-mono text-[14px] font-bold text-[#dbfcff]">
+                <span className="font-mono text-[15px] font-bold text-[#dbfcff]">
                   ${formatP(askWallPrice)}
                 </span>
               </div>
-              <span className="font-mono text-[9px] text-[#ffb4ab] font-bold">
+              <span className="font-mono text-[10px] text-[#ffb4ab] font-bold">
                 {liquidity?.askLiquidityQty
                   ? `${liquidity.askLiquidityQty.toFixed(1)} ${baseAsset} 🎯`
                   : '🎯 TRACK'}
@@ -2025,14 +2048,14 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 tabular-nums">
-            <div className="p-3 bg-[#090c12] border border-[#1e2636] flex flex-col justify-between">
-              <span className="font-mono text-[9px] text-[#849495] uppercase">
+            <div className="rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg flex flex-col justify-between">
+              <span className="font-mono text-[10px] text-[#849495] uppercase">
                 HURST EXPONENT (H)
               </span>
               <div className="font-mono text-[17px] font-bold text-[#00f0ff] mt-1">
                 {hurst.toFixed(2)}
               </div>
-              <span className="font-mono text-[8.5px] text-[#849495] mt-0.5">
+              <span className="font-mono text-[9.5px] text-[#849495] mt-0.5">
                 {hurst < 0.48
                   ? 'H < 0.48: Mean-Reverting'
                   : hurst > 0.55
@@ -2041,41 +2064,41 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
               </span>
             </div>
 
-            <div className="p-3 bg-[#090c12] border border-[#1e2636] flex flex-col justify-between">
-              <span className="font-mono text-[9px] text-[#849495] uppercase">
+            <div className="rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg flex flex-col justify-between">
+              <span className="font-mono text-[10px] text-[#849495] uppercase">
                 WILDER&apos;S ADX(14)
               </span>
               <div className="font-mono text-[17px] font-bold text-[#dbfcff] mt-1">
                 {adx.toFixed(1)}
               </div>
-              <span className="font-mono text-[8.5px] text-[#849495] mt-0.5">
+              <span className="font-mono text-[9.5px] text-[#849495] mt-0.5">
                 {adx >= 25 ? 'ADX >= 25: Active Trend' : 'ADX < 25: Range Bound'}
               </span>
             </div>
 
             <div
               onClick={(e) => toggleTrackPrice(e, '50-VWMA FAIR VALUE', telemetry.vwma50)}
-              className={`p-3 bg-[#090c12] border border-[#1e2636] flex flex-col justify-between cursor-pointer ${
+              className={`rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg flex flex-col justify-between cursor-pointer ${
                 isPriceTracked(telemetry.vwma50) ? 'cyber-panel-tracked' : ''
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="font-mono text-[9px] text-[#849495] uppercase">
+                <span className="font-mono text-[10px] text-[#849495] uppercase">
                   50-VWMA Z-SCORE
                 </span>
-                <span className="font-mono text-[8px] text-[#00f0ff]">🎯</span>
+                <span className="font-mono text-[9px] text-[#00f0ff]">🎯</span>
               </div>
               <div className="font-mono text-[17px] font-bold text-[#fcd34d] mt-1">
                 {telemetry.zScore >= 0 ? '+' : ''}
                 {telemetry.zScore.toFixed(2)}σ
               </div>
-              <span className="font-mono text-[8.5px] text-[#849495] mt-0.5">
+              <span className="font-mono text-[9.5px] text-[#849495] mt-0.5">
                 VWMA: ${formatP(telemetry.vwma50)}
               </span>
             </div>
 
-            <div className="p-3 bg-[#090c12] border border-[#1e2636] flex flex-col justify-between">
-              <span className="font-mono text-[9px] text-[#849495] uppercase">
+            <div className="rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg flex flex-col justify-between">
+              <span className="font-mono text-[10px] text-[#849495] uppercase">
                 SHARPE / SORTINO
               </span>
               <div
@@ -2086,7 +2109,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                 {sharpe >= 0 ? '+' : ''}
                 {sharpe.toFixed(2)} / {sortino.toFixed(2)}
               </div>
-              <span className="font-mono text-[8.5px] text-[#849495] mt-0.5 truncate">
+              <span className="font-mono text-[9.5px] text-[#849495] mt-0.5 truncate">
                 {sharpeSortino?.sharpeRegime || 'Dampened Intraday Scaling'}
               </span>
             </div>
@@ -2291,16 +2314,16 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                   key={sId}
                   type="button"
                   onClick={() => handleStageSelect(sId)}
-                  className={`p-2.5 border flex flex-col gap-1 text-left transition-colors cursor-pointer ${
+                  className={`rounded-xl p-3 border flex flex-col gap-1 text-left transition-all shadow-sm cursor-pointer ${
                     isLight
                       ? 'bg-[#ffffff] hover:bg-[#f1f5f9] border-[#cbd5e1]'
-                      : 'bg-[#090c12] hover:bg-[#141821] border-[#1e2636]'
+                      : 'bg-[#0d121d]/90 hover:bg-[#141821] border-white/[0.08]'
                   }`}
                   title={`Click to inspect Stage 0${sId} (${st.shortTitle})`}
                 >
                   <div className="flex items-center justify-between gap-1">
                     <span
-                      className={`font-mono text-[9px] font-bold ${
+                      className={`font-mono text-[10px] font-bold ${
                         isLight ? 'text-[#475569]' : 'text-[#849495]'
                       }`}
                     >
@@ -2313,13 +2336,13 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                   </div>
                   <div className="flex items-baseline justify-between">
                     <span
-                      className="font-mono text-[13px] font-bold"
+                      className="font-mono text-[14px] font-bold"
                       style={{ color: getReadableStatusColor(ev.dotColor) }}
                     >
                       {ev.score}%
                     </span>
                     <span
-                      className={`font-mono text-[8px] uppercase ${
+                      className={`font-mono text-[9px] uppercase ${
                         isLight ? 'text-[#334155]' : 'text-[#b9cacb]'
                       }`}
                     >
@@ -2366,14 +2389,14 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
 
         {/* Shortcut Banner to 14-Model Playbooks & Gann/Lunar Scanner */}
         <div
-          className={`cyber-panel border-l-2 border-l-[#f59e0b] p-3.5 flex items-center justify-between gap-3 flex-wrap ${
+          className={`cyber-panel border-l-2 border-l-[#f59e0b] p-4 flex items-center justify-between gap-3 flex-wrap ${
             isLight ? 'bg-[#ffffff]' : 'bg-[#0b0e14]'
           }`}
         >
-          <div className="flex flex-col gap-0.5">
+          <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2 flex-wrap">
               <span
-                className={`px-2 py-0.5 border font-mono text-[9.5px] font-bold uppercase ${
+                className={`px-2.5 py-0.5 rounded-md border font-mono text-[10px] font-bold uppercase ${
                   isLight
                     ? 'bg-[#d97706]/15 text-[#b45309] border-[#d97706]/40'
                     : 'bg-[#f59e0b]/20 text-[#fcd34d] border-[#f59e0b]/40'
@@ -2382,7 +2405,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                 🏆 14 FAMOUS PLAYBOOKS &amp; GANN / LUNAR SCANNER
               </span>
               <span
-                className={`font-mono text-[10px] font-bold ${
+                className={`font-mono text-[11px] font-bold ${
                   isLight ? 'text-[#047857]' : 'text-[#4edea3]'
                 }`}
               >
@@ -2390,12 +2413,12 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
               </span>
             </div>
             <span
-              className={`font-sans text-[11.5px] ${
-                isLight ? 'text-[#334155]' : 'text-[#b9cacb]'
+              className={`font-sans text-[13px] ${
+                isLight ? 'text-[#334155]' : 'text-[#cbd5e1]'
               }`}
             >
               Top Ranked Now:{' '}
-              <strong className={isLight ? 'text-[#0f172a]' : 'text-[#dbfcff]'}>
+              <strong className={isLight ? 'text-[#0f172a]' : 'text-white'}>
                 {top3PodiumStrategies[0]?.name} ({top3PodiumStrategies[0]?.possibilityScore}% Score •{' '}
                 {top3PodiumStrategies[0]?.backtest250Bars.winRatePct}% 250-Bar Win Rate)
               </strong>
@@ -2414,7 +2437,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                     top.tradePlan.tp2Price
                   );
                 }}
-                className={`px-3 py-1.5 border font-mono text-[9.5px] font-bold uppercase cursor-pointer ${
+                className={`text-[11px] sm:text-[12px] font-semibold px-3.5 py-2 rounded-lg border font-mono uppercase cursor-pointer transition-all shadow-sm ${
                   isLight
                     ? 'bg-[#059669]/15 hover:bg-[#059669]/25 text-[#047857] border-[#059669]/40'
                     : 'bg-[#4edea3]/15 hover:bg-[#4edea3]/25 text-[#4edea3] border-[#4edea3]/40'
@@ -2425,14 +2448,17 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
             )}
             <button
               type="button"
-              onClick={() => setViewMode('PLAYBOOKS')}
-              className={`px-3 py-1.5 border font-mono text-[9.5px] font-bold uppercase cursor-pointer ${
+              onClick={() => {
+                setViewMode('PLAYBOOKS');
+                onToggleWorkspaceExpand?.(true);
+              }}
+              className={`text-[11px] sm:text-[12px] font-semibold px-3.5 py-2 rounded-lg border font-mono uppercase cursor-pointer transition-all shadow-sm ${
                 isLight
                   ? 'bg-[#d97706]/15 hover:bg-[#d97706]/25 text-[#b45309] border-[#d97706]/50'
                   : 'bg-[#f59e0b]/20 hover:bg-[#f59e0b]/30 text-[#fcd34d] border-[#f59e0b]/50'
               }`}
             >
-              🏆 OPEN PLAYBOOKS &amp; GANN HUB →
+              🏆 OPEN 14 PLAYBOOKS →
             </button>
           </div>
         </div>
@@ -2440,7 +2466,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
         {/* Lens Setup Selector Pill — 1-Click Load Entry, Stop Loss & Targets from any Stage */}
         <div className="cyber-panel p-4 flex flex-col gap-3">
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <span className="font-mono text-[10px] font-bold text-[#00f0ff] uppercase tracking-wider">
+            <span className="font-mono text-[11px] font-bold text-[#00f0ff] uppercase tracking-wider">
               🎯 1-CLICK STAGE SETUP LOADER (SELECT STAGE THESIS TO POPULATE SIZER)
             </span>
             <button
@@ -2453,13 +2479,13 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                   activeSetup.target2Price
                 )
               }
-              className="px-3 py-1 bg-[#4edea3]/15 hover:bg-[#4edea3]/25 text-[#4edea3] border border-[#4edea3]/40 font-mono text-[9.5px] font-bold uppercase cursor-pointer"
+              className="text-[11px] sm:text-[12px] font-semibold px-3.5 py-2 rounded-lg bg-[#4edea3]/15 hover:bg-[#4edea3]/25 text-[#4edea3] border border-[#4edea3]/40 font-mono uppercase cursor-pointer transition-all shadow-sm"
             >
               ⚡ LOAD {activeSetup.lensTitle} INTO SIZER
             </button>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 font-mono text-[9px]">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 font-mono text-[10px]">
             {(
               [
                 { lensId: 1, label: '01 PRICE & S/R' },
@@ -2486,14 +2512,14 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                       );
                     }
                   }}
-                  className={`px-2.5 py-2 border text-left transition-all cursor-pointer flex flex-col gap-0.5 ${
+                  className={`rounded-xl px-3 py-2.5 border text-left transition-all cursor-pointer flex flex-col gap-0.5 ${
                     isSel
                       ? 'bg-[#00f0ff]/15 border-[#00f0ff] text-[#dbfcff]'
-                      : 'bg-[#090c12] hover:bg-[#141821] border-[#1e2636] text-[#849495]'
+                      : 'bg-[#0d121d]/90 hover:bg-[#141821] border-white/[0.08] text-[#849495]'
                   }`}
                 >
                   <span className="font-bold text-[#00f0ff]">{item.label}</span>
-                  <span className="text-[8.5px] truncate">
+                  <span className="text-[9.5px] truncate">
                     Entry ${formatP(s?.suggestedEntry || currentPrice)}
                   </span>
                 </button>
@@ -2503,19 +2529,19 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
 
           {/* Selected Stage Setup Summary Strip */}
           {activeSetup && (
-            <div className="p-3 bg-[#090c12] border border-[#1e2636] flex flex-col gap-2">
+            <div className="rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg flex flex-col gap-2">
               <div className="flex items-center justify-between flex-wrap gap-2">
-                <span className="font-mono text-[11px] font-bold text-[#dbfcff]">
+                <span className="font-mono text-[12px] font-bold text-white">
                   {activeSetup.setupType} ({activeSetup.bias})
                 </span>
-                <span className="font-mono text-[9.5px] text-[#849495] tabular-nums">
+                <span className="font-mono text-[10.5px] text-[#849495] tabular-nums">
                   Entry: <strong className="text-[#00f0ff]">${formatP(activeSetup.suggestedEntry)}</strong> • Stop:{' '}
                   <strong className="text-[#ffb4ab]">${formatP(activeSetup.invalidationPrice)}</strong> • TP1:{' '}
                   <strong className="text-[#4edea3]">${formatP(activeSetup.target1Price)}</strong> • TP2:{' '}
                   <strong className="text-[#4edea3]">${formatP(activeSetup.target2Price)}</strong>
                 </span>
               </div>
-              <p className="font-sans text-[11.5px] text-[#b9cacb] leading-snug">
+              <p className="font-sans text-[13px] text-[#cbd5e1] leading-relaxed">
                 {activeSetup.thesis}
               </p>
             </div>
@@ -3178,7 +3204,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 tabular-nums">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5 tabular-nums">
             {top3PodiumStrategies.map((strat, idx) => {
               const rankLabels = ['#1 BEST EDGE NOW', '#2 RUNNER-UP', '#3 ALTERNATIVE'];
               const rankBorderColors = [
@@ -3189,18 +3215,18 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
               return (
                 <div
                   key={strat.id}
-                  className={`p-3.5 border flex flex-col justify-between gap-3 ${
+                  className={`rounded-xl p-4 border shadow-lg flex flex-col justify-between gap-3 ${
                     rankBorderColors[idx]
                   } ${
                     isLight
                       ? 'bg-[#ffffff] border-[#cbd5e1]'
-                      : 'bg-[#090c12] border-[#1e2636]'
+                      : 'bg-[#0d121d]/90 border-white/[0.08]'
                   }`}
                 >
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-2.5">
                     <div className="flex items-center justify-between gap-1.5 flex-wrap">
                       <span
-                        className={`px-1.5 py-0.5 font-mono text-[8.5px] font-bold uppercase border ${
+                        className={`px-2 py-0.5 rounded-md font-mono text-[9px] font-bold uppercase border ${
                           idx === 0
                             ? isLight
                               ? 'bg-[#059669]/15 text-[#047857] border-[#059669]/40'
@@ -3215,14 +3241,14 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
 
                       <div className="flex items-center gap-1">
                         <span
-                          className={`px-1.5 py-0.5 border font-mono text-[9px] font-bold ${getBiasBadgeColors(
+                          className={`px-2 py-0.5 rounded-md border font-mono text-[9.5px] font-bold ${getBiasBadgeColors(
                             strat.direction
                           )}`}
                         >
                           {strat.direction}
                         </span>
                         <span
-                          className={`px-1.5 py-0.5 border font-mono text-[9.5px] font-bold ${getStrategyBadgeColors(
+                          className={`px-2 py-0.5 rounded-md border font-mono text-[10px] font-bold ${getStrategyBadgeColors(
                             strat.possibilityScore
                           )}`}
                         >
@@ -3233,14 +3259,14 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
 
                     <div>
                       <div
-                        className={`font-mono text-[12px] font-bold ${
-                          isLight ? 'text-[#0f172a]' : 'text-[#dbfcff]'
+                        className={`font-sans text-[15px] sm:text-[16px] font-bold tracking-tight ${
+                          isLight ? 'text-[#0f172a]' : 'text-white'
                         }`}
                       >
                         {strat.name}
                       </div>
                       <div
-                        className={`font-mono text-[9.5px] ${
+                        className={`font-mono text-[10px] mt-0.5 ${
                           isLight ? 'text-[#475569]' : 'text-[#849495]'
                         }`}
                       >
@@ -3253,8 +3279,8 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                     </div>
 
                     <p
-                      className={`font-sans text-[11px] leading-snug ${
-                        isLight ? 'text-[#1e293b]' : 'text-[#b9cacb]'
+                      className={`font-sans text-[13px] leading-relaxed ${
+                        isLight ? 'text-[#1e293b]' : 'text-[#cbd5e1]'
                       }`}
                     >
                       {strat.tradePlan.triggerNote}
@@ -3262,8 +3288,8 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
 
                     {/* Compact Trade Geometry Strip */}
                     <div
-                      className={`grid grid-cols-4 gap-1 p-2 border font-mono text-[9px] ${
-                        isLight ? 'bg-[#f8fafc] border-[#cbd5e1]' : 'bg-[#0b0e14] border-[#1e2636]'
+                      className={`grid grid-cols-4 gap-1.5 p-2.5 rounded-lg border font-mono text-[9.5px] ${
+                        isLight ? 'bg-[#f8fafc] border-[#cbd5e1]' : 'bg-[#080b12]/90 border-white/[0.08]'
                       }`}
                     >
                       <button
@@ -3278,7 +3304,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                         className="text-left cursor-pointer hover:opacity-80"
                         title="Click to spotlight Entry on Chart"
                       >
-                        <span className="block text-[7.5px] opacity-70">ENTRY 🎯</span>
+                        <span className="block text-[8px] opacity-70">ENTRY 🎯</span>
                         <strong className={isLight ? 'text-[#0284c7]' : 'text-[#00f0ff]'}>
                           ${formatP(strat.tradePlan.entryPrice)}
                         </strong>
@@ -3295,7 +3321,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                         className="text-left cursor-pointer hover:opacity-80"
                         title="Click to spotlight Stop Loss on Chart"
                       >
-                        <span className="block text-[7.5px] opacity-70">STOP 🎯</span>
+                        <span className="block text-[8px] opacity-70">STOP 🎯</span>
                         <strong className={isLight ? 'text-[#b91c1c]' : 'text-[#ffb4ab]'}>
                           ${formatP(strat.tradePlan.stopLoss)}
                         </strong>
@@ -3308,7 +3334,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                         className="text-left cursor-pointer hover:opacity-80"
                         title="Click to spotlight TP1 on Chart"
                       >
-                        <span className="block text-[7.5px] opacity-70">TP1 🎯</span>
+                        <span className="block text-[8px] opacity-70">TP1 🎯</span>
                         <strong className={isLight ? 'text-[#047857]' : 'text-[#4edea3]'}>
                           ${formatP(strat.tradePlan.tp1Price)}
                         </strong>
@@ -3321,7 +3347,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                         className="text-left cursor-pointer hover:opacity-80"
                         title="Click to spotlight TP2 on Chart"
                       >
-                        <span className="block text-[7.5px] opacity-70">TP2 🎯</span>
+                        <span className="block text-[8px] opacity-70">TP2 🎯</span>
                         <strong className={isLight ? 'text-[#047857]' : 'text-[#4edea3]'}>
                           ${formatP(strat.tradePlan.tp2Price)}
                         </strong>
@@ -3334,7 +3360,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                     <button
                       type="button"
                       onClick={() => setAssessedStrategyId(strat.id)}
-                      className={`flex-1 px-2.5 py-1.5 border font-mono text-[9.5px] font-bold uppercase transition-colors cursor-pointer ${
+                      className={`flex-1 text-[11px] sm:text-[12px] font-semibold px-3.5 py-2 rounded-lg border font-mono uppercase transition-all shadow-sm cursor-pointer ${
                         isLight
                           ? 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0284c7] border-[#0284c7]/40'
                           : 'bg-[#141821] hover:bg-[#191c22] text-[#00f0ff] border-[#00f0ff]/40'
@@ -3353,8 +3379,9 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                         );
                         setViewMode('GUIDED');
                         handleStageSelect(6);
+                        onToggleWorkspaceExpand?.(false);
                       }}
-                      className={`flex-1 px-2.5 py-1.5 border font-mono text-[9.5px] font-bold uppercase transition-colors cursor-pointer ${
+                      className={`flex-1 text-[11px] sm:text-[12px] font-semibold px-3.5 py-2 rounded-lg border font-mono uppercase transition-all shadow-sm cursor-pointer ${
                         isLight
                           ? 'bg-[#059669]/15 hover:bg-[#059669]/25 text-[#047857] border-[#059669]/40'
                           : 'bg-[#4edea3]/15 hover:bg-[#4edea3]/25 text-[#4edea3] border-[#4edea3]/40'
@@ -3372,10 +3399,10 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
         {/* ==================================================================== */}
         {/* SECTION 3: FULL 14-MODEL RESEARCH LIBRARY WITH ERA FILTERS           */}
         {/* ==================================================================== */}
-        <div className="cyber-panel p-4 flex flex-col gap-3">
+        <div className="cyber-panel p-4 flex flex-col gap-3.5">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <span
-              className={`font-mono text-[10px] font-bold uppercase tracking-wider ${
+              className={`font-mono text-[11px] font-bold uppercase tracking-wider ${
                 isLight ? 'text-[#0284c7]' : 'text-[#00f0ff]'
               }`}
             >
@@ -3383,7 +3410,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
             </span>
 
             {/* Era Filter Tabs */}
-            <div className="flex items-center gap-1 flex-wrap font-mono text-[9px]">
+            <div className="flex items-center gap-1.5 flex-wrap font-mono text-[10px]">
               {(
                 [
                   { id: 'ALL', label: `ALL (${famousStrategies.length})` },
@@ -3400,14 +3427,14 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                     key={tab.id}
                     type="button"
                     onClick={() => setPlaybookFilter(tab.id)}
-                    className={`px-2.5 py-1 border font-bold uppercase transition-colors cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-lg border font-bold uppercase transition-all cursor-pointer ${
                       active
                         ? isLight
                           ? 'bg-[#0284c7]/15 text-[#0284c7] border-[#0284c7]'
                           : 'bg-[#00f0ff]/20 text-[#00f0ff] border-[#00f0ff]'
                         : isLight
                         ? 'bg-[#f8fafc] hover:bg-[#e2e8f0] text-[#475569] border-[#cbd5e1]'
-                        : 'bg-[#090c12] hover:bg-[#141821] text-[#849495] border-[#1e2636]'
+                        : 'bg-[#0d121d]/90 hover:bg-[#141821] text-[#849495] border-white/10'
                     }`}
                   >
                     {tab.label}
@@ -3417,12 +3444,16 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 tabular-nums">
+          <div
+            className={`grid grid-cols-1 ${
+              isWorkspaceExpanded ? 'md:grid-cols-2 xl:grid-cols-3' : 'xl:grid-cols-2'
+            } gap-4 tabular-nums`}
+          >
             {filteredModels.map((model) => (
               <div
                 key={model.id}
-                className={`p-4 border flex flex-col justify-between gap-3 ${
-                  isLight ? 'bg-[#ffffff] border-[#cbd5e1]' : 'bg-[#090c12] border-[#1e2636]'
+                className={`rounded-xl p-4 border shadow-lg flex flex-col justify-between gap-3 ${
+                  isLight ? 'bg-[#ffffff] border-[#cbd5e1]' : 'bg-[#0d121d]/90 border-white/[0.08]'
                 }`}
               >
                 <div className="flex flex-col gap-2.5">
@@ -3430,16 +3461,16 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span
-                        className={`px-1.5 py-0.5 border font-mono text-[8.5px] font-bold uppercase ${
+                        className={`px-2 py-0.5 rounded-md border font-mono text-[9px] font-bold uppercase ${
                           isLight
                             ? 'bg-[#f1f5f9] text-[#334155] border-[#cbd5e1]'
-                            : 'bg-[#141821] text-[#b9cacb] border-[#1e2636]'
+                            : 'bg-[#141821] text-[#b9cacb] border-white/10'
                         }`}
                       >
                         {model.era}
                       </span>
                       <span
-                        className={`font-mono text-[9.5px] ${
+                        className={`font-mono text-[10px] ${
                           isLight ? 'text-[#475569]' : 'text-[#849495]'
                         }`}
                       >
@@ -3449,14 +3480,14 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
 
                     <div className="flex items-center gap-1.5">
                       <span
-                        className={`px-2 py-0.5 border font-mono text-[9px] font-bold ${getBiasBadgeColors(
+                        className={`px-2 py-0.5 rounded-md border font-mono text-[9.5px] font-bold ${getBiasBadgeColors(
                           model.direction
                         )}`}
                       >
                         {model.direction}
                       </span>
                       <span
-                        className={`px-2 py-0.5 border font-mono text-[9.5px] font-bold ${getStrategyBadgeColors(
+                        className={`px-2 py-0.5 rounded-md border font-mono text-[10px] font-bold ${getStrategyBadgeColors(
                           model.possibilityScore
                         )}`}
                       >
@@ -3468,15 +3499,15 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                   {/* Title & Live Verdict */}
                   <div>
                     <div
-                      className={`font-mono text-[12.5px] font-bold ${
-                        isLight ? 'text-[#0f172a]' : 'text-[#dbfcff]'
+                      className={`font-sans text-[15px] sm:text-[16px] font-bold tracking-tight ${
+                        isLight ? 'text-[#0f172a]' : 'text-white'
                       }`}
                     >
                       {model.name}
                     </div>
                     <p
-                      className={`font-sans text-[11.5px] mt-0.5 leading-snug ${
-                        isLight ? 'text-[#1e293b]' : 'text-[#b9cacb]'
+                      className={`font-sans text-[13px] mt-1 leading-relaxed ${
+                        isLight ? 'text-[#1e293b]' : 'text-[#cbd5e1]'
                       }`}
                     >
                       {model.tradePlan.triggerNote}
@@ -3484,18 +3515,18 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                   </div>
 
                   {/* 4-Rule Live Telemetry Checklist */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {model.rules.map((r, rIdx) => (
                       <div
                         key={rIdx}
-                        className={`p-2 border flex flex-col gap-0.5 font-mono text-[9px] ${
+                        className={`rounded-lg p-2.5 border flex flex-col gap-0.5 font-mono text-[9.5px] ${
                           r.passed
                             ? isLight
                               ? 'bg-[#059669]/10 border-[#059669]/30'
                               : 'bg-[#4edea3]/10 border-[#4edea3]/30'
                             : isLight
                             ? 'bg-[#f8fafc] border-[#cbd5e1]'
-                            : 'bg-[#0b0e14] border-[#1e2636]'
+                            : 'bg-[#080b12]/90 border-white/[0.08]'
                         }`}
                       >
                         <div className="flex items-center justify-between gap-1">
@@ -3512,10 +3543,10 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                           >
                             {r.passed ? '✓' : '○'} {r.label}
                           </span>
-                          <span className="text-[8px] opacity-75">+25%</span>
+                          <span className="text-[8.5px] opacity-75">+25%</span>
                         </div>
                         <span
-                          className={`text-[8.5px] truncate ${
+                          className={`text-[9px] truncate ${
                             isLight ? 'text-[#0f172a]' : 'text-[#dbfcff]'
                           }`}
                         >
@@ -3527,8 +3558,8 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
 
                   {/* 250-Bar Rolling Walk-Forward Backtest Strip */}
                   <div
-                    className={`p-2 border flex items-center justify-between flex-wrap gap-2 font-mono text-[9px] ${
-                      isLight ? 'bg-[#f8fafc] border-[#cbd5e1]' : 'bg-[#0b0e14] border-[#1e2636]'
+                    className={`rounded-lg p-2.5 border flex items-center justify-between flex-wrap gap-2 font-mono text-[9.5px] ${
+                      isLight ? 'bg-[#f8fafc] border-[#cbd5e1]' : 'bg-[#080b12]/90 border-white/[0.08]'
                     }`}
                   >
                     <span>
@@ -3552,11 +3583,11 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
 
                   {/* Rookie vs Pro Explanation */}
                   <p
-                    className={`font-sans text-[11px] leading-relaxed ${
-                      isLight ? 'text-[#334155]' : 'text-[#94a3b8]'
+                    className={`font-sans text-[13px] leading-relaxed ${
+                      isLight ? 'text-[#334155]' : 'text-[#cbd5e1]'
                     }`}
                   >
-                    <strong className="font-mono text-[9.5px] uppercase">
+                    <strong className="font-mono text-[10px] uppercase text-[#fcd34d]">
                       {experienceMode === 'rookie' ? '🎓 ROOKIE GUIDE: ' : '🏛️ QUANT DESK THESIS: '}
                     </strong>
                     {experienceMode === 'rookie' ? model.rookieExplanation : model.corePhilosophy}
@@ -3564,8 +3595,8 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                 </div>
 
                 {/* Action Footer */}
-                <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#1e2636]/40 flex-wrap">
-                  <div className="flex items-center gap-1.5">
+                <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-white/[0.08] flex-wrap">
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={(e) =>
@@ -3575,20 +3606,20 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                           model.tradePlan.entryPrice
                         )
                       }
-                      className={`px-2.5 py-1.5 border font-mono text-[9px] font-bold uppercase cursor-pointer ${
+                      className={`text-[11px] sm:text-[12px] font-semibold px-3.5 py-2 rounded-lg border font-mono uppercase cursor-pointer transition-all shadow-sm ${
                         isPriceTracked(model.tradePlan.entryPrice)
                           ? 'bg-[#00f0ff]/25 border-[#00f0ff] text-[#00f0ff]'
                           : isLight
                           ? 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#334155] border-[#cbd5e1]'
-                          : 'bg-[#141821] hover:bg-[#191c22] text-[#b9cacb] border-[#1e2636]'
+                          : 'bg-[#141821] hover:bg-[#191c22] text-[#e1e2eb] border-white/15'
                       }`}
                     >
-                      🎯 TRACK ENTRY (${formatP(model.tradePlan.entryPrice)})
+                      🎯 TRACK ON CHART (${formatP(model.tradePlan.entryPrice)})
                     </button>
                     <button
                       type="button"
                       onClick={() => setAssessedStrategyId(model.id)}
-                      className={`px-2.5 py-1.5 border font-mono text-[9px] font-bold uppercase cursor-pointer ${
+                      className={`text-[11px] sm:text-[12px] font-semibold px-3.5 py-2 rounded-lg border font-mono uppercase cursor-pointer transition-all shadow-sm ${
                         isLight
                           ? 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0284c7] border-[#0284c7]/40'
                           : 'bg-[#141821] hover:bg-[#191c22] text-[#00f0ff] border-[#00f0ff]/40'
@@ -3609,14 +3640,15 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                       );
                       setViewMode('GUIDED');
                       handleStageSelect(6);
+                      onToggleWorkspaceExpand?.(false);
                     }}
-                    className={`px-3 py-1.5 border font-mono text-[9.5px] font-bold uppercase cursor-pointer ${
+                    className={`text-[11px] sm:text-[12px] font-semibold px-3.5 py-2 rounded-lg border font-mono uppercase cursor-pointer transition-all shadow-sm ${
                       isLight
                         ? 'bg-[#059669]/15 hover:bg-[#059669]/25 text-[#047857] border-[#059669]/40'
                         : 'bg-[#4edea3]/15 hover:bg-[#4edea3]/25 text-[#4edea3] border-[#4edea3]/40'
                     }`}
                   >
-                    ⚡ APPLY TO SIZER →
+                    ⚡ LOAD INTO SIZER →
                   </button>
                 </div>
               </div>
@@ -3857,198 +3889,352 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
     <div className={`flex flex-col w-full ${isLight ? 'bg-[#f1f5f9]' : 'bg-[#10131a]'}`}>
       {renderStrategyAssessmentModal()}
       {/* ========================================================================= */}
-      {/* TOP PINNED 6-STAGE PROGRESSIVE TRADER PIPELINE STEPPER BAR                */}
+      {/* TOP PINNED 4-WORKSPACE PRIMARY MODE DOCK + 6-STAGE PROGRESSIVE STEPPER    */}
       {/* ========================================================================= */}
       <div
-        className={`sticky top-0 z-30 backdrop-blur-md border-b flex flex-col ${
+        className={`sticky top-0 z-40 backdrop-blur-xl border-b flex flex-col ${
           isLight
             ? 'bg-[#ffffff]/95 border-[#cbd5e1]'
-            : 'bg-[#0b0e14]/95 border-[#1e2636]'
+            : 'bg-[#090d16]/95 border-white/10'
         }`}
       >
-        {/* Stepper Top Sub-Bar: Pipeline Title + View Mode Toggle (GUIDED FLOW | COMPACT ALL | PLAYBOOKS) */}
-        <div
-          className={`flex items-center justify-between px-3 py-2 border-b gap-2 flex-wrap ${
-            isLight ? 'border-[#cbd5e1]/80' : 'border-[#1e2636]/80'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <span
-              className={`px-1.5 py-0.5 border font-mono text-[9px] font-bold tracking-wider ${
-                isLight
-                  ? 'bg-[#0284c7]/15 text-[#0284c7] border-[#0284c7]/40'
-                  : 'bg-[#00f0ff]/15 text-[#00f0ff] border-[#00f0ff]/40'
-              }`}
-            >
-              6-STAGE FUNNEL
-            </span>
-            <span
-              className={`font-mono text-[10px] font-bold uppercase tracking-wider ${
-                isLight ? 'text-[#0f172a]' : 'text-[#e1e2eb]'
-              }`}
-            >
-              PROGRESSIVE TRADER WORKFLOW
-            </span>
-          </div>
-
-          <div
-            className={`flex items-center gap-1 p-0.5 border font-mono text-[9px] flex-wrap ${
-              isLight
-                ? 'bg-[#f1f5f9] border-[#cbd5e1]'
-                : 'bg-[#10141d] border-[#1e2636]'
-            }`}
-          >
-            <span className={`px-1.5 hidden sm:inline ${isLight ? 'text-[#475569]' : 'text-[#849495]'}`}>
-              👁️ VIEW:
-            </span>
-            <button
-              type="button"
-              onClick={() => setViewMode('GUIDED')}
-              className={`px-2 py-1 font-bold uppercase transition-colors cursor-pointer ${
-                viewMode === 'GUIDED'
-                  ? isLight
-                    ? 'bg-[#0284c7]/15 text-[#0284c7] border border-[#0284c7]/50'
-                    : 'bg-[#00f0ff]/20 text-[#00f0ff] border border-[#00f0ff]/50'
-                  : isLight
-                  ? 'text-[#475569] hover:text-[#0f172a]'
-                  : 'text-[#849495] hover:text-[#e1e2eb]'
-              }`}
-            >
-              GUIDED FLOW
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('COMPACT_ALL')}
-              className={`px-2 py-1 font-bold uppercase transition-colors cursor-pointer ${
-                viewMode === 'COMPACT_ALL'
-                  ? isLight
-                    ? 'bg-[#0284c7]/15 text-[#0284c7] border border-[#0284c7]/50'
-                    : 'bg-[#00f0ff]/20 text-[#00f0ff] border border-[#00f0ff]/50'
-                  : isLight
-                  ? 'text-[#475569] hover:text-[#0f172a]'
-                  : 'text-[#849495] hover:text-[#e1e2eb]'
-              }`}
-            >
-              COMPACT ALL
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('PLAYBOOKS')}
-              className={`px-2 py-1 font-bold uppercase transition-colors cursor-pointer ${
-                viewMode === 'PLAYBOOKS'
-                  ? isLight
-                    ? 'bg-[#d97706]/20 text-[#b45309] border border-[#d97706]'
-                    : 'bg-[#f59e0b]/25 text-[#fcd34d] border border-[#f59e0b]'
-                  : isLight
-                  ? 'text-[#b45309] hover:bg-[#d97706]/10'
-                  : 'text-[#fcd34d] hover:bg-[#f59e0b]/10'
-              }`}
-            >
-              🏆 BEST SETUPS &amp; PLAYBOOKS ({readyPlaybooksCount} READY)
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('CODEX')}
-              className={`px-2 py-1 font-bold uppercase transition-colors cursor-pointer ${
-                viewMode === 'CODEX'
-                  ? isLight
-                    ? 'bg-[#7e22ce]/20 text-[#6d28d9] border border-[#7e22ce]'
-                    : 'bg-[#c084fc]/25 text-[#c084fc] border border-[#c084fc]'
-                  : isLight
-                  ? 'text-[#6d28d9] hover:bg-[#7e22ce]/10'
-                  : 'text-[#c084fc] hover:bg-[#c084fc]/10'
-              }`}
-            >
-              📚 CODEX &amp; LEARN
-            </button>
-          </div>
-        </div>
-
-        {/* 6 Connected Sequential Stage Pills (Single-Row Swipeable Carousel on Mobile, 6-Col Grid on Desktop) */}
-        <div
-          className={`flex sm:grid sm:grid-cols-6 overflow-x-auto no-scrollbar snap-x snap-mandatory gap-1.5 p-2 ${
-            isLight ? 'bg-[#f1f5f9]/95' : 'bg-[#080b12]/90'
-          }`}
-        >
-          {STAGES.map((stage) => {
-            const isActive = viewMode === 'GUIDED' && activeStage === stage.id;
-            const evalData = stageEvaluations[stage.id];
-            const readableDotColor = getReadableStatusColor(evalData.dotColor);
+        {/* THE 4 LARGE, HIGH-VISIBILITY PRIMARY WORKSPACE PILLS */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2.5 border-b border-white/10">
+          {/* 1. 6-STAGE MARKET FLOW */}
+          {(() => {
+            const isFlowActive =
+              (viewMode === 'GUIDED' || viewMode === 'COMPACT_ALL') && activeStage <= 5;
             return (
               <button
-                key={stage.id}
                 type="button"
                 onClick={() => {
                   setViewMode('GUIDED');
-                  handleStageSelect(stage.id);
+                  if (activeStage === 6) {
+                    handleStageSelect(1);
+                  }
+                  onToggleWorkspaceExpand?.(false);
                 }}
-                className={`relative flex flex-col justify-between text-left min-w-[115px] sm:min-w-0 shrink-0 snap-start rounded-xl px-3 py-2 border transition-all cursor-pointer ${
-                  isActive
+                className={`flex flex-col items-start justify-between text-left rounded-xl px-3.5 py-2.5 border transition-all cursor-pointer ${
+                  isFlowActive
                     ? isLight
-                      ? 'bg-[#e2e8f0] text-[#0284c7] border-[#0284c7]/50'
-                      : 'bg-[#141821] text-[#00f0ff] border-[#00f0ff]/45'
+                      ? 'bg-[#0284c7]/15 border-[#0284c7] text-[#0f172a] shadow-sm'
+                      : 'bg-gradient-to-r from-[#00f0ff]/20 to-[#00f0ff]/5 border-[#00f0ff]/60 text-white shadow-[0_0_20px_rgba(0,240,255,0.18)]'
                     : isLight
-                    ? 'bg-[#ffffff] hover:bg-[#f8fafc] text-[#475569] hover:text-[#0f172a] border-[#cbd5e1]'
-                    : 'bg-[#0b0e14] hover:bg-[#11151f] text-[#849495] hover:text-[#e1e2eb] border-white/10'
+                    ? 'bg-[#f8fafc] hover:bg-[#e2e8f0] border-[#cbd5e1] text-[#334155]'
+                    : 'bg-[#0d121d]/90 hover:bg-[#141821] border-white/[0.08] text-[#cbd5e1]'
                 }`}
               >
-                {isActive && (
-                  <span
-                    className={`absolute bottom-0 left-2 right-2 h-0.5 rounded-full ${
-                      isLight
-                        ? 'bg-[#0284c7] shadow-[0_0_8px_rgba(2,132,199,0.4)]'
-                        : 'bg-[#00f0ff] shadow-[0_0_8px_#00f0ff]'
-                    }`}
-                  />
-                )}
-                <div className="flex items-center justify-between gap-1 w-full">
-                  <span
-                    className={`font-mono text-[9px] font-bold tracking-wider ${
-                      isActive
-                        ? isLight
-                          ? 'text-[#0284c7]'
-                          : 'text-[#00f0ff]'
-                        : isLight
-                        ? 'text-[#475569]'
-                        : 'text-[#849495]'
-                    }`}
-                  >
-                    STAGE {stage.stepCode}
+                <div className="flex items-center justify-between w-full gap-1">
+                  <span className="font-mono text-[11px] sm:text-[12px] font-bold tracking-tight">
+                    📊 6-STAGE MARKET FLOW
                   </span>
                   <span
-                    className="w-2 h-2 rounded-full shrink-0"
-                    style={{
-                      backgroundColor: readableDotColor,
-                      boxShadow: isActive ? `0 0 8px ${readableDotColor}` : 'none',
-                    }}
-                    title={`Stage ${stage.stepCode}: ${evalData.score}% (${evalData.status})`}
-                  />
-                </div>
-                <div className="flex items-baseline justify-between gap-1 mt-1 w-full">
-                  <span
-                    className={`font-mono text-[10.5px] font-bold truncate ${
-                      isActive
-                        ? isLight
-                          ? 'text-[#0f172a]'
-                          : 'text-[#dbfcff]'
-                        : isLight
-                        ? 'text-[#1e293b]'
-                        : 'text-[#e1e2eb]'
+                    className={`px-1.5 py-0.5 rounded font-mono text-[9px] font-bold ${
+                      isFlowActive
+                        ? 'bg-[#00f0ff]/25 text-[#00f0ff]'
+                        : 'bg-white/[0.06] text-[#849495]'
                     }`}
                   >
-                    {stage.shortTitle}
-                  </span>
-                  <span
-                    className="font-mono text-[9px] font-bold tabular-nums"
-                    style={{ color: readableDotColor }}
-                  >
-                    {evalData.score}%
+                    S0{activeStage <= 5 ? activeStage : 1}
                   </span>
                 </div>
+                <span className="font-sans text-[11px] text-[#94a3b8] mt-0.5 truncate w-full">
+                  Step-by-Step Analysis
+                </span>
               </button>
             );
-          })}
+          })()}
+
+          {/* 2. 14 PRO PLAYBOOKS */}
+          {(() => {
+            const isPlaybooksActive = viewMode === 'PLAYBOOKS';
+            return (
+              <button
+                type="button"
+                onClick={() => {
+                  setViewMode('PLAYBOOKS');
+                  onToggleWorkspaceExpand?.(true);
+                }}
+                className={`flex flex-col items-start justify-between text-left rounded-xl px-3.5 py-2.5 border transition-all cursor-pointer ${
+                  isPlaybooksActive
+                    ? isLight
+                      ? 'bg-[#d97706]/15 border-[#d97706] text-[#b45309] shadow-sm'
+                      : 'bg-gradient-to-r from-[#f59e0b]/25 to-[#f59e0b]/5 border-[#f59e0b]/60 text-[#fcd34d] shadow-[0_0_20px_rgba(245,158,11,0.2)]'
+                    : isLight
+                    ? 'bg-[#f8fafc] hover:bg-[#e2e8f0] border-[#cbd5e1] text-[#334155]'
+                    : 'bg-[#0d121d]/90 hover:bg-[#141821] border-white/[0.08] text-[#cbd5e1]'
+                }`}
+              >
+                <div className="flex items-center justify-between w-full gap-1">
+                  <span className="font-mono text-[11px] sm:text-[12px] font-bold tracking-tight">
+                    🏆 14 PRO PLAYBOOKS
+                  </span>
+                  <span
+                    className={`px-1.5 py-0.5 rounded font-mono text-[9px] font-bold ${
+                      isPlaybooksActive
+                        ? 'bg-[#f59e0b]/30 text-[#fcd34d]'
+                        : 'bg-[#f59e0b]/15 text-[#fcd34d]'
+                    }`}
+                  >
+                    {readyPlaybooksCount} READY
+                  </span>
+                </div>
+                <span className="font-sans text-[11px] text-[#94a3b8] mt-0.5 truncate w-full">
+                  Gann • Lunar • SSRN ({readyPlaybooksCount} Ready)
+                </span>
+              </button>
+            );
+          })()}
+
+          {/* 3. EXECUTE & SIZER */}
+          {(() => {
+            const isExecuteActive = viewMode === 'GUIDED' && activeStage === 6;
+            return (
+              <button
+                type="button"
+                onClick={() => {
+                  setViewMode('GUIDED');
+                  handleStageSelect(6);
+                  onToggleWorkspaceExpand?.(false);
+                }}
+                className={`flex flex-col items-start justify-between text-left rounded-xl px-3.5 py-2.5 border transition-all cursor-pointer ${
+                  isExecuteActive
+                    ? isLight
+                      ? 'bg-[#059669]/15 border-[#059669] text-[#047857] shadow-sm'
+                      : 'bg-gradient-to-r from-[#4edea3]/20 to-[#4edea3]/5 border-[#4edea3]/60 text-[#4edea3] shadow-[0_0_20px_rgba(78,222,163,0.18)]'
+                    : isLight
+                    ? 'bg-[#f8fafc] hover:bg-[#e2e8f0] border-[#cbd5e1] text-[#334155]'
+                    : 'bg-[#0d121d]/90 hover:bg-[#141821] border-white/[0.08] text-[#cbd5e1]'
+                }`}
+              >
+                <div className="flex items-center justify-between w-full gap-1">
+                  <span className="font-mono text-[11px] sm:text-[12px] font-bold tracking-tight">
+                    🎯 EXECUTE &amp; SIZER
+                  </span>
+                  <span
+                    className={`px-1.5 py-0.5 rounded font-mono text-[9px] font-bold ${
+                      isExecuteActive
+                        ? 'bg-[#4edea3]/25 text-[#4edea3]'
+                        : 'bg-white/[0.06] text-[#849495]'
+                    }`}
+                  >
+                    {stageEvaluations[6].score}%
+                  </span>
+                </div>
+                <span className="font-sans text-[11px] text-[#94a3b8] mt-0.5 truncate w-full">
+                  Pre-Flight &amp; Risk Calc
+                </span>
+              </button>
+            );
+          })()}
+
+          {/* 4. CODEX & ACADEMY */}
+          {(() => {
+            const isCodexActive = viewMode === 'CODEX';
+            return (
+              <button
+                type="button"
+                onClick={() => {
+                  setViewMode('CODEX');
+                  onToggleWorkspaceExpand?.(true);
+                }}
+                className={`flex flex-col items-start justify-between text-left rounded-xl px-3.5 py-2.5 border transition-all cursor-pointer ${
+                  isCodexActive
+                    ? isLight
+                      ? 'bg-[#7e22ce]/15 border-[#7e22ce] text-[#6d28d9] shadow-sm'
+                      : 'bg-gradient-to-r from-[#c084fc]/25 to-[#c084fc]/5 border-[#c084fc]/60 text-[#e9d5ff] shadow-[0_0_20px_rgba(192,132,252,0.2)]'
+                    : isLight
+                    ? 'bg-[#f8fafc] hover:bg-[#e2e8f0] border-[#cbd5e1] text-[#334155]'
+                    : 'bg-[#0d121d]/90 hover:bg-[#141821] border-white/[0.08] text-[#cbd5e1]'
+                }`}
+              >
+                <div className="flex items-center justify-between w-full gap-1">
+                  <span className="font-mono text-[11px] sm:text-[12px] font-bold tracking-tight">
+                    📚 CODEX &amp; ACADEMY
+                  </span>
+                  <span
+                    className={`px-1.5 py-0.5 rounded font-mono text-[9px] font-bold ${
+                      isCodexActive
+                        ? 'bg-[#c084fc]/30 text-[#e9d5ff]'
+                        : 'bg-[#c084fc]/15 text-[#c084fc]'
+                    }`}
+                  >
+                    LEARN
+                  </span>
+                </div>
+                <span className="font-sans text-[11px] text-[#94a3b8] mt-0.5 truncate w-full">
+                  Learn All Elements &amp; X-Ray
+                </span>
+              </button>
+            );
+          })()}
         </div>
+
+        {/* Sub-Bar: Workspace Context + Guided/Compact Toggle + Desktop Full-Screen / Split-View Toggle */}
+        <div
+          className={`flex items-center justify-between px-3 py-2 border-b gap-2 flex-wrap ${
+            isLight ? 'border-[#cbd5e1]/80 bg-[#f8fafc]' : 'border-white/10 bg-[#080b12]/90'
+          }`}
+        >
+          <div className="flex items-center gap-2 flex-wrap">
+            {viewMode === 'PLAYBOOKS' ? (
+              <span className="font-mono text-[11px] font-bold text-[#fcd34d] uppercase tracking-wider">
+                🏆 14 PRO PLAYBOOKS &amp; GANN / LUNAR SCANNER ({readyPlaybooksCount} READY ON {symbol})
+              </span>
+            ) : viewMode === 'CODEX' ? (
+              <span className="font-mono text-[11px] font-bold text-[#e9d5ff] uppercase tracking-wider">
+                📚 INFERNO CODEX // VISUAL ELEMENT ATLAS, 14 MASTERCLASSES &amp; LIVE X-RAY
+              </span>
+            ) : (
+              <>
+                <span
+                  className={`px-2 py-0.5 rounded border font-mono text-[10px] font-bold tracking-wider ${
+                    isLight
+                      ? 'bg-[#0284c7]/15 text-[#0284c7] border-[#0284c7]/40'
+                      : 'bg-[#00f0ff]/15 text-[#00f0ff] border-[#00f0ff]/40'
+                  }`}
+                >
+                  6-STAGE FUNNEL
+                </span>
+                <div className="flex items-center gap-1 p-0.5 rounded-lg border border-white/10 bg-[#0d121d] font-mono text-[10px]">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('GUIDED')}
+                    className={`px-2.5 py-1 rounded-md font-bold uppercase transition-colors cursor-pointer ${
+                      viewMode === 'GUIDED'
+                        ? 'bg-[#00f0ff]/20 text-[#00f0ff] border border-[#00f0ff]/50'
+                        : 'text-[#849495] hover:text-white'
+                    }`}
+                  >
+                    STEP-BY-STEP
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('COMPACT_ALL')}
+                    className={`px-2.5 py-1 rounded-md font-bold uppercase transition-colors cursor-pointer ${
+                      viewMode === 'COMPACT_ALL'
+                        ? 'bg-[#00f0ff]/20 text-[#00f0ff] border border-[#00f0ff]/50'
+                        : 'text-[#849495] hover:text-white'
+                    }`}
+                  >
+                    COMPACT ALL (6)
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Desktop Full-Width vs Split-With-Chart Toggle Button */}
+          <div className="hidden lg:flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onToggleWorkspaceExpand?.(!isWorkspaceExpanded)}
+              className={`text-[11px] font-semibold px-3.5 py-1.5 rounded-lg border font-mono uppercase transition-all shadow-sm cursor-pointer flex items-center gap-1.5 ${
+                isWorkspaceExpanded
+                  ? 'bg-[#00f0ff]/20 text-[#00f0ff] border-[#00f0ff]/60 shadow-[0_0_14px_rgba(0,240,255,0.2)]'
+                  : 'bg-[#141821] hover:bg-[#191c22] text-[#e1e2eb] border-white/15'
+              }`}
+              title={
+                isWorkspaceExpanded
+                  ? 'Return to 7-col Live Chart + 5-col Command Deck split view'
+                  : 'Expand this workspace across all 12 columns for full-screen reading'
+              }
+            >
+              <span>{isWorkspaceExpanded ? '◫ SPLIT WITH CHART' : '⤢ EXPAND FULL SCREEN'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 6 Connected Sequential Stage Pills (Shown when in GUIDED or COMPACT_ALL mode) */}
+        {(viewMode === 'GUIDED' || viewMode === 'COMPACT_ALL') && (
+          <div
+            className={`flex sm:grid sm:grid-cols-6 overflow-x-auto no-scrollbar snap-x snap-mandatory gap-1.5 p-2 ${
+              isLight ? 'bg-[#f1f5f9]/95' : 'bg-[#080b12]/90'
+            }`}
+          >
+            {STAGES.map((stage) => {
+              const isActive = viewMode === 'GUIDED' && activeStage === stage.id;
+              const evalData = stageEvaluations[stage.id];
+              const readableDotColor = getReadableStatusColor(evalData.dotColor);
+              return (
+                <button
+                  key={stage.id}
+                  type="button"
+                  onClick={() => {
+                    setViewMode('GUIDED');
+                    handleStageSelect(stage.id);
+                    if (stage.id === 6) {
+                      onToggleWorkspaceExpand?.(false);
+                    }
+                  }}
+                  className={`relative flex flex-col justify-between text-left min-w-[115px] sm:min-w-0 shrink-0 snap-start rounded-xl px-3 py-2 border transition-all cursor-pointer ${
+                    isActive
+                      ? isLight
+                        ? 'bg-[#e2e8f0] text-[#0284c7] border-[#0284c7]/50'
+                        : 'bg-[#141821] text-[#00f0ff] border-[#00f0ff]/45'
+                      : isLight
+                      ? 'bg-[#ffffff] hover:bg-[#f8fafc] text-[#475569] hover:text-[#0f172a] border-[#cbd5e1]'
+                      : 'bg-[#0d121d]/90 hover:bg-[#141821] text-[#849495] hover:text-[#e1e2eb] border-white/10'
+                  }`}
+                >
+                  {isActive && (
+                    <span
+                      className={`absolute bottom-0 left-2 right-2 h-0.5 rounded-full ${
+                        isLight
+                          ? 'bg-[#0284c7] shadow-[0_0_8px_rgba(2,132,199,0.4)]'
+                          : 'bg-[#00f0ff] shadow-[0_0_8px_#00f0ff]'
+                      }`}
+                    />
+                  )}
+                  <div className="flex items-center justify-between gap-1 w-full">
+                    <span
+                      className={`font-mono text-[9.5px] font-bold tracking-wider ${
+                        isActive
+                          ? isLight
+                            ? 'text-[#0284c7]'
+                            : 'text-[#00f0ff]'
+                          : isLight
+                          ? 'text-[#475569]'
+                          : 'text-[#849495]'
+                      }`}
+                    >
+                      STAGE {stage.stepCode}
+                    </span>
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{
+                        backgroundColor: readableDotColor,
+                        boxShadow: isActive ? `0 0 8px ${readableDotColor}` : 'none',
+                      }}
+                      title={`Stage ${stage.stepCode}: ${evalData.score}% (${evalData.status})`}
+                    />
+                  </div>
+                  <div className="flex items-baseline justify-between gap-1 mt-1 w-full">
+                    <span
+                      className={`font-mono text-[11px] font-bold truncate ${
+                        isActive
+                          ? isLight
+                            ? 'text-[#0f172a]'
+                            : 'text-white'
+                          : isLight
+                          ? 'text-[#1e293b]'
+                          : 'text-[#e1e2eb]'
+                      }`}
+                    >
+                      {stage.shortTitle}
+                    </span>
+                    <span
+                      className="font-mono text-[9.5px] font-bold tabular-nums"
+                      style={{ color: readableDotColor }}
+                    >
+                      {evalData.score}%
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* ========================================================================= */}

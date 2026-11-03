@@ -102,11 +102,14 @@ export default function App() {
     deck: TacticalDeckMode;
     ts: number;
   } | null>(null);
-  const [mobilePage, setMobilePage] = useState<'CHART' | 'RADAR' | 'LENSES' | 'EXECUTE' | 'ACADEMY'>('CHART');
+  const [mobilePage, setMobilePage] = useState<
+    'CHART' | 'RADAR' | 'LENSES' | 'PLAYBOOKS' | 'EXECUTE' | 'ACADEMY'
+  >('CHART');
   const [isMobileNavOpen, setIsMobileNavOpen] = useState<boolean>(false);
+  const [isRightWorkspaceExpanded, setIsRightWorkspaceExpanded] = useState<boolean>(false);
 
   const handleNavigateMobilePage = useCallback(
-    (page: 'CHART' | 'RADAR' | 'LENSES' | 'EXECUTE' | 'ACADEMY') => {
+    (page: 'CHART' | 'RADAR' | 'LENSES' | 'PLAYBOOKS' | 'EXECUTE' | 'ACADEMY') => {
       setMobilePage(page);
       setIsMobileNavOpen(false);
       if (page === 'RADAR') {
@@ -115,6 +118,8 @@ export default function App() {
       } else if (page === 'LENSES') {
         setActiveStrategyTab((prev) => (prev === 6 ? 1 : prev));
         setExternalDeckRequest({ deck: 'LENSES', ts: Date.now() });
+      } else if (page === 'PLAYBOOKS') {
+        setExternalDeckRequest({ deck: 'PLAYBOOKS', ts: Date.now() });
       } else if (page === 'EXECUTE') {
         setActiveStrategyTab(6);
         setExternalDeckRequest({ deck: 'PREFLIGHT_SIZER', ts: Date.now() });
@@ -1065,11 +1070,15 @@ export default function App() {
 
             {/* Main 12-Column Split Cockpit */}
             <div className="grid grid-cols-1 lg:grid-cols-12 border-b border-[#1e2433] items-start">
-              {/* LEFT PANE — LIVE CHART & ACTIONABILITY COCKPIT (Sticky on Desktop; Page-Gated on Mobile) */}
+              {/* LEFT PANE — LIVE CHART & ACTIONABILITY COCKPIT (Sticky on Desktop; Page-Gated on Mobile; Collapses when Full-Screen Workspace Active) */}
               <div
                 className={`${
                   mobilePage === 'CHART' || mobilePage === 'RADAR' ? 'flex' : 'hidden'
-                } lg:flex lg:col-span-7 xl:col-span-7 lg:sticky lg:top-14 lg:h-[calc(100vh-3.5rem)] lg:overflow-y-auto no-scrollbar border-b lg:border-b-0 lg:border-r border-[#1e2433] bg-[#0b0e14] flex-col`}
+                } ${
+                  isRightWorkspaceExpanded
+                    ? 'lg:hidden'
+                    : 'lg:flex lg:col-span-7 xl:col-span-7'
+                } lg:sticky lg:top-14 lg:h-[calc(100vh-3.5rem)] lg:overflow-y-auto no-scrollbar border-b lg:border-b-0 lg:border-r border-[#1e2433] bg-[#0b0e14] flex-col`}
               >
                 {/* Brutalist Left Pane Header Bar (Desktop + Mobile Chart Page) */}
                 <div
@@ -1189,17 +1198,17 @@ export default function App() {
                     <div className="flex items-center gap-1.5 shrink-0">
                       <button
                         type="button"
-                        onClick={() => handleNavigateMobilePage('RADAR')}
-                        className="px-2 py-1 rounded bg-[#00f0ff]/15 text-[#00f0ff] border border-[#00f0ff]/40 font-bold text-[9px] cursor-pointer"
+                        onClick={() => handleNavigateMobilePage('PLAYBOOKS')}
+                        className="px-2.5 py-1 rounded-lg bg-[#f59e0b]/15 text-[#fcd34d] border border-[#f59e0b]/40 font-bold text-[10px] cursor-pointer"
                       >
-                        RADAR →
+                        🏆 PLAYBOOKS →
                       </button>
                       <button
                         type="button"
                         onClick={() => handleNavigateMobilePage('LENSES')}
-                        className="px-2 py-1 rounded bg-[#4edea3]/15 text-[#4edea3] border border-[#4edea3]/40 font-bold text-[9px] cursor-pointer"
+                        className="px-2.5 py-1 rounded-lg bg-[#4edea3]/15 text-[#4edea3] border border-[#4edea3]/40 font-bold text-[10px] cursor-pointer"
                       >
-                        6 STAGES →
+                        📊 6 STAGES →
                       </button>
                     </div>
                   </div>
@@ -1236,11 +1245,15 @@ export default function App() {
                 </div>
               </div>
 
-              {/* RIGHT PANE — MODULAR TACTICAL COMMAND DECK (Always visible on Desktop; visible on Mobile RADAR, LENSES, EXECUTE, ACADEMY pages) */}
+              {/* RIGHT PANE — MODULAR TACTICAL COMMAND DECK (Expands to 12 cols on Desktop when Playbooks/Codex Full-Screen is active) */}
               <div
                 className={`${
                   mobilePage !== 'CHART' ? 'flex' : 'hidden'
-                } lg:flex lg:col-span-5 xl:col-span-5 lg:h-[calc(100vh-3.5rem)] lg:overflow-y-auto bg-[#10131a] flex-col`}
+                } lg:flex ${
+                  isRightWorkspaceExpanded
+                    ? 'lg:col-span-12 xl:col-span-12 min-h-[calc(100vh-3.5rem)]'
+                    : 'lg:col-span-5 xl:col-span-5 lg:h-[calc(100vh-3.5rem)] lg:overflow-y-auto'
+                } bg-[#10131a] flex-col transition-all duration-200`}
               >
                 <StrategyTabs
                   currentPrice={activePair.price}
@@ -1283,7 +1296,10 @@ export default function App() {
                     setCalcResult(calculateExecution(riskUsdt, entryPrice, s));
                   }}
                   onCopyText={handleCopyText}
-                  onLoadSetup={handleLoadSetup}
+                  onLoadSetup={(entry, stop, tp1, tp2) => {
+                    setIsRightWorkspaceExpanded(false);
+                    handleLoadSetup(entry, stop, tp1, tp2);
+                  }}
                   candlestickResult={candlestickResult}
                   maResult={maResult}
                   lensSetups={lensSetups}
@@ -1293,9 +1309,12 @@ export default function App() {
                   onTabChange={setActiveStrategyTab}
                   externalDeckRequest={externalDeckRequest}
                   onNavigateMobilePage={handleNavigateMobilePage}
+                  isWorkspaceExpanded={isRightWorkspaceExpanded}
+                  onToggleWorkspaceExpand={setIsRightWorkspaceExpanded}
                   onHoverLevel={(lvl) => {
                     setHighlightedLevel(lvl);
                     if (lvl) {
+                      setIsRightWorkspaceExpanded(false);
                       showToast(`🎯 TRACKING ON CHART: ${lvl.label} ($${lvl.price.toLocaleString()})`);
                     }
                   }}
@@ -1354,36 +1373,36 @@ export default function App() {
             const mobileNavItems = [
               {
                 id: 'CHART' as const,
-                label: 'CHART',
-                sub: 'Live Price & Overlays',
+                label: '📈 CHART',
+                sub: 'Live Chart + 1-Tap Layers',
                 icon: 'candlestick_chart',
                 badge: selectedTf.toUpperCase(),
               },
               {
                 id: 'LENSES' as const,
-                label: '6 STAGES',
-                sub: 'Progressive Funnel & Playbooks',
+                label: '📊 6 STAGES',
+                sub: '6-Stage Market Flow',
                 icon: 'layers',
                 badge: `S0${activeStrategyTab}`,
               },
               {
-                id: 'RADAR' as const,
-                label: 'RADAR',
-                sub: 'MTF Matrix & GEX Regime',
-                icon: 'radar',
-                badge: `${confluence.score}%`,
+                id: 'PLAYBOOKS' as const,
+                label: '🏆 PLAYBOOKS',
+                sub: '14 Pro & Gann Playbooks',
+                icon: 'emoji_events',
+                badge: '14 PRO',
               },
               {
                 id: 'EXECUTE' as const,
-                label: 'EXECUTE',
+                label: '🎯 EXECUTE',
                 sub: 'Pre-Flight & Position Sizer',
                 icon: 'calculate',
                 badge: 'S06',
               },
               {
                 id: 'ACADEMY' as const,
-                label: 'CODEX',
-                sub: 'Atlas, 14 Masterclasses & X-Ray',
+                label: '📚 CODEX',
+                sub: 'Inferno Codex & X-Ray Hub',
                 icon: 'school',
                 badge: 'LEARN',
               },
