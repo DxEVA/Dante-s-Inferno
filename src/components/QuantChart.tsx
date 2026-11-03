@@ -1746,6 +1746,98 @@ export const QuantChart: React.FC<QuantChartProps> = ({
         </div>
       </div>
 
+      {/* Touch-Friendly Mobile Layer Chips Strip (Mobile-Only) */}
+      <div className="flex lg:hidden items-center gap-1.5 overflow-x-auto no-scrollbar py-1 px-0.5 font-mono text-[10px] font-bold">
+        <button
+          type="button"
+          onClick={() => handleToggleLayer('vp')}
+          className={`px-2.5 py-1 rounded-lg border shrink-0 transition-all cursor-pointer ${
+            layers.vp
+              ? 'bg-[#00f0ff]/20 text-[#00f0ff] border-[#00f0ff]/50'
+              : 'bg-[#141821] text-[#849495] border-white/10'
+          }`}
+        >
+          VP SPLIT
+        </button>
+        <button
+          type="button"
+          onClick={() => handleToggleLayer('ob')}
+          className={`px-2.5 py-1 rounded-lg border shrink-0 transition-all cursor-pointer ${
+            layers.ob
+              ? 'bg-[#4edea3]/20 text-[#4edea3] border-[#4edea3]/50'
+              : 'bg-[#141821] text-[#849495] border-white/10'
+          }`}
+        >
+          OB + MT
+        </button>
+        <button
+          type="button"
+          onClick={() => handleToggleLayer('sr')}
+          className={`px-2.5 py-1 rounded-lg border shrink-0 transition-all cursor-pointer ${
+            layers.sr
+              ? 'bg-[#ffb4ab]/20 text-[#ffb4ab] border-[#ffb4ab]/50'
+              : 'bg-[#141821] text-[#849495] border-white/10'
+          }`}
+        >
+          S/R
+        </button>
+        <button
+          type="button"
+          onClick={() => handleToggleLayer('bubbles')}
+          className={`px-2.5 py-1 rounded-lg border shrink-0 transition-all cursor-pointer ${
+            layers.bubbles
+              ? 'bg-[#38bdf8]/20 text-[#38bdf8] border-[#38bdf8]/50'
+              : 'bg-[#141821] text-[#849495] border-white/10'
+          }`}
+        >
+          Δ BUBBLES
+        </button>
+        <button
+          type="button"
+          onClick={() => handleToggleLayer('options')}
+          className={`px-2.5 py-1 rounded-lg border shrink-0 transition-all cursor-pointer ${
+            layers.options && (optionsData.isDeribitNative !== false || manualOptionsOverride)
+              ? 'bg-[#c084fc]/20 text-[#c084fc] border-[#c084fc]/50'
+              : 'bg-[#141821] text-[#849495] border-white/10'
+          }`}
+        >
+          OPTIONS + 0Γ
+        </button>
+        <button
+          type="button"
+          onClick={() => handleToggleLayer('ma')}
+          className={`px-2.5 py-1 rounded-lg border shrink-0 transition-all cursor-pointer ${
+            layers.ma
+              ? 'bg-[#f59e0b]/20 text-[#fcd34d] border-[#f59e0b]/50'
+              : 'bg-[#141821] text-[#849495] border-white/10'
+          }`}
+        >
+          EMA + VWAP
+        </button>
+        <button
+          type="button"
+          onClick={() => handleToggleLayer('rrBox')}
+          className={`px-2.5 py-1 rounded-lg border shrink-0 transition-all cursor-pointer ${
+            layers.rrBox
+              ? 'bg-[#10b981]/20 text-[#10b981] border-[#10b981]/50'
+              : 'bg-[#141821] text-[#849495] border-white/10'
+          }`}
+        >
+          R:R BOX
+        </button>
+        <button
+          type="button"
+          onClick={() => setAutoSyncTab(!autoSyncTab)}
+          className={`px-2.5 py-1 rounded-lg border shrink-0 transition-all cursor-pointer ${
+            autoSyncTab
+              ? 'bg-[#00f0ff]/20 text-[#00f0ff] border-[#00f0ff]/50'
+              : 'bg-[#f59e0b]/20 text-[#fcd34d] border-[#f59e0b]/50'
+          }`}
+        >
+          {autoSyncTab ? '🔓 AUTO-SYNC' : '🔒 LOCKED'}
+        </button>
+      </div>
+
       {/* Chart Status Strip with Session-Normalized RVOL & Live Bar Delta */}
       <div className="flex flex-wrap items-center justify-between text-[11px] font-mono text-[#b9cacb] px-0.5 gap-2">
         <div className="flex flex-wrap items-center gap-3 truncate">

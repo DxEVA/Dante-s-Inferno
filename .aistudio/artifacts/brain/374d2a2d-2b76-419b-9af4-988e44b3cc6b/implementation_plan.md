@@ -1,81 +1,86 @@
-# Playbook Scanner Session RVOL, Bayesian Shrinkage & Podium Alignment
+# Obsidian Glass Visual System, Mobile Ergonomics & Inferno Codex Hub
 
-This update resolves four live edge cases discovered on `XAGUSDT` in the Multi-Era Quantitative Playbook & Gann/Lunar Scanner: eliminating unfinished-candle `0.07x` Session RVOL readings, applying Bayesian sample-size shrinkage and a strict `>= 50%` regime gate to the Top 3 Podium, fixing false-positive `EMA COMPRESSION COIL` passes in the Barbon Donchian Ensemble model, and unifying the Podium and Strategy Card score badges.
+This upgrade elevates **Project Inferno** with a 2026 Obsidian Glassmorphic surface system, a swipeable single-row mobile Stage 01–06 carousel, touch-friendly mobile chart layer chips, a frosted-glass bottom-left collapsible mobile command pill, and a standalone 3-tab **Inferno Codex Hub** (`Visual Element Atlas`, `Strategy Masterclass Archive`, and `Live Reverse Signal X-Ray & Quiz`)—while maintaining a strict 100% read-only lock on all quantitative math, strategy engines, and existing stage views.
 
 ## User Review & Critical Decisions
 
 > [!IMPORTANT]
-> Both interactive design choices were confirmed and are incorporated into this plan:
+> The interactive layout and navigation preferences have been confirmed:
 
-- **Confirmed Decision 1 (Unified Score Badge Display)**: Display a unified Live Match percentage badge (`${possibilityScore}% MATCH`) on both the Top 3 Podium cards and the 14-model library cards below so a strategy never displays two different percentage numbers across the two views.
-- **Confirmed Decision 2 (Unfinished Candle Session RVOL Normalization)**: Whenever the active forming candle produces a raw RVOL reading below `0.20x` (or is less than 40% elapsed), evaluate Session RVOL using the last completed candle (`klines[klines.length - 2]`) so playbook rules always reflect true closed-bar participation (`>= 0.20x`).
+- **Confirmed Decision 1 (Mobile Bottom Navigation Layout)**: Preserve the **collapsible bottom-left command pill** so it never collides with bottom-right preview badges, upgraded with frosted-glass Obsidian styling (`rounded-2xl bg-[#0b101b]/90 backdrop-blur-xl border border-white/12 shadow-[0_16px_40px_rgba(0,0,0,0.85)]`) and active cyan highlights (`rounded-xl bg-[#00f0ff]/15 text-[#00f0ff] border border-[#00f0ff]/35`).
+- **Confirmed Decision 2 (Visual Element Atlas Chart Spotlight Behavior)**: Clicking `[ 🎯 SPOTLIGHT ON CHART ]` on any of the 12 indicator cards spotlights the live price level directly on the candlestick chart while keeping the Codex open, paired with a quick action to jump to its corresponding Stage (`01`–`06`).
 
 ---
 
 ## 1. Overview & Core Concept
 
 - **What It Does**:
-  1. **Closed-Bar Session RVOL Guard**: Prevents brand-new forming candles from reporting `0.07x–0.10x` Session RVOL in `crabel_nr7_volatility_coil`, `raschke_holy_grail`, `williams_smash_day_reversal`, and `ssrn_zarattini_orb` by falling back to the last completed bar whenever the active bar is under 40% elapsed or reads `< 0.20x`.
-  2. **Bayesian Sample-Size Shrinkage & Strict Podium Regime Gate**: Shrinks small-sample 250-bar backtests toward a neutral prior (`5` virtual trades at `50%` win rate and `0.0R`), relaxes the `ssrn_barbon_donchian_trend` historical walk-forward detector to capture a statistically meaningful sample (`8–25` signals over 250 bars), and blocks `WRONG_REGIME` (`< 50%` match) setups from appearing on the Top 3 Podium when `STALKING_SETUP` or `TRIGGER_ACTIVE` setups exist.
-  3. **Strict EMA 9/21/50 Ribbon Stack Check**: Ensures `ssrn_barbon_donchian_trend` Rule 1 only passes when `EMA 9 > EMA 21 > EMA 50` (for `LONG`) or `EMA 9 < EMA 21 < EMA 50` (for `SHORT`) and never when `ribbonAlignment` is `"COMPRESSION"`, updating the trigger note when compressed to state `"Awaiting EMA 9/21/50 expansion out of compression coil"`.
-  4. **Unified Podium & Library Score Badges**: Harmonizes the Top 3 Podium badge and the 14-model library card badge to display the exact same `possibilityScore` (`% MATCH`).
-- **Target Audience / Persona**: Quantitative crypto & commodities traders scanning multi-era playbooks across live pairs like `XAGUSDT` and `BTCUSDT`.
-- **Key Value**: Eliminates early-candle RVOL distortion, prevents `N=1` backtest outliers or `WRONG_REGIME` setups from outranking high-sample setups like Linda Raschke's Holy Grail, and ensures 100% visual consistency between Podium and Library cards.
+  1. **Obsidian Glassmorphic Card System**: Upgrades `.cyber-panel` and `.cyber-panel-tracked` globally with `12px` rounded corners, subtle top-edge specular highlights, deep ambient shadows, and cyan hover/tracked states while preserving high-contrast light mode compatibility.
+  2. **Mobile Touch Ergonomics**:
+     - Converts the 6-Stage Stepper Bar on mobile screens into a single-row horizontal snap-scroll carousel (`STAGE 01` through `STAGE 06`) while remaining a 6-column grid on desktop.
+     - Adds a mobile-only horizontal touch pill strip directly above the Chart Status Strip for 1-tap toggling of `VP`, `OB + MT`, `S/R`, `Δ BUBBLES`, `OPTIONS + 0Γ`, `EMA + VWAP`, `R:R BOX`, and `AUTO-SYNC`.
+     - Upgrades the bottom-left collapsible mobile command pill with frosted-glass styling and routes the 5th item (`CODEX / X-RAY`) directly into the new Codex view.
+  3. **Standalone 3-Tab Inferno Codex Hub**:
+     - **Tab 1 — `🔬 VISUAL ELEMENT ATLAS (ALL 12 TERMINAL INDICATORS)`**: 12 interactive cards with custom inline `<svg>` vector diagrams, live readings on the active symbol, equilibrium vs. extreme benchmarks, plain-English analogies, pro action rules (`Do / Avoid`), `[ 🎯 SPOTLIGHT ON CHART ]` buttons, and external study links.
+     - **Tab 2 — `🏛️ STRATEGY MASTERCLASS ARCHIVE (ALL 14 MODELS EXPLAINED)`**: Deep-dive cards for all 14 multi-era strategies powered by live telemetry and 250-bar walk-forward backtests, featuring a 3-step execution blueprint (`1. Setup` ➔ `2. Trigger` ➔ `3. Invalidation & Target`), market psychology rationale, regime trap warnings, and 1-click `[ ⚡ LOAD INTO SIZER ]`.
+     - **Tab 3 — `🔍 LIVE REVERSE SIGNAL X-RAY & SPOT-CHECK QUIZ`**: Embeds the live Reverse Signal Deconstructor and interactive 5-level spot-check quiz deck.
+- **Target Audience / Persona**: Quantitative traders and learners who want institutional-grade execution tools paired with visual, interactive explanations of every chart overlay and quantitative model.
+- **Key Value**: Unifies all visual education, live indicator deconstruction, and 14-model masterclasses into a single zero-friction hub without altering a single line of underlying math or data fetching.
 
 ---
 
 ## 2. User Experience & Visual Design
 
 - **Key User Flows**:
-  1. **Inspecting Top 3 Podium**: Traders immediately see the top 3 eligible setups (`possibilityScore >= 50` and positive expectancy) ranked by Bayesian-shrunk Composite Edge, with each card showing its unified `${possibilityScore}% MATCH` badge matching the library card below.
-  2. **Auditing RVOL & EMA Ribbon Rules**: Every RVOL rule (`Crabel NR7`, `Raschke Holy Grail`, `Zarattini ORB`, `Williams Smash Day`) displays a realistic closed-bar Session RVOL (`>= 0.20x`), and `Barbon Ensemble Donchian Trend` accurately flags `EMA COMPRESSION COIL` as an unpassed filter (`✗`) until the 9/21/50 ribbon expands.
+  1. **Swiping Stages & Toggling Layers on Mobile**: On mobile viewports, the trader swipes horizontally across the compact Stage 01–06 pill carousel and taps layer chips directly beneath the candlestick canvas without opening nested menus.
+  2. **Exploring the Visual Element Atlas**: Clicking `[ 📚 CODEX & LEARN ]` in the top view switcher (or `CODEX / X-RAY` from the mobile command pill / Traffic Light banner) opens the 12-indicator Visual Element Atlas, where each card displays an SVG schematic, live coin telemetry, and a 1-click chart spotlight button.
+  3. **Studying & Loading a Masterclass Strategy**: Switching to the Strategy Masterclass Archive tab lets the user inspect the 3-step blueprint and regime trap warning for any of the 14 strategies and load its live Entry, Stop, TP1, and TP2 directly into the Stage 06 Position Sizer.
 - **Visual Identity & Theme**:
-  - *Aesthetic Direction*: High-density quantitative terminal with crisp dual-theme (dark/light) contrast.
-  - *Color Palette & Mood*: Preserves the obsidian slate (`#090c12`) and daylight (`#f8fafc`) surfaces with semantic emerald (`#4edea3` / `#047857`), cyan (`#00f0ff` / `#0284c7`), amber (`#f59e0b` / `#b45309`), and coral (`#ffb4ab` / `#b91c1c`) accents.
-  - *Typography & Hierarchy*: Monospace tabular numerals (`font-mono tabular-nums`) across all RVOL, backtest sample counts (`N=...`), and match score badges.
+  - *Aesthetic Direction*: 2026 Obsidian Glassmorphism with crisp 1px specular borders, monospace tabular metrics (`JetBrains Mono`), and high-contrast light/dark adaptability.
+  - *Color Palette & Mood*: Deep obsidian gradient (`rgba(18, 24, 36, 0.82)` to `rgba(10, 14, 22, 0.92)`), electric cyan (`#00f0ff`), emerald (`#4edea3`), amber (`#f59e0b`), and coral (`#ffb4ab`), with clean slate/white overrides when light theme is active.
+  - *Typography & Hierarchy*: `JetBrains Mono` (`tabular-nums`) for all live readings, backtest metrics, and badges; clean sans-serif body copy for analogies and psychological explanations.
 
 ---
 
 ## 3. Key Product Decisions & Trade-Offs
 
-- **Decision 1: Bayesian Empirical Shrinkage for 250-Bar Walk-Forward Backtests**
-  - *Chosen Approach*: Blend each strategy's observed 250-bar win rate and average R with a conjugate prior of `5` virtual trades at `50%` win rate and `0.0R`:
-    $$\text{shrunkWinRate} = \frac{\text{winRatePct} \cdot n + 50 \cdot 5}{n + 5}, \quad \text{shrunkAvgR} = \frac{\text{avgRealizedR} \cdot n}{n + 5}$$
-  - *Why*: A single lucky trade (`N=1, 100% Win Rate, 1.95R`) shrinks to `58.3%` and `0.33R`, preventing tiny samples from eclipsing robust 30-trade setups (`N=30, 56.7% Win Rate, +0.52R`).
-- **Decision 2: Strict Podium Regime Gate (`possibilityScore >= 50`)**
-  - *Chosen Approach*: Filter Podium candidates for `s.possibilityScore >= 50` (`STALKING_SETUP` or `TRIGGER_ACTIVE`) and `s.backtest250Bars.avgRealizedR >= 0` before sorting by `compositeScore` descending, falling back to the broader pool only if fewer than 3 strategies meet the threshold.
-  - *Why*: Ensures a `42% (WRONG REGIME)` setup never appears on the Podium ahead of a `64% (STALKING SETUP)` strategy.
+- **Decision 1: Strict Read-Only Lock on All Quantitative & Strategy Engines**
+  - *Chosen Approach*: Consume existing calculated props and pure read-only helper functions (`evaluateFamousStrategies`, `calculateGannAndCyclesTelemetry`, `getRookieMentorGuide`, and `ReverseAcademyDeck`) without touching any calculation files or React state hooks.
+  - *Why*: Guarantees zero regressions in live pricing, orderflow, options GEX, Gann harmonics, or 250-bar backtests.
+- **Decision 2: Collapsible Frosted-Glass Bottom-Left Mobile Command Pill**
+  - *Chosen Approach*: Retain the bottom-left collapsible command pill and 1-tap quick-flip button while upgrading their surfaces to frosted Obsidian glass (`backdrop-blur-xl`, `rounded-2xl`, `border-white/12`).
+  - *Why*: Keeps the bottom-right corner completely clear on mobile screens while delivering a modern frosted-glass feel.
 
 ---
 
 ## 4. Technical Architecture & Data Strategy *(Technical Reference)*
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                CLOSED-BAR SESSION RVOL & PLAYBOOK ENGINE                │
-│                                                                         │
-│  ┌───────────────────────────────────────────────────────────────────┐  │
-│  │ 1. Closed-Bar Session RVOL Normalizer                             │  │
-│  │    • If current bar < 40% elapsed OR raw RVOL < 0.20x:            │  │
-│  │      evaluate klines.slice(0, -1) (last completed bar)            │  │
-│  │    • Guarantees liveSessionRvol >= 0.20x across all 14 playbooks  │  │
-│  └─────────────────────────────────┬─────────────────────────────────┘  │
-│                                    ▼                                    │
-│  ┌───────────────────────────────────────────────────────────────────┐  │
-│  │ 2. Barbon Donchian Ribbon & Walk-Forward Detector                 │  │
-│  │    • Rule 1 requires strict EMA9 > EMA21 > EMA50 (or inverse)     │  │
-│  │      and maResult.ribbonAlignment !== 'COMPRESSION'               │  │
-│  │    • Backtest detector triggers on 12-bar channel breakout or     │  │
-│  │      EMA9/21/50 trend continuation pullback (8–25 signals/250b)   │  │
-│  └─────────────────────────────────┬─────────────────────────────────┘  │
-│                                    ▼                                    │
-│  ┌───────────────────────────────────────────────────────────────────┐  │
-│  │ 3. Bayesian Shrinkage & Top 3 Podium Selector                     │  │
-│  │    • Prior: 5 virtual trades @ 50% WR, 0.0R                       │  │
-│  │    • compositeEdgeScore = round(score*0.65 + shrunkWR*0.35        │  │
-│  │      + clamp(shrunkAvgR * 20, -15, 20))                           │  │
-│  │    • Podium filters possibilityScore >= 50 && avgRealizedR >= 0   │  │
-│  │    • Unified "${possibilityScore}% MATCH" badge on Podium & Cards │  │
-│  └───────────────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                   OBSIDIAN GLASS & INFERNO CODEX ARCHITECTURE               │
+│                                                                             │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │ Read-Only Quantitative & Strategy Engines (100% Untouched)            │  │
+│  │  • Live Telemetry, Volume Profile, Order Blocks, Options GEX, MAs     │  │
+│  │  • 14-Model Playbook Engine & Gann / Lunar / Seasonal Telemetry       │  │
+│  │  • Rookie Mentor Benchmarks & Reverse Signal X-Ray Engine             │  │
+│  └───────────────────────────────────┬───────────────────────────────────┘  │
+│                                      ▼                                      │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │ Top Workflow Switcher & Mobile Snap-Scroll Stage Carousel             │  │
+│  │  • View Modes: [GUIDED FLOW] [COMPACT ALL] [PLAYBOOKS] [CODEX & LEARN]│  │
+│  │  • Mobile Stage Bar: Horizontal snap-x pill carousel (Stages 01–06)   │  │
+│  │  • Mobile Chart Strip: Touch-friendly layer chips above status bar    │  │
+│  │  • Mobile Command Pill: Frosted-glass bottom-left fan-out menu        │  │
+│  └───────────────────────────────────┬───────────────────────────────────┘  │
+│                                      ▼                                      │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │ Standalone Inferno Codex Hub (3 Segmented Sub-Views)                  │  │
+│  │  ├─ 1. 🔬 Visual Element Atlas (12 Indicators + Inline SVG Diagrams   │  │
+│  │  │      + Live Reading + Equilibrium Norms + Chart Spotlight)         │  │
+│  │  ├─ 2. 🏛️ Strategy Masterclass Archive (14 Models + 3-Step Blueprint  │  │
+│  │  │      + Market Psychology + Regime Trap Warning + Load into Sizer)  │  │
+│  │  └─ 3. 🔍 Live Reverse Signal X-Ray & Interactive Spot-Check Quiz     │  │
+│  └───────────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```

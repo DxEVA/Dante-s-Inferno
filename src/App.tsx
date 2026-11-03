@@ -1382,8 +1382,8 @@ export default function App() {
               },
               {
                 id: 'ACADEMY' as const,
-                label: 'X-RAY',
-                sub: 'Reverse Deconstructor',
+                label: 'CODEX',
+                sub: 'Atlas, 14 Masterclasses & X-Ray',
                 icon: 'school',
                 badge: 'LEARN',
               },
@@ -1397,19 +1397,19 @@ export default function App() {
               <>
                 {isMobileNavOpen && (
                   <div
-                    className="lg:hidden fixed inset-0 z-[9998] bg-black/40 backdrop-blur-[1px]"
+                    className="lg:hidden fixed inset-0 z-[9998] bg-black/45 backdrop-blur-[2px]"
                     onClick={() => setIsMobileNavOpen(false)}
                   />
                 )}
 
                 <nav
-                  aria-label="Mobile Terminal Command Pill"
-                  className="lg:hidden fixed bottom-4 left-3 z-[9999] flex flex-col items-start gap-2 pb-[env(safe-area-inset-bottom,0px)]"
+                  aria-label="Mobile Terminal Pages"
+                  className="lg:hidden fixed bottom-3 left-3 z-[9999] flex flex-col items-start gap-2 pb-[env(safe-area-inset-bottom,4px)]"
                 >
-                  {/* Expanded Fan-Out Vertical Command Stack */}
+                  {/* Expanded Fan-Out Vertical Command Stack (Frosted Obsidian Glass) */}
                   {isMobileNavOpen && (
-                    <div className="w-64 bg-[#07090e]/95 backdrop-blur-xl border border-[#00f0ff]/50 shadow-[0_12px_36px_rgba(0,0,0,0.92)] flex flex-col divide-y divide-[#1e2636] overflow-hidden">
-                      <div className="px-3 py-2 bg-[#10141d] flex items-center justify-between">
+                    <div className="w-68 rounded-2xl bg-[#0b101b]/92 backdrop-blur-xl border border-white/12 shadow-[0_16px_40px_rgba(0,0,0,0.85)] p-1.5 flex flex-col gap-1 overflow-hidden">
+                      <div className="px-3 py-1.5 rounded-xl bg-white/[0.04] flex items-center justify-between">
                         <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-[#00f0ff]">
                           ⚡ TERMINAL NAVIGATION
                         </span>
@@ -1425,15 +1425,12 @@ export default function App() {
                             key={item.id}
                             type="button"
                             onClick={() => handleNavigateMobilePage(item.id)}
-                            className={`relative w-full px-3 py-2.5 flex items-center justify-between gap-2 text-left font-mono transition-colors cursor-pointer ${
+                            className={`relative w-full px-3 py-2.5 rounded-xl flex items-center justify-between gap-2 text-left font-mono transition-all cursor-pointer ${
                               isActive
-                                ? 'bg-[#00f0ff]/15 text-[#00f0ff]'
-                                : 'text-[#e1e2eb] hover:bg-[#141821]'
+                                ? 'bg-[#00f0ff]/15 text-[#00f0ff] border border-[#00f0ff]/35'
+                                : 'text-[#e1e2eb] hover:bg-white/[0.05] border border-transparent'
                             }`}
                           >
-                            {isActive && (
-                              <span className="absolute left-0 top-0 bottom-0 w-1 bg-[#00f0ff]" />
-                            )}
                             <div className="flex items-center gap-2.5 min-w-0">
                               <span className="material-symbols-outlined text-[18px] shrink-0">
                                 {item.icon}
@@ -1449,10 +1446,10 @@ export default function App() {
                             </div>
 
                             <span
-                              className={`px-1.5 py-0.5 text-[8.5px] font-bold tabular-nums border shrink-0 ${
+                              className={`px-1.5 py-0.5 rounded-md text-[8.5px] font-bold tabular-nums border shrink-0 ${
                                 isActive
                                   ? 'bg-[#00f0ff]/20 text-[#00f0ff] border-[#00f0ff]/50'
-                                  : 'bg-[#141821] text-[#849495] border-[#1e2636]'
+                                  : 'bg-[#141821] text-[#849495] border-white/10'
                               }`}
                             >
                               {item.badge}
@@ -1463,15 +1460,15 @@ export default function App() {
                     </div>
                   )}
 
-                  {/* Compact Bottom-Left Command Pill + 1-Tap Quick-Flip Button */}
-                  <div className="flex items-center gap-1.5 shadow-[0_8px_28px_rgba(0,0,0,0.9)]">
+                  {/* Compact Bottom-Left Frosted-Glass Command Pill + 1-Tap Quick-Flip Button */}
+                  <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-[#0b101b]/90 backdrop-blur-xl border border-white/12 shadow-[0_16px_40px_rgba(0,0,0,0.85)]">
                     <button
                       type="button"
                       onClick={() => setIsMobileNavOpen((prev) => !prev)}
-                      className={`h-11 px-3 bg-[#07090e]/95 backdrop-blur-xl border flex items-center gap-2 font-mono transition-all cursor-pointer ${
+                      className={`h-11 px-3 rounded-xl flex items-center gap-2 font-mono transition-all cursor-pointer ${
                         isMobileNavOpen
-                          ? 'border-[#00f0ff] text-[#00f0ff]'
-                          : 'border-[#00f0ff]/45 text-[#dbfcff]'
+                          ? 'bg-[#00f0ff]/20 text-[#00f0ff] border border-[#00f0ff]/50'
+                          : 'bg-[#00f0ff]/15 text-[#00f0ff] border border-[#00f0ff]/35'
                       }`}
                       title="Open Mobile Workspace Menu"
                     >
@@ -1486,7 +1483,7 @@ export default function App() {
                           <span className="text-[10px] font-bold tracking-tight">
                             {activeItem.label}
                           </span>
-                          <span className="px-1 py-0.2 bg-[#00f0ff]/20 text-[#00f0ff] text-[8px] font-bold tabular-nums">
+                          <span className="px-1 py-0.2 rounded bg-[#00f0ff]/20 text-[#00f0ff] text-[8px] font-bold tabular-nums">
                             {activeItem.badge}
                           </span>
                         </div>
@@ -1500,13 +1497,13 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => handleNavigateMobilePage(quickFlipTarget.id)}
-                      className="h-11 px-2.5 bg-[#07090e]/95 backdrop-blur-xl border border-[#1e2636] hover:border-[#00f0ff]/40 text-[#849495] hover:text-[#00f0ff] flex items-center gap-1 font-mono cursor-pointer transition-colors"
+                      className="h-11 px-3 rounded-xl bg-white/[0.04] hover:bg-[#00f0ff]/15 border border-white/10 hover:border-[#00f0ff]/35 text-[#dbfcff] hover:text-[#00f0ff] flex items-center gap-1.5 font-mono cursor-pointer transition-all"
                       title={`Quick switch to ${quickFlipTarget.label}`}
                     >
                       <span className="material-symbols-outlined text-[16px] text-[#00f0ff]">
                         {quickFlipTarget.icon}
                       </span>
-                      <span className="text-[9px] font-bold uppercase">
+                      <span className="text-[9.5px] font-bold uppercase">
                         {quickFlipTarget.label}
                       </span>
                     </button>

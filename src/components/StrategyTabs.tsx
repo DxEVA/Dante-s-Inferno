@@ -36,10 +36,11 @@ import {
   FamousStrategyEvaluation,
   PlaybookEra,
 } from '../utils/famousStrategiesEngine';
+import { InfernoCodexHub } from './InfernoCodexHub';
 
 export type TacticalDeckMode = 'LENSES' | 'MTF_RADAR' | 'PREFLIGHT_SIZER' | 'REVERSE_ACADEMY';
 export type StageId = 1 | 2 | 3 | 4 | 5 | 6;
-type FlowViewMode = 'GUIDED' | 'COMPACT_ALL' | 'PLAYBOOKS';
+type FlowViewMode = 'GUIDED' | 'COMPACT_ALL' | 'PLAYBOOKS' | 'CODEX';
 type PlaybookFilterType = 'ALL' | 'READY' | PlaybookEra;
 
 interface StrategyTabsProps {
@@ -355,9 +356,8 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
       setShowReverseXRay(false);
       handleStageSelect(6);
     } else if (externalDeckRequest.deck === 'REVERSE_ACADEMY') {
-      setViewMode('GUIDED');
+      setViewMode('CODEX');
       setShowReverseXRay(true);
-      handleStageSelect(6);
     } else if (externalDeckRequest.deck === 'MTF_RADAR') {
       setViewMode('GUIDED');
       setShowReverseXRay(false);
@@ -3946,13 +3946,28 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
             >
               🏆 BEST SETUPS &amp; PLAYBOOKS ({readyPlaybooksCount} READY)
             </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('CODEX')}
+              className={`px-2 py-1 font-bold uppercase transition-colors cursor-pointer ${
+                viewMode === 'CODEX'
+                  ? isLight
+                    ? 'bg-[#7e22ce]/20 text-[#6d28d9] border border-[#7e22ce]'
+                    : 'bg-[#c084fc]/25 text-[#c084fc] border border-[#c084fc]'
+                  : isLight
+                  ? 'text-[#6d28d9] hover:bg-[#7e22ce]/10'
+                  : 'text-[#c084fc] hover:bg-[#c084fc]/10'
+              }`}
+            >
+              📚 CODEX &amp; LEARN
+            </button>
           </div>
         </div>
 
-        {/* 6 Connected Sequential Stage Pills */}
+        {/* 6 Connected Sequential Stage Pills (Single-Row Swipeable Carousel on Mobile, 6-Col Grid on Desktop) */}
         <div
-          className={`grid grid-cols-3 sm:grid-cols-6 divide-x divide-y sm:divide-y-0 ${
-            isLight ? 'divide-[#cbd5e1]' : 'divide-[#1e2636]'
+          className={`flex sm:grid sm:grid-cols-6 overflow-x-auto no-scrollbar snap-x snap-mandatory gap-1.5 p-2 ${
+            isLight ? 'bg-[#f1f5f9]/95' : 'bg-[#080b12]/90'
           }`}
         >
           {STAGES.map((stage) => {
@@ -3967,19 +3982,19 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                   setViewMode('GUIDED');
                   handleStageSelect(stage.id);
                 }}
-                className={`relative flex flex-col justify-between p-2.5 text-left transition-all cursor-pointer ${
+                className={`relative flex flex-col justify-between text-left min-w-[115px] sm:min-w-0 shrink-0 snap-start rounded-xl px-3 py-2 border transition-all cursor-pointer ${
                   isActive
                     ? isLight
-                      ? 'bg-[#e2e8f0] text-[#0284c7]'
-                      : 'bg-[#141821] text-[#00f0ff]'
+                      ? 'bg-[#e2e8f0] text-[#0284c7] border-[#0284c7]/50'
+                      : 'bg-[#141821] text-[#00f0ff] border-[#00f0ff]/45'
                     : isLight
-                    ? 'bg-[#ffffff] hover:bg-[#f8fafc] text-[#475569] hover:text-[#0f172a]'
-                    : 'bg-[#0b0e14] hover:bg-[#11151f] text-[#849495] hover:text-[#e1e2eb]'
+                    ? 'bg-[#ffffff] hover:bg-[#f8fafc] text-[#475569] hover:text-[#0f172a] border-[#cbd5e1]'
+                    : 'bg-[#0b0e14] hover:bg-[#11151f] text-[#849495] hover:text-[#e1e2eb] border-white/10'
                 }`}
               >
                 {isActive && (
                   <span
-                    className={`absolute bottom-0 left-0 right-0 h-0.5 ${
+                    className={`absolute bottom-0 left-2 right-2 h-0.5 rounded-full ${
                       isLight
                         ? 'bg-[#0284c7] shadow-[0_0_8px_rgba(2,132,199,0.4)]'
                         : 'bg-[#00f0ff] shadow-[0_0_8px_#00f0ff]'
@@ -4037,10 +4052,55 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
       </div>
 
       {/* ========================================================================= */}
-      {/* ACTIVE STAGE BODY, COMPACT ALL STACK, OR PLAYBOOKS & GANN COMMAND HUB     */}
+      {/* ACTIVE STAGE BODY, COMPACT ALL STACK, PLAYBOOKS, OR INFERNO CODEX HUB     */}
       {/* ========================================================================= */}
       <AnimatePresence mode="wait">
-        {viewMode === 'PLAYBOOKS' ? (
+        {viewMode === 'CODEX' ? (
+          <motion.div
+            key="inferno-codex-view"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+          >
+            <InfernoCodexHub
+              symbol={symbol}
+              currentPrice={currentPrice}
+              klines={klines}
+              volumeProfile={volumeProfile}
+              bullOB={bullOB}
+              bearOB={bearOB}
+              optionsData={optionsData}
+              liquidity={liquidity}
+              telemetry={telemetry}
+              confluence={confluence}
+              amdPhase={amdPhase}
+              calcResult={calcResult}
+              candlestickResult={candlestickResult}
+              maResult={maResult}
+              sharpeSortino={sharpeSortino}
+              isLight={isLight}
+              highlightedLevel={highlightedLevel}
+              onHoverLevel={onHoverLevel}
+              onSelectStage={(stageId) => {
+                setViewMode('GUIDED');
+                handleStageSelect(stageId);
+              }}
+              onLoadSetup={(entry, stop, tp1, tp2) => {
+                onLoadSetup(
+                  entry,
+                  stop,
+                  tp1 ?? entry,
+                  tp2 ?? entry
+                );
+                setViewMode('GUIDED');
+                handleStageSelect(6);
+              }}
+              onProgressChange={setAcademyProgress}
+              focusXRaySignal={externalDeckRequest?.ts}
+            />
+          </motion.div>
+        ) : viewMode === 'PLAYBOOKS' ? (
           <motion.div
             key="playbooks-gann-view"
             initial={{ opacity: 0, y: 6 }}
