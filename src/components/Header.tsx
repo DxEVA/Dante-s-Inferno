@@ -19,6 +19,7 @@ interface HeaderProps {
   onToggleObMode?: (mode: 'strict' | 'loose') => void;
   vpMode?: 'vrvp' | 'session';
   onToggleVpMode?: (mode: 'vrvp' | 'session') => void;
+  onOpenBriefing?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -37,6 +38,7 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleObMode,
   vpMode = 'vrvp',
   onToggleVpMode,
+  onOpenBriefing,
 }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
@@ -174,7 +176,20 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
-            {/* 4. Switch Asset Button (Opens Top 50 Launchpad) */}
+            {/* 4. Executive Briefing HUD Button */}
+            {onOpenBriefing && (
+              <button
+                type="button"
+                onClick={onOpenBriefing}
+                className="px-2.5 py-1 rounded bg-[#c084fc]/15 hover:bg-[#c084fc]/25 text-[#e9d5ff] border border-[#c084fc]/50 font-mono text-[10px] font-bold transition-all flex items-center gap-1 shadow-[0_0_10px_rgba(192,132,252,0.18)] cursor-pointer"
+                title="Open Executive Quant Mission Briefing HUD for Active Asset"
+              >
+                <span className="material-symbols-outlined text-[13px] text-[#c084fc]">radar</span>
+                <span>📡 BRIEFING HUD</span>
+              </button>
+            )}
+
+            {/* 5. Switch Asset Button (Opens Top 50 Launchpad) */}
             {onSwitchAsset && (
               <button
                 onClick={onSwitchAsset}
@@ -427,6 +442,25 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="font-mono text-[9px] text-[#849495] uppercase font-bold tracking-wider">
                   TOOLS &amp; ASSET CATALOG
                 </span>
+
+                {onOpenBriefing && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDrawerOpen(false);
+                      onOpenBriefing();
+                    }}
+                    className="min-h-[44px] px-3 rounded-lg bg-[#c084fc]/15 hover:bg-[#c084fc]/25 text-[#e9d5ff] border border-[#c084fc]/40 font-mono text-[11px] font-bold flex items-center justify-between cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[16px] text-[#c084fc]">
+                        radar
+                      </span>
+                      <span>📡 EXECUTIVE BRIEFING HUD</span>
+                    </span>
+                    <span className="text-[10px] text-[#e9d5ff]">SUMMARY →</span>
+                  </button>
+                )}
 
                 {onSwitchAsset && (
                   <button

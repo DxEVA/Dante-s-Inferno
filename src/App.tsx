@@ -56,6 +56,8 @@ import { TrafficLightBanner } from './components/TrafficLightBanner';
 import { StrategyTabs, TacticalDeckMode } from './components/StrategyTabs';
 import { PaperTradeEntry } from './components/PreFlightChecklist';
 import { AssetSelectorScreen } from './components/AssetSelectorScreen';
+import { ExperienceGateScreen } from './components/ExperienceGateScreen';
+import { AssetBriefingScreen } from './components/AssetBriefingScreen';
 import { Footer } from './components/Footer';
 import { Toast } from './components/Toast';
 import { PaperJournalModal } from './components/PaperJournalModal';
@@ -72,8 +74,10 @@ import {
 } from './utils/paperJournal';
 
 export default function App() {
-  // Screen View Mode: 'selector' (Pre-Chart Top 50 Launchpad) vs 'terminal' (Full Chart & Strategy Workspace)
-  const [viewMode, setViewMode] = useState<'selector' | 'terminal'>('selector');
+  // 4-Step Screen Flow: 'mode_select' (Operator Portal) -> 'selector' (Top 50 Launchpad) -> 'briefing' (Executive Quant HUD) -> 'terminal' (Full Workstation)
+  const [viewMode, setViewMode] = useState<'mode_select' | 'selector' | 'briefing' | 'terminal'>(
+    'mode_select'
+  );
   const [isInitialLoading, setIsInitialLoading] = useState<boolean>(false);
   const [isCatalogLoading, setIsCatalogLoading] = useState<boolean>(true);
 
@@ -698,9 +702,9 @@ export default function App() {
     }
   }, [activePair.symbol, selectedTf, obMode, vpMode]);
 
-  // Run loadMarketData ONLY when symbol, tf, obMode, or vpMode changes in terminal view
+  // Run loadMarketData when symbol, tf, obMode, or vpMode changes in briefing or terminal view
   useEffect(() => {
-    if (viewMode === 'terminal') {
+    if (viewMode === 'terminal' || viewMode === 'briefing') {
       loadMarketData();
       const refreshInterval = setInterval(loadMarketData, 60000);
       return () => clearInterval(refreshInterval);
@@ -727,9 +731,9 @@ export default function App() {
     [vpMode]
   );
 
-  // FIX 1: Safe Live WebSocket Tick Streaming (active in terminal mode)
+  // FIX 1: Safe Live WebSocket Tick Streaming (active in briefing & terminal modes)
   useEffect(() => {
-    if (viewMode !== 'terminal') return;
+    if (viewMode !== 'terminal' && viewMode !== 'briefing') return;
 
     if (!socketRef.current) {
       socketRef.current = new BinanceKlineSocket();
@@ -837,12 +841,12 @@ export default function App() {
     };
   }, [activePair.symbol, selectedTf, viewMode, showToast]);
 
-  // Handle Ticker Selection from Launchpad Screen
+  // Handle Ticker Selection from Launchpad Screen -> Opens Executive Mission Briefing HUD first
   const handleSelectPairFromLaunchpad = async (pair: PairItem) => {
     setKlines([]);
     setIsInitialLoading(true);
     setActivePair(pair);
-    setViewMode('terminal');
+    setViewMode('briefing');
 
     // Pre-populate execution calculator with sensible offsets for the selected coin
     const estEntry = Number((pair.price * 0.99).toPrecision(5));
@@ -850,7 +854,7 @@ export default function App() {
     setCustomTargets({});
     setEntryPrice(estEntry);
     setStopLoss(estStop);
-    showToast(`LAUNCHING TERMINAL: ${pair.symbol}`);
+    showToast(`SYNCHRONIZING EXECUTIVE BRIEFING: ${pair.symbol}`);
 
     await loadMarketData(pair);
   };
@@ -982,7 +986,28 @@ export default function App() {
 
   return (
     <div className="flex flex-col min-h-screen bg-[#10131a] text-[#e1e2eb] font-sans select-none pb-24 lg:pb-10">
-      {viewMode === 'selector' ? (
+      {viewMode === 'mode_select' ? (
+        <ExperienceGateScreen
+          pingMs={pingMs}
+          currentMode={experienceMode}
+          onSelectMode={(mode, remember) => {
+            setExperienceMode(mode);
+            if (remember) {
+              try {
+                sessionStorage.setItem('inferno_session_mode', mode);
+              } catch {
+                // ignore storage errors
+              }
+            }
+            setViewMode('selector');
+            showToast(
+              mode === 'rookie'
+                ? '🎓 ROOKIE MENTOR HUD INITIALIZED — SELECT TARGET ASSET'
+                : '⚡ PRO QUANT WORKSTATION INITIALIZED — SELECT TARGET ASSET'
+            );
+          }}
+        />
+      ) : viewMode === 'selector' ? (
         <AssetSelectorScreen
           pairs={allPairs.length > 0 ? allPairs : topPairs}
           isLoading={isCatalogLoading}
@@ -990,15 +1015,74 @@ export default function App() {
           activeSymbol={activePair.symbol}
           pingMs={pingMs}
         />
+      ) : viewMode === 'briefing' ? (
+        <AssetBriefingScreen
+          activePair={activePair}
+          klines={klines}
+          isInitialLoading={isInitialLoading}
+          isStreaming={isStreaming}
+          selectedTf={selectedTf}
+          onSelectTf={(tf) => {
+            setSelectedTf(tf);
+            showToast(`TIMEFRAME: ${tf.toUpperCase()}`);
+          }}
+          experienceMode={experienceMode}
+          onToggleExperienceMode={(mode) => {
+            setExperienceMode(mode);
+            showToast(
+              mode === 'rookie'
+                ? '🎓 ROOKIE GUIDE MODE ACTIVE'
+                : '⚡ PRO TERMINAL MODE ACTIVE'
+            );
+          }}
+          volumeProfile={volumeProfile}
+          bullOB={bullOB}
+          bearOB={bearOB}
+          optionsData={optionsData}
+          liquidity={liquidity}
+          telemetry={telemetry}
+          confluence={confluence}
+          amdPhase={amdPhase}
+          candlestickResult={candlestickResult}
+          maResult={maResult}
+          sharpeSortino={sharpeSortino}
+          onChangeAsset={() => setViewMode('selector')}
+          onEnterWorkstation={() => {
+            setIsRightWorkspaceExpanded(false);
+            setViewMode('terminal');
+            showToast(`⚡ ENTERED LIVE WORKSTATION: ${activePair.symbol}`);
+          }}
+          onOpenStageInTerminal={(stageId) => {
+            setIsRightWorkspaceExpanded(false);
+            setActiveStrategyTab(stageId);
+            setExternalDeckRequest({ deck: 'LENSES', ts: Date.now() });
+            setViewMode('terminal');
+            showToast(`📊 OPENED STAGE 0${stageId} FOR ${activePair.symbol}`);
+          }}
+          onLaunchWithSetup={(entry, stop, tp1, tp2) => {
+            setIsRightWorkspaceExpanded(false);
+            handleLoadSetup(entry, stop, tp1, tp2);
+            setActiveStrategyTab(6);
+            setExternalDeckRequest({ deck: 'PREFLIGHT_SIZER', ts: Date.now() });
+            setViewMode('terminal');
+          }}
+          onOpenPlaybooksInTerminal={() => {
+            setIsRightWorkspaceExpanded(true);
+            setExternalDeckRequest({ deck: 'PLAYBOOKS', ts: Date.now() });
+            setViewMode('terminal');
+            showToast(`🏆 14 PRO PLAYBOOKS OPENED FOR ${activePair.symbol}`);
+          }}
+        />
       ) : (
         <>
-          {/* 1. Single Top Navigation Header with prominent SWITCH ASSET button, Journal & Glossary */}
+          {/* 1. Single Top Navigation Header with prominent SWITCH ASSET button, Briefing HUD, Journal & Glossary */}
           <Header
             topPairs={topPairs}
             activePair={activePair}
             pingMs={pingMs}
             onSelectPair={handleSelectPair}
             onSwitchAsset={() => setViewMode('selector')}
+            onOpenBriefing={() => setViewMode('briefing')}
             installPrompt={installPrompt}
             onInstallPwa={handleInstallPwa}
             experienceMode={experienceMode}
