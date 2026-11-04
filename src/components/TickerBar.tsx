@@ -8,12 +8,14 @@ interface TickerBarProps {
   topPairs: PairItem[];
   allPairs?: PairItem[];
   selectedTf: string;
+  candleDepth?: 250 | 500 | 1000;
   obMode: 'strict' | 'loose';
   vpMode: 'vrvp' | 'session';
   searchQuery: string;
   onSearchChange: (q: string) => void;
   onSelectPair: (symbol: string) => void;
   onSelectTf: (tf: string) => void;
+  onSelectCandleDepth?: (depth: 250 | 500 | 1000) => void;
   onToggleObMode: (mode: 'strict' | 'loose') => void;
   onToggleVpMode: (mode: 'vrvp' | 'session') => void;
   sharpeSortino?: SharpeSortinoMetrics;
@@ -24,6 +26,7 @@ export const TickerBar: React.FC<TickerBarProps> = ({
   topPairs,
   allPairs = [],
   selectedTf,
+  candleDepth = 1000,
   obMode,
   vpMode,
   sharpeSortino,
@@ -31,6 +34,7 @@ export const TickerBar: React.FC<TickerBarProps> = ({
   onSearchChange,
   onSelectPair,
   onSelectTf,
+  onSelectCandleDepth,
   onToggleObMode,
   onToggleVpMode,
 }) => {
@@ -266,8 +270,36 @@ export const TickerBar: React.FC<TickerBarProps> = ({
           })}
         </div>
 
-        {/* Sensitivity & Profile Anchor Toggles */}
+        {/* Depth, Sensitivity & Profile Anchor Toggles */}
         <div className="flex items-center gap-1.5 shrink-0">
+          {onSelectCandleDepth && (
+            <div
+              className="flex items-center rounded bg-[#0b0e14] border border-[#272a31] p-0.5"
+              title="Historical Candle Depth for EMA 200 Warmup & Strategy Backtest Walk-Forward"
+            >
+              <span className="px-1.5 font-mono text-[8.5px] text-[#849495] font-bold uppercase">
+                DEPTH:
+              </span>
+              {([250, 500, 1000] as const).map((d) => {
+                const isActive = candleDepth === d;
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => onSelectCandleDepth(d)}
+                    className={`px-1.5 sm:px-2 py-0.5 rounded font-mono text-[9px] sm:text-[10px] font-semibold transition-all cursor-pointer tabular-nums ${
+                      isActive
+                        ? 'bg-[#00f0ff]/20 text-[#00f0ff] border border-[#00f0ff]/50 font-bold shadow-[0_0_8px_rgba(0,240,255,0.18)]'
+                        : 'text-[#849495] hover:text-[#e1e2eb]'
+                    }`}
+                  >
+                    {d === 1000 ? '1K' : d}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           <div className="flex items-center rounded bg-[#0b0e14] border border-[#272a31] p-0.5">
             <button
               onClick={() => onToggleObMode('strict')}

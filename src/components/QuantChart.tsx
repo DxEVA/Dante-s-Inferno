@@ -1360,7 +1360,14 @@ export const QuantChart: React.FC<QuantChartProps> = ({
 
       if (symbolTfChanged || lastCountRef.current < 20) {
         candleSeriesRef.current?.priceScale().applyOptions({ autoScale: true });
-        chartRef.current?.timeScale().fitContent();
+        if (sorted.length > 160) {
+          chartRef.current?.timeScale().setVisibleLogicalRange({
+            from: sorted.length - 150,
+            to: sorted.length + 5,
+          });
+        } else {
+          chartRef.current?.timeScale().fitContent();
+        }
       }
       requestAnimationFrame(() => {
         drawOverlayCanvas();
@@ -1413,12 +1420,40 @@ export const QuantChart: React.FC<QuantChartProps> = ({
     }
   }, [klines, symbol, timeframe, drawOverlayCanvas]);
 
-  // Recalibrate price scale & fit content immediately when symbol or timeframe changes
+  const handleResetZoom150 = useCallback(() => {
+    candleSeriesRef.current?.priceScale().applyOptions({ autoScale: true });
+    const len = klinesRef.current.length;
+    if (len > 160) {
+      chartRef.current?.timeScale().setVisibleLogicalRange({
+        from: len - 150,
+        to: len + 5,
+      });
+    } else {
+      chartRef.current?.timeScale().fitContent();
+    }
+    requestAnimationFrame(drawOverlayCanvas);
+  }, [drawOverlayCanvas]);
+
+  const handleFitAllBars = useCallback(() => {
+    candleSeriesRef.current?.priceScale().applyOptions({ autoScale: true });
+    chartRef.current?.timeScale().fitContent();
+    requestAnimationFrame(drawOverlayCanvas);
+  }, [drawOverlayCanvas]);
+
+  // Recalibrate price scale & 150-bar viewport immediately when symbol or timeframe changes
   useEffect(() => {
     manualOptionsOverrideRef.current = false;
     setManualOptionsOverride(false);
     candleSeriesRef.current?.priceScale().applyOptions({ autoScale: true });
-    chartRef.current?.timeScale().fitContent();
+    const len = klinesRef.current.length;
+    if (len > 160) {
+      chartRef.current?.timeScale().setVisibleLogicalRange({
+        from: len - 150,
+        to: len + 5,
+      });
+    } else {
+      chartRef.current?.timeScale().fitContent();
+    }
   }, [symbol, timeframe]);
 
   // Sync Price Lines for Institutional Levels, S/R, and Liquidity Walls
@@ -1724,8 +1759,28 @@ export const QuantChart: React.FC<QuantChartProps> = ({
           </button>
         </div>
 
-        {/* Right: Auto-Sync to 6-Stage Pipeline or Lock Layers */}
+        {/* Right: Zoom Controls + Auto-Sync to 6-Stage Pipeline or Lock Layers */}
         <div className="flex items-center gap-1.5 shrink-0 pl-1">
+          <div className="flex items-center rounded bg-[#0b0e14] border border-[#272a31] p-0.5 font-mono text-[9px]">
+            <button
+              type="button"
+              onClick={handleResetZoom150}
+              className="px-1.5 py-0.5 rounded text-[#00f0ff] hover:bg-[#191c22] font-bold transition-colors cursor-pointer"
+              title="Reset viewport to crisp 150-bar active trading window"
+            >
+              🔍 RESET ZOOM (150B)
+            </button>
+            <span className="text-[#272a31] px-0.5">|</span>
+            <button
+              type="button"
+              onClick={handleFitAllBars}
+              className="px-1.5 py-0.5 rounded text-[#b9cacb] hover:text-[#00f0ff] hover:bg-[#191c22] font-bold transition-colors cursor-pointer tabular-nums"
+              title="Fit all loaded historical candles into viewport"
+            >
+              FIT ALL ({klines.length}B)
+            </button>
+          </div>
+
           <button
             type="button"
             onClick={() => setAutoSyncTab(!autoSyncTab)}
@@ -1748,6 +1803,20 @@ export const QuantChart: React.FC<QuantChartProps> = ({
 
       {/* Touch-Friendly Mobile Layer Chips Strip (Mobile-Only) */}
       <div className="flex lg:hidden items-center gap-1.5 overflow-x-auto no-scrollbar py-1 px-0.5 font-mono text-[10px] font-bold">
+        <button
+          type="button"
+          onClick={handleResetZoom150}
+          className="px-2.5 py-1 rounded-lg border shrink-0 transition-all cursor-pointer bg-[#00f0ff]/15 text-[#00f0ff] border-[#00f0ff]/40"
+        >
+          🔍 150B ZOOM
+        </button>
+        <button
+          type="button"
+          onClick={handleFitAllBars}
+          className="px-2.5 py-1 rounded-lg border shrink-0 transition-all cursor-pointer bg-[#141821] text-[#b9cacb] border-white/10 tabular-nums"
+        >
+          FIT ALL ({klines.length}B)
+        </button>
         <button
           type="button"
           onClick={() => handleToggleLayer('vp')}

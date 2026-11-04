@@ -151,6 +151,7 @@ export default function App() {
   const [activePair, setActivePair] = useState<PairItem>(DEFAULT_PAIRS[0]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTf, setSelectedTf] = useState('1h');
+  const [candleDepth, setCandleDepth] = useState<250 | 500 | 1000>(1000);
   const [obMode, setObMode] = useState<'strict' | 'loose'>('strict');
   const [vpMode, setVpMode] = useState<'vrvp' | 'session'>('vrvp');
 
@@ -499,41 +500,38 @@ export default function App() {
     return () => clearInterval(interval);
   }, [activePair.symbol]);
 
-  // Load Full Multi-Timeframe Data (250 candles, no activePair.price in deps)
+  // Load Full Multi-Timeframe Data (1,000 candles on activeTf, 250 on background MTF matrix)
   const loadMarketData = useCallback(async (targetPair?: PairItem) => {
     try {
       setIsInitialLoading(true);
       const pair = targetPair || activePair;
       const currentSymbol = pair.symbol;
 
-      // Parallel MTF fetches with 250 lookback depth across matrix + active timeframe
-      const isCustomTf = !['15m', '1h', '4h', '1d'].includes(selectedTf);
-      const activeTfFetch = isCustomTf
-        ? fetchKlines(currentSymbol, selectedTf, 250)
-        : Promise.resolve<KlineData[] | null>(null);
-
-      const [data15m, data1h, data4h, data1d, customActiveData, funding, oiDelta] =
+      // Always fetch active chart timeframe at candleDepth (default 1,000 bars),
+      // while keeping the other 3 background MTF Matrix calls at 250 bars for low latency.
+      const [activeKlines, raw15m, raw1h, raw4h, raw1d, funding, oiDelta] =
         await Promise.all([
-          fetchKlines(currentSymbol, '15m', 250),
-          fetchKlines(currentSymbol, '1h', 250),
-          fetchKlines(currentSymbol, '4h', 250),
-          fetchKlines(currentSymbol, '1d', 250),
-          activeTfFetch,
+          fetchKlines(currentSymbol, selectedTf, candleDepth),
+          selectedTf === '15m'
+            ? Promise.resolve<KlineData[]>([])
+            : fetchKlines(currentSymbol, '15m', 250),
+          selectedTf === '1h'
+            ? Promise.resolve<KlineData[]>([])
+            : fetchKlines(currentSymbol, '1h', 250),
+          selectedTf === '4h'
+            ? Promise.resolve<KlineData[]>([])
+            : fetchKlines(currentSymbol, '4h', 250),
+          selectedTf === '1d'
+            ? Promise.resolve<KlineData[]>([])
+            : fetchKlines(currentSymbol, '1d', 250),
           fetchFundingRate(currentSymbol),
           fetch4hOIDelta(currentSymbol),
         ]);
 
-      // Active timeframe klines for chart
-      const activeKlines =
-        customActiveData && customActiveData.length > 0
-          ? customActiveData
-          : selectedTf === '15m'
-          ? data15m
-          : selectedTf === '4h'
-          ? data4h
-          : selectedTf === '1d'
-          ? data1d
-          : data1h;
+      const data15m = selectedTf === '15m' ? activeKlines : raw15m;
+      const data1h = selectedTf === '1h' ? activeKlines : raw1h;
+      const data4h = selectedTf === '4h' ? activeKlines : raw4h;
+      const data1d = selectedTf === '1d' ? activeKlines : raw1d;
 
       setKlines(activeKlines);
       latestKlinesRef.current = activeKlines;
@@ -558,8 +556,12 @@ export default function App() {
       ]);
       setSpotPerpDivergence(spotPerp);
 
-      // Calculate S/R from fractal pivot highs/lows
-      const sr = calculateSupportResistance(activeKlines);
+      // Slice recent 250 candles for structural S/R pivots and unmitigated Order Blocks
+      // so levels reflect relevant recent price action rather than stale levels from 900 bars ago.
+      const recentStructuralKlines = activeKlines.slice(-250);
+
+      // Calculate S/R from fractal pivot highs/lows on recent 250-bar structural window
+      const sr = calculateSupportResistance(recentStructuralKlines);
       const currentLiq: LiquidityLevels = {
         srHigh: sr.srHigh,
         srLow: sr.srLow,
@@ -570,7 +572,7 @@ export default function App() {
       };
       setLiquidity(currentLiq);
 
-      // Session vs VRVP Volume Profile calculation
+      // Session vs VRVP Volume Profile calculation (VRVP defaults to initial 150-bar visible window)
       const sessionBars =
         selectedTf === '5m'
           ? 288
@@ -590,22 +592,24 @@ export default function App() {
           ? 30
           : 52;
 
+      const vpSourceKlines =
+        vpMode === 'vrvp' ? activeKlines.slice(-150) : activeKlines;
       const vp = calculateVolumeProfile(
-        activeKlines,
+        vpSourceKlines,
         vpMode,
         vpMode === 'session' ? sessionBars : 60
       );
       setVolumeProfile(vp);
 
-      // Order Blocks on active timeframe
-      const obs = calculateOrderBlocks(activeKlines, obMode);
+      // Order Blocks on recent 250-bar structural window
+      const obs = calculateOrderBlocks(recentStructuralKlines, obMode);
       setBullOB(obs.bullOB);
       setBearOB(obs.bearOB);
 
       // Options Data
       setOptionsData(options);
 
-      // 50-VWMA and Regime-Gated Z-Score
+      // 50-VWMA and Regime-Gated Z-Score (full 1,000-bar activeKlines)
       const { vwma50, zScore, zScoreBias, marketRegime } = calculateVWMAAndZScore(activeKlines);
 
       // CVD and RSI Divergence
@@ -700,7 +704,7 @@ export default function App() {
     } finally {
       setIsInitialLoading(false);
     }
-  }, [activePair.symbol, selectedTf, obMode, vpMode]);
+  }, [activePair.symbol, selectedTf, candleDepth, obMode, vpMode]);
 
   // Run loadMarketData when symbol, tf, obMode, or vpMode changes in briefing or terminal view
   useEffect(() => {
@@ -1118,6 +1122,7 @@ export default function App() {
                 topPairs={topPairs}
                 allPairs={allPairs}
                 selectedTf={selectedTf}
+                candleDepth={candleDepth}
                 obMode={obMode}
                 vpMode={vpMode}
                 sharpeSortino={sharpeSortino}
@@ -1127,6 +1132,10 @@ export default function App() {
                 onSelectTf={(tf) => {
                   setSelectedTf(tf);
                   showToast(`TIMEFRAME: ${tf.toUpperCase()}`);
+                }}
+                onSelectCandleDepth={(depth) => {
+                  setCandleDepth(depth);
+                  showToast(`HISTORICAL DEPTH: ${depth} CANDLES`);
                 }}
                 onToggleObMode={(mode) => {
                   setObMode(mode);
@@ -1182,6 +1191,8 @@ export default function App() {
                     <span>{activePair.symbol}</span>
                     <span>•</span>
                     <span className="text-[#00f0ff] font-bold">{selectedTf.toUpperCase()}</span>
+                    <span>•</span>
+                    <span className="text-[#4edea3] font-bold">{klines.length || candleDepth}B</span>
                     <span className="hidden sm:inline">•</span>
                     <span className={`hidden sm:inline ${showSetupOnChart ? 'text-[#4edea3]' : 'text-[#849495]'}`}>
                       R:R BOX {showSetupOnChart ? 'ACTIVE' : 'HIDDEN'}
@@ -1218,7 +1229,7 @@ export default function App() {
                         ● INITIALIZING {activePair.symbol} QUANT ENGINE ({selectedTf.toUpperCase()})...
                       </div>
                       <div className="font-mono text-[10px] text-[#849495]">
-                        Fetching 250 klines &amp; computing Volume Profile, Order Blocks &amp; 5 Strategy Lenses
+                        Fetching {candleDepth} klines &amp; computing Volume Profile, Order Blocks &amp; 14 Strategy Models
                       </div>
                     </div>
                   ) : (

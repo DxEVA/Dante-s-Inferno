@@ -4,6 +4,7 @@ import { TelemetryMetrics } from '../types';
 import { InfoTooltip } from './InfoTooltip';
 import { getRookieMentorGuide } from '../utils/metricBenchmarks';
 import { AsciiOrderflowBar, ScrambleValue } from './AsciiTelemetry';
+import { SignalBiasPill } from './SignalBiasPill';
 
 interface TelemetryCardsProps {
   metrics: TelemetryMetrics;
@@ -350,11 +351,27 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
           className="w-full"
         >
           <div className="cyber-panel border-l-2 border-l-[#4edea3] p-3 flex flex-col justify-between gap-2 cursor-pointer w-full">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-1.5">
               <span className="font-mono text-[10px] text-[#849495] uppercase font-semibold">
                 FUNDING RATE
               </span>
-              <span className="material-symbols-outlined text-[#849495] text-[14px]">schedule</span>
+              <SignalBiasPill
+                size="xs"
+                bias={
+                  metrics.fundingRate <= -0.00015
+                    ? 'BULLISH'
+                    : metrics.fundingRate >= 0.0003
+                    ? 'BEARISH'
+                    : 'BULLISH'
+                }
+                label={
+                  metrics.fundingRate <= -0.00015
+                    ? 'BULLISH SQUEEZE'
+                    : metrics.fundingRate >= 0.0003
+                    ? 'BEARISH CROWDED'
+                    : 'BULLISH HEALTHY'
+                }
+              />
             </div>
 
             <div className="flex flex-col tabular-nums">
@@ -407,13 +424,27 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
           className="w-full"
         >
           <div className="cyber-panel border-l-2 border-l-[#00f0ff] p-3 flex flex-col justify-between gap-2 cursor-pointer w-full">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-1.5">
               <span className="font-mono text-[10px] text-[#849495] uppercase font-semibold">
                 OI 4H DELTA
               </span>
-              <span className="material-symbols-outlined text-[#4edea3] text-[14px]">
-                stacked_line_chart
-              </span>
+              <SignalBiasPill
+                size="xs"
+                bias={
+                  metrics.oiBias === 'Long Build' || metrics.oiBias === 'Short Cover'
+                    ? 'BULLISH'
+                    : 'BEARISH'
+                }
+                label={
+                  metrics.oiBias === 'Long Build'
+                    ? 'BULLISH BUILD'
+                    : metrics.oiBias === 'Short Cover'
+                    ? 'BULLISH COVER'
+                    : metrics.oiBias === 'Short Build'
+                    ? 'BEARISH BUILD'
+                    : 'BEARISH SQUEEZE'
+                }
+              />
             </div>
 
             <div className="flex flex-col tabular-nums">
@@ -474,13 +505,21 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
           className="w-full"
         >
           <div className="cyber-panel border-l-2 border-l-[#00f0ff] p-3 flex flex-col justify-between gap-2 cursor-pointer w-full">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-1.5">
               <span className="font-mono text-[10px] text-[#00f0ff] uppercase font-bold tracking-wider">
                 SHARPE &amp; SORTINO
               </span>
-              <span className="material-symbols-outlined text-[#00f0ff] text-[14px]">
-                monitoring
-              </span>
+              <SignalBiasPill
+                size="xs"
+                bias={sharpe >= 0.5 ? 'BULLISH' : sharpe <= -0.25 ? 'BEARISH' : 'NEUTRAL'}
+                label={
+                  sharpe >= 0.5
+                    ? 'BULLISH EDGE'
+                    : sharpe <= -0.25
+                    ? 'BEARISH DRAWDOWN'
+                    : 'NEUTRAL'
+                }
+              />
             </div>
 
             <div className="flex flex-col tabular-nums">
@@ -543,11 +582,31 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
               isPriceTracked(metrics.vwma50) ? 'cyber-panel-tracked' : ''
             }`}
           >
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-1.5">
               <span className="font-mono text-[10px] text-[#849495] uppercase font-semibold">
                 STATISTICAL Z-SCORE
               </span>
-              <span className="material-symbols-outlined text-[#f59e0b] text-[14px]">tune</span>
+              <SignalBiasPill
+                size="xs"
+                bias={
+                  metrics.zScore <= -1.5
+                    ? 'BULLISH'
+                    : metrics.zScore >= 1.8
+                    ? 'BEARISH'
+                    : metrics.zScore >= 0
+                    ? 'BULLISH'
+                    : 'BEARISH'
+                }
+                label={
+                  metrics.zScore <= -1.5
+                    ? 'BULLISH OVERSOLD'
+                    : metrics.zScore >= 1.8
+                    ? 'BEARISH OVERBOUGHT'
+                    : metrics.zScore >= 0
+                    ? 'BULLISH'
+                    : 'BEARISH'
+                }
+              />
             </div>
 
             <div className="flex flex-col tabular-nums">
@@ -605,13 +664,27 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
           className="w-full"
         >
           <div className="cyber-panel border-l-2 border-l-[#4edea3] p-3 flex flex-col justify-between gap-2 cursor-pointer w-full">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-1.5">
               <span className="font-mono text-[10px] text-[#849495] uppercase font-semibold">
                 DIVERGENCE SCAN
               </span>
-              <span className="material-symbols-outlined text-[#4edea3] text-[14px]">
-                compare_arrows
-              </span>
+              <SignalBiasPill
+                size="xs"
+                bias={
+                  metrics.cvdDelta > 0 && metrics.rsi14 < 72
+                    ? 'BULLISH'
+                    : metrics.cvdDelta < 0 && metrics.rsi14 > 28
+                    ? 'BEARISH'
+                    : 'NEUTRAL'
+                }
+                label={
+                  metrics.cvdDelta > 0
+                    ? 'BULLISH CVD'
+                    : metrics.cvdDelta < 0
+                    ? 'BEARISH CVD'
+                    : 'NEUTRAL'
+                }
+              />
             </div>
 
             <div className="flex flex-col tabular-nums gap-1">
@@ -658,11 +731,15 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
           className="w-full"
         >
           <div className="cyber-panel border-l-2 border-l-[#ddb7ff] p-3 flex flex-col justify-between gap-2 cursor-pointer w-full">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-1.5">
               <span className="font-mono text-[10px] text-[#ddb7ff] uppercase font-semibold">
                 GAMMA REGIME
               </span>
-              <span className="material-symbols-outlined text-[#ddb7ff] text-[14px]">radar</span>
+              <SignalBiasPill
+                size="xs"
+                bias={metrics.netGex >= 0 ? 'BULLISH' : 'BEARISH'}
+                label={metrics.netGex >= 0 ? 'BULLISH +GEX PIN' : 'BEARISH -GEX VOL'}
+              />
             </div>
 
             <div className="flex flex-col tabular-nums">
@@ -705,13 +782,27 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
           className="w-full"
         >
           <div className="cyber-panel border-l-2 border-l-[#842bd2] p-3 flex flex-col justify-between gap-2 cursor-pointer w-full">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-1.5">
               <span className="font-mono text-[10px] text-[#849495] uppercase font-semibold">
                 OPTIONS SKEW
               </span>
-              <span className="material-symbols-outlined text-[#849495] text-[14px]">
-                swap_horiz
-              </span>
+              <SignalBiasPill
+                size="xs"
+                bias={
+                  metrics.pcRatio < 0.85
+                    ? 'BULLISH'
+                    : metrics.pcRatio > 1.05
+                    ? 'BEARISH'
+                    : 'NEUTRAL'
+                }
+                label={
+                  metrics.pcRatio < 0.85
+                    ? 'BULLISH CALL FLOW'
+                    : metrics.pcRatio > 1.05
+                    ? 'BEARISH PUT HEDGE'
+                    : 'NEUTRAL SKEW'
+                }
+              />
             </div>
 
             <div className="flex flex-col tabular-nums">
@@ -758,11 +849,19 @@ export const TelemetryCards: React.FC<TelemetryCardsProps> = ({
               isPriceTracked(zeroGammaOrVwma) ? 'cyber-panel-tracked' : ''
             }`}
           >
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-1.5">
               <span className="font-mono text-[10px] text-[#00f0ff] uppercase font-semibold">
                 0-Γ FLIP &amp; BASIS
               </span>
-              <span className="material-symbols-outlined text-[#00f0ff] text-[14px]">balance</span>
+              <SignalBiasPill
+                size="xs"
+                bias={(metrics.spotPerpDivergence?.spotDeltaPct ?? 0) >= 0 ? 'BULLISH' : 'BEARISH'}
+                label={
+                  (metrics.spotPerpDivergence?.spotDeltaPct ?? 0) >= 0
+                    ? 'BULLISH SPOT FLOW'
+                    : 'BEARISH SPOT FLOW'
+                }
+              />
             </div>
 
             <div className="flex flex-col tabular-nums">
