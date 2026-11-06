@@ -24,7 +24,6 @@ import { AMDPhaseEngine } from './AMDPhaseEngine';
 import { ConfluenceMatrix } from './ConfluenceMatrix';
 import { SpeculationBrief } from './SpeculationBrief';
 import { ExecutionHelper } from './ExecutionHelper';
-import { InfoTooltip } from './InfoTooltip';
 import { PreFlightChecklist, PaperTradeEntry } from './PreFlightChecklist';
 import { ReverseAcademyDeck } from './ReverseAcademyDeck';
 import { loadAcademyProgress, AcademyProgressState } from '../utils/reverseAcademyEngine';
@@ -97,6 +96,7 @@ interface StageDefinition {
   id: StageId;
   stepCode: string;
   shortTitle: string;
+  stepperLabel: string;
   fullTitle: string;
   subtitle: string;
   question: string;
@@ -108,9 +108,10 @@ const STAGES: StageDefinition[] = [
   {
     id: 1,
     stepCode: '01',
-    shortTitle: 'PRICE',
-    fullTitle: 'STAGE 01 // PRICE & STRUCTURE',
-    subtitle: 'Candles, Wicks & S/R',
+    shortTitle: 'Price',
+    stepperLabel: '1. Price',
+    fullTitle: 'Price & Structure',
+    subtitle: 'Candles, Wicks & Support / Resistance',
     question: 'Are buyers or sellers rejecting key price levels right now?',
     mentorKeys: ['wick_rejection'],
     studyLinks: [
@@ -134,10 +135,11 @@ const STAGES: StageDefinition[] = [
   {
     id: 2,
     stepCode: '02',
-    shortTitle: 'VOLUME',
-    fullTitle: 'STAGE 02 // VOLUME & VALUE AREA',
+    shortTitle: 'Volume',
+    stepperLabel: '2. Volume',
+    fullTitle: 'Volume & Value Area',
     subtitle: 'POC, VAH/VAL & Session RVOL',
-    question: 'Is price at a cheap/expensive auction zone with real volume participation?',
+    question: 'Is price at a discount or premium auction zone with real volume participation?',
     mentorKeys: ['volume_profile', 'session_rvol'],
     studyLinks: [
       {
@@ -160,10 +162,11 @@ const STAGES: StageDefinition[] = [
   {
     id: 3,
     stepCode: '03',
-    shortTitle: 'TREND & MA',
-    fullTitle: 'STAGE 03 // MOVING AVERAGES & TREND',
-    subtitle: 'EMA Ribbon, VWAP, Stretch & MTF',
-    question: 'Is the multi-timeframe trend aligned, or is price over-stretched like a rubber band?',
+    shortTitle: 'Trend',
+    stepperLabel: '3. Trend',
+    fullTitle: 'Moving Averages & Trend',
+    subtitle: 'EMA Ribbon, VWAP, ATR Stretch & MTF',
+    question: 'Is the multi-timeframe trend aligned, or is price over-stretched?',
     mentorKeys: ['atr_stretch', 'vwma_zscore'],
     studyLinks: [
       {
@@ -186,10 +189,11 @@ const STAGES: StageDefinition[] = [
   {
     id: 4,
     stepCode: '04',
-    shortTitle: 'ORDERFLOW',
-    fullTitle: 'STAGE 04 // ORDERFLOW & SMART MONEY',
+    shortTitle: 'Orderflow',
+    stepperLabel: '4. Orderflow',
+    fullTitle: 'Orderflow & Smart Money',
     subtitle: 'Order Blocks, AMD, CVD & Spot vs Perp',
-    question: 'Are institutional Spot buyers stepping in at unmitigated Order Blocks, or is it a Perp trap?',
+    question: 'Are institutional Spot buyers stepping in at unmitigated Order Blocks?',
     mentorKeys: ['order_blocks', 'cvd_delta'],
     studyLinks: [
       {
@@ -212,10 +216,11 @@ const STAGES: StageDefinition[] = [
   {
     id: 5,
     stepCode: '05',
-    shortTitle: 'QUANT & GEX',
-    fullTitle: 'STAGE 05 // QUANT & DERIVATIVES',
+    shortTitle: 'Quant',
+    stepperLabel: '5. Quant',
+    fullTitle: 'Quant & Derivatives',
     subtitle: 'Hurst, ADX, Z-Score, Options GEX & Funding/OI',
-    question: 'What do statistical math and options market-makers say about volatility and traps?',
+    question: 'What do statistical regime math and options market-makers indicate?',
     mentorKeys: ['hurst_adx', 'net_gex', 'sharpe_sortino', 'funding_rate', 'oi_delta'],
     studyLinks: [
       {
@@ -238,10 +243,11 @@ const STAGES: StageDefinition[] = [
   {
     id: 6,
     stepCode: '06',
-    shortTitle: 'EXECUTE',
-    fullTitle: 'STAGE 06 // VERDICT & EXECUTION SIZER',
-    subtitle: 'Funnel Scorecard, Pre-Flight & Position Sizer',
-    question: 'Do all 5 stages align for execution, and what is our exact fee-adjusted position size?',
+    shortTitle: 'Summary',
+    stepperLabel: '6. Summary',
+    fullTitle: 'Summary & Execution Sizer',
+    subtitle: 'Funnel Scorecard, Pre-Flight & Position Calculator',
+    question: 'Do all 5 stages align for execution, and what is our fee-adjusted position size?',
     mentorKeys: ['sharpe_sortino'],
     studyLinks: [
       {
@@ -304,15 +310,15 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
   const [viewMode, setViewMode] = useState<FlowViewMode>('GUIDED');
   const [showReverseXRay, setShowReverseXRay] = useState<boolean>(false);
   const [showFullPatternScanner, setShowFullPatternScanner] = useState<boolean>(false);
-  const [ showAiBriefInStage5, setShowAiBriefInStage5] = useState<boolean>(false);
+  const [showAiBriefInStage5, setShowAiBriefInStage5] = useState<boolean>(false);
   const [filterOnlyKeyLevels, setFilterOnlyKeyLevels] = useState<boolean>(false);
   const [selectedSetupLensId, setSelectedSetupLensId] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [, setAcademyProgress] = useState<AcademyProgressState>(() => loadAcademyProgress());
-  const [openLearnStages, setOpenLearnStages] = useState<Record<number, boolean>>({
-    1: experienceMode === 'rookie',
-  });
+  const [openLearnStages, setOpenLearnStages] = useState<Record<number, boolean>>({});
   const [playbookFilter, setPlaybookFilter] = useState<PlaybookFilterType>('ALL');
   const [assessedStrategyId, setAssessedStrategyId] = useState<string | null>(null);
+  const [expandedPlaybookId, setExpandedPlaybookId] = useState<string | null>(null);
+  const [showGannLevelsDrawer, setShowGannLevelsDrawer] = useState<boolean>(false);
   const [isLight, setIsLight] = useState<boolean>(
     () => typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light'
   );
@@ -327,10 +333,10 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
 
   const getReadableStatusColor = (dotHex: string) => {
     if (!isLight) return dotHex;
-    if (dotHex === '#4edea3') return '#047857';
+    if (dotHex === '#10b981' || dotHex === '#4edea3') return '#047857';
     if (dotHex === '#f59e0b') return '#b45309';
-    if (dotHex === '#ffb4ab') return '#b91c1c';
-    return '#0284c7';
+    if (dotHex === '#f43f5e' || dotHex === '#ffb4ab') return '#b91c1c';
+    return '#2563eb';
   };
 
   const symbol = activeSymbol || (baseAsset ? `${baseAsset}USDT` : 'BTCUSDT');
@@ -360,7 +366,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
     }
   }, [controlledActiveTab]);
 
-  // Sync external deck requests (from Mobile bottom nav or TrafficLightBanner X-Ray button)
+  // Sync external deck requests
   useEffect(() => {
     if (!externalDeckRequest?.deck) return;
     if (externalDeckRequest.deck === 'PREFLIGHT_SIZER') {
@@ -430,7 +436,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
     [currentPrice, volumeProfile.poc, klines]
   );
 
-  // 14 World-Renowned Models across 4 Eras with 250-bar 20-candle forward walk-forward backtest
+  // 14 World-Renowned Models across 4 Eras
   const famousStrategies = useMemo<FamousStrategyEvaluation[]>(
     () =>
       evaluateFamousStrategies({
@@ -606,12 +612,12 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
     const isDiscount = currentPrice < volumeProfile.val;
     const isPremium = currentPrice > volumeProfile.vah;
     const auctionZoneLabel = isDiscount
-      ? 'DISCOUNT (< VAL)'
+      ? 'Discount (< VAL)'
       : isPremium
-      ? 'PREMIUM (> VAH)'
-      : 'FAIR VALUE (INSIDE VA)';
+      ? 'Premium (> VAH)'
+      : 'Fair Value (Inside VA)';
 
-    // Stage 01: Price & Structure (Lens 1)
+    // Stage 1: Price & Structure (Lens 1)
     const s1Conf = lensConfidences[1];
     const patName = candlestickResult.primaryPattern?.name || 'Neutral Bar Structure';
     const srLow = liquidity?.srLow || volumeProfile.val || currentPrice * 0.985;
@@ -619,8 +625,8 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
     const distSrLowPct = currentPrice > 0 ? ((currentPrice - srLow) / currentPrice) * 100 : 1.2;
     const distSrHighPct = currentPrice > 0 ? ((srHigh - currentPrice) / currentPrice) * 100 : 1.2;
 
-    // Stage 02: Volume & Value Area (Auction Location + Session RVOL)
-    const vpScore = Math.round((lensConfidences[3].score * 0.55 + lensConfidences[4].score * 0.45));
+    // Stage 2: Volume & Value Area
+    const vpScore = Math.round(lensConfidences[3].score * 0.55 + lensConfidences[4].score * 0.45);
     const vpBias: 'BULLISH' | 'BEARISH' | 'NEUTRAL' =
       isDiscount || (currentPrice >= volumeProfile.poc && telemetry.cvdDelta >= 0)
         ? 'BULLISH'
@@ -628,20 +634,20 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
         ? 'BEARISH'
         : lensConfidences[3].bias;
 
-    // Stage 03: Moving Averages & Trend (Lens 2)
+    // Stage 3: Moving Averages & Trend (Lens 2)
     const s3Conf = lensConfidences[2];
 
-    // Stage 04: Orderflow & Smart Money (Order Blocks + AMD + CVD + Spot vs Perp)
-    const s4Score = Math.round((lensConfidences[3].score * 0.45 + lensConfidences[4].score * 0.55));
+    // Stage 4: Orderflow & Smart Money
+    const s4Score = Math.round(lensConfidences[3].score * 0.45 + lensConfidences[4].score * 0.55);
     const s4Bias =
       lensConfidences[4].score >= lensConfidences[3].score
         ? lensConfidences[4].bias
         : lensConfidences[3].bias;
 
-    // Stage 05: Quant & Derivatives (Lens 5)
+    // Stage 5: Quant & Derivatives (Lens 5)
     const s5Conf = lensConfidences[5];
 
-    // Stage 06: Verdict & Execution
+    // Stage 6: Verdict & Execution
     const avgFunnelScore = Math.round(
       (s1Conf.score + vpScore + s3Conf.score + s4Score + s5Conf.score) / 5
     );
@@ -649,7 +655,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
       confluence.score >= 60 ? 'BULLISH' : confluence.score <= 40 ? 'BEARISH' : s1Conf.bias;
 
     const getStatusColor = (score: number): string =>
-      score >= 65 ? '#4edea3' : score >= 45 ? '#f59e0b' : '#ffb4ab';
+      score >= 65 ? '#10b981' : score >= 45 ? '#f59e0b' : '#f43f5e';
 
     const getStatusLabel = (score: number): 'PASS' | 'WAIT' | 'CONFLICT' =>
       score >= 65 ? 'PASS' : score >= 45 ? 'WAIT' : 'CONFLICT';
@@ -665,9 +671,9 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
           candlestickResult.primaryPattern?.quality ?? 68
         }% quality) with ${((candlestickResult.anatomy?.wickRejectionRatio || 0.5) * 100).toFixed(
           0
-        )}% wick rejection. Price sits ${distSrLowPct.toFixed(2)}% above SR_LOW support ($${formatP(
+        )}% wick rejection. Price sits ${distSrLowPct.toFixed(2)}% above support ($${formatP(
           srLow
-        )}) and ${distSrHighPct.toFixed(2)}% below SR_HIGH resistance ($${formatP(srHigh)}).`,
+        )}) and ${distSrHighPct.toFixed(2)}% below resistance ($${formatP(srHigh)}).`,
         setup: lensSetups[1],
       },
       2: {
@@ -694,10 +700,10 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
         bias: s3Conf.bias,
         dotColor: getStatusColor(s3Conf.score),
         status: getStatusLabel(s3Conf.score),
-        headline: `${maResult.ribbonAlignment} • STRETCH ${maResult.stretchScoreAtr >= 0 ? '+' : ''}${maResult.stretchScoreAtr.toFixed(2)} ATR`,
+        headline: `${maResult.ribbonAlignment} • Stretch ${maResult.stretchScoreAtr >= 0 ? '+' : ''}${maResult.stretchScoreAtr.toFixed(2)} ATR`,
         takeaway: `Moving averages show ${maResult.ribbonAlignment} with Session VWAP at $${formatP(
           maResult.mas.vwap.price
-        )}. ATR Rubber-Band Stretch is ${maResult.stretchScoreAtr.toFixed(2)} ATR (${
+        )}. ATR Stretch is ${maResult.stretchScoreAtr.toFixed(2)} ATR (${
           Math.abs(maResult.stretchScoreAtr) >= 2.0
             ? 'Overextended — wait for a pullback toward the 21 EMA before entering'
             : 'Healthy — price is tracking near dynamic moving average support/resistance'
@@ -731,7 +737,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
         bias: s5Conf.bias,
         dotColor: getStatusColor(s5Conf.score),
         status: getStatusLabel(s5Conf.score),
-        headline: `HURST ${(candlestickResult.marketRegime?.hurstExponent ?? 0.5).toFixed(
+        headline: `Hurst ${(candlestickResult.marketRegime?.hurstExponent ?? 0.5).toFixed(
           2
         )} • GEX ${telemetry.netGex >= 0 ? '+' : ''}$${telemetry.netGex}M`,
         takeaway: `Statistical regime prints Hurst H=${(
@@ -752,7 +758,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
         bias: s6Bias,
         dotColor: getStatusColor(avgFunnelScore),
         status: getStatusLabel(avgFunnelScore),
-        headline: `${avgFunnelScore}% 5-STAGE FUNNEL CONFLUENCE (${s6Bias})`,
+        headline: `${avgFunnelScore}% 5-Stage Funnel Confluence (${s6Bias})`,
         takeaway: `All 5 upstream stages synthesize into a ${avgFunnelScore}% ${s6Bias} funnel rating. Verify the 5-Point Pre-Flight Checklist and size your Maker Limit or Taker Market order below.`,
         setup: lensSetups[selectedSetupLensId] || lensSetups[1],
       },
@@ -796,25 +802,21 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
   ) => {
     const clampedPct = Math.max(4, Math.min(96, pct));
     return (
-      <div
-        className={`flex flex-col gap-1 pt-2 mt-1 border-t ${
-          isLight ? 'border-[#cbd5e1]' : 'border-[#1e2636]/80'
-        }`}
-      >
+      <div className="flex flex-col gap-1.5 pt-2">
         <div
-          className={`relative w-full h-1.5 border overflow-hidden ${
-            isLight ? 'bg-[#e2e8f0] border-[#cbd5e1]' : 'bg-[#090c12] border-[#1e2636]'
+          className={`relative w-full h-1.5 rounded-full overflow-hidden ${
+            isLight ? 'bg-[#e2e8f0]' : 'bg-[#090d16]'
           }`}
         >
           <div
-            className="absolute inset-y-0 left-0 opacity-25"
+            className="absolute inset-y-0 left-0 opacity-35 rounded-full"
             style={{
               width: `${clampedPct}%`,
               backgroundColor: markerColor,
             }}
           />
           <div
-            className="absolute top-0 bottom-0 w-1.5 -ml-0.5 shadow-[0_0_8px_#00f0ff]"
+            className="absolute top-0 bottom-0 w-1.5 -ml-0.5 rounded-full"
             style={{
               left: `${clampedPct}%`,
               backgroundColor: markerColor,
@@ -822,12 +824,12 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
           />
         </div>
         <div
-          className={`flex items-center justify-between font-mono text-[8.5px] tabular-nums ${
-            isLight ? 'text-[#475569]' : 'text-[#849495]'
+          className={`flex items-center justify-between font-mono text-[10px] tabular-nums ${
+            isLight ? 'text-[#64748b]' : 'text-[#64748b]'
           }`}
         >
           <span>{leftLabel}</span>
-          <span className={`font-semibold ${isLight ? 'text-[#0f172a]' : 'text-[#b9cacb]'}`}>
+          <span className={`font-medium ${isLight ? 'text-[#0f172a]' : 'text-[#94a3b8]'}`}>
             {centerLabel}
           </span>
           <span>{rightLabel}</span>
@@ -836,131 +838,90 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
     );
   };
 
-  // Block A: Stage Verdict Banner (Used in Stages 01–05)
+  // Rule B: Clean Stage Verdict Header (Used in Stages 1–5)
   const renderStageVerdictBanner = (stageDef: StageDefinition) => {
     const evalData = stageEvaluations[stageDef.id as 1 | 2 | 3 | 4 | 5];
-    const borderAccent =
+    const biasWord =
       evalData.bias === 'BULLISH'
-        ? isLight
-          ? 'border-l-[#059669]'
-          : 'border-l-[#4edea3]'
+        ? 'Bullish'
         : evalData.bias === 'BEARISH'
-        ? isLight
-          ? 'border-l-[#dc2626]'
-          : 'border-l-[#ffb4ab]'
-        : isLight
-        ? 'border-l-[#0284c7]'
-        : 'border-l-[#00f0ff]';
+        ? 'Bearish'
+        : 'Neutral';
 
     return (
-      <div
-        className={`cyber-panel cyber-scan-active border-l-2 ${borderAccent} p-4 flex flex-col gap-3`}
-      >
-        {/* Top Row: Stage Badge + Question + Live Stage Score & Bias Pill */}
+      <div className="cyber-panel p-4 flex flex-col gap-3">
+        {/* Top Row: Stage Title + Question on left, Bias Badge on right */}
         <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div className="flex flex-col gap-1 min-w-0 flex-1">
+          <div className="flex flex-col gap-0.5 min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <span
-                className={`px-2.5 py-0.5 rounded-md border font-mono text-[10px] font-bold tracking-wider ${
-                  isLight
-                    ? 'bg-[#ffffff] border-[#0284c7]/40 text-[#0284c7]'
-                    : 'bg-[#0b0e14] border-[#00f0ff]/40 text-[#00f0ff]'
+                className={`font-sans text-[13px] font-semibold ${
+                  isLight ? 'text-[#0f172a]' : 'text-[#f8fafc]'
                 }`}
               >
-                {stageDef.fullTitle}
+                {stageDef.stepperLabel} — {stageDef.fullTitle}
               </span>
               <span
-                className={`font-mono text-[10px] uppercase ${
-                  isLight ? 'text-[#475569]' : 'text-[#849495]'
+                className={`font-mono text-[11px] ${
+                  isLight ? 'text-[#64748b]' : 'text-[#64748b]'
                 }`}
               >
                 {stageDef.subtitle}
               </span>
             </div>
             <h3
-              className={`font-sans text-[15px] sm:text-[16px] font-bold tracking-tight leading-snug pt-0.5 ${
-                isLight ? 'text-[#0f172a]' : 'text-white'
+              className={`font-sans text-[14px] font-medium leading-snug ${
+                isLight ? 'text-[#334155]' : 'text-[#94a3b8]'
               }`}
             >
-              “{stageDef.question}”
+              {stageDef.question}
             </h3>
           </div>
 
-          {/* Live Stage Score & Bias Badge */}
           <div className="flex items-center gap-2 shrink-0">
-            <div
-              className={`px-3 py-1.5 rounded-lg border font-mono text-[11px] font-bold tabular-nums flex items-center gap-2 ${
-                evalData.bias === 'BULLISH'
-                  ? isLight
-                    ? 'bg-[#059669]/10 text-[#047857] border-[#059669]/40'
-                    : 'bg-[#4edea3]/10 text-[#4edea3] border-[#4edea3]/40'
-                  : evalData.bias === 'BEARISH'
-                  ? isLight
-                    ? 'bg-[#dc2626]/10 text-[#b91c1c] border-[#dc2626]/40'
-                    : 'bg-[#ffb4ab]/10 text-[#ffb4ab] border-[#ffb4ab]/40'
-                  : isLight
-                  ? 'bg-[#d97706]/10 text-[#b45309] border-[#d97706]/40'
-                  : 'bg-[#f59e0b]/10 text-[#fcd34d] border-[#f59e0b]/40'
-              }`}
-            >
-              <span
-                className="w-2 h-2 rounded-full shrink-0"
-                style={{ backgroundColor: getReadableStatusColor(evalData.dotColor) }}
-              />
-              <span>
-                <ScrambleValue text={`${evalData.score}%`} /> {evalData.bias} ALIGNMENT
-              </span>
-            </div>
+            <SignalBiasPill
+              bias={evalData.bias}
+              label={`${biasWord} ${evalData.score}%`}
+              size="sm"
+            />
           </div>
         </div>
 
-        {/* 1-Sentence Plain-English Takeaway */}
+        {/* Concise 1-sentence summary + two clean text buttons */}
         <div
-          className={`rounded-xl p-4 border shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-            isLight
-              ? 'bg-[#ffffff] border-[#cbd5e1]'
-              : 'bg-[#0d121d]/90 border-white/[0.08]'
+          className={`pt-3 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+            isLight ? 'border-[#e2e8f0]' : 'border-white/[0.06]'
           }`}
         >
           <p
             className={`font-sans text-[13px] leading-relaxed flex-1 ${
-              isLight ? 'text-[#0f172a]' : 'text-[#cbd5e1]'
+              isLight ? 'text-[#1e293b]' : 'text-[#cbd5e1]'
             }`}
           >
-            <strong
-              className={`font-mono uppercase text-[11px] mr-1.5 ${
-                isLight ? 'text-[#0284c7]' : 'text-[#00f0ff]'
-              }`}
-            >
-              STAGE {stageDef.stepCode} VERDICT:
-            </strong>
             {evalData.takeaway}
           </p>
 
-          {/* Quick Action Buttons to Track Stage Entry or Load into Sizer */}
-          <div className="flex items-center gap-2 shrink-0 font-mono">
+          <div className="flex items-center gap-2 shrink-0 font-sans text-[12px]">
             <button
               type="button"
               onClick={(e) =>
                 toggleTrackPrice(
                   e,
-                  `STAGE ${stageDef.stepCode} ENTRY`,
+                  `${stageDef.shortTitle} Entry`,
                   evalData.setup.suggestedEntry
                 )
               }
-              className={`text-[11px] sm:text-[12px] font-semibold px-3.5 py-2 rounded-lg border uppercase transition-all shadow-sm cursor-pointer ${
+              className={`px-3 py-1.5 rounded-md border font-medium transition-colors cursor-pointer ${
                 isPriceTracked(evalData.setup.suggestedEntry)
-                  ? isLight
-                    ? 'bg-[#0284c7]/15 text-[#0284c7] border-[#0284c7]'
-                    : 'bg-[#00f0ff]/20 text-[#00f0ff] border-[#00f0ff]'
+                  ? 'bg-[#3b82f6]/15 text-[#60a5fa] border-[#3b82f6]/40'
                   : isLight
-                  ? 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#1e293b] border-[#cbd5e1]'
-                  : 'bg-[#141821] hover:bg-[#191c22] text-[#e1e2eb] border-white/15'
+                  ? 'bg-[#f8fafc] hover:bg-[#f1f5f9] text-[#334155] border-[#cbd5e1]'
+                  : 'bg-[#171c28] hover:bg-[#1e2536] text-[#e2e8f0] border-white/[0.08]'
               }`}
             >
               {isPriceTracked(evalData.setup.suggestedEntry)
-                ? '🎯 TRACKING ZONE'
-                : `🎯 TRACK $${formatP(evalData.setup.suggestedEntry)}`}
+                ? `Highlighted ($${formatP(evalData.setup.suggestedEntry)})`
+                : 'Highlight on Chart'}
             </button>
             <button
               type="button"
@@ -976,14 +937,9 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                 );
                 handleStageSelect(6);
               }}
-              className={`text-[11px] sm:text-[12px] font-semibold px-3.5 py-2 rounded-lg border uppercase transition-all shadow-sm cursor-pointer ${
-                isLight
-                  ? 'bg-[#0284c7]/15 hover:bg-[#0284c7]/25 text-[#0284c7] border-[#0284c7]/40'
-                  : 'bg-[#00f0ff]/15 hover:bg-[#00f0ff]/25 text-[#00f0ff] border-[#00f0ff]/40'
-              }`}
-              title="Load this stage's entry, stop loss, and targets into the Execution Sizer"
+              className="px-3 py-1.5 bg-[#6366f1]/15 hover:bg-[#6366f1]/25 text-[#a5b4fc] border border-[#6366f1]/30 rounded-lg font-medium transition-colors cursor-pointer"
             >
-              ⚡ LOAD INTO SIZER
+              Load Setup
             </button>
           </div>
         </div>
@@ -991,7 +947,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
     );
   };
 
-  // Block C: Bottom Stage Navigation & Inline Learn Accordion
+  // Bottom Stage Navigation & Cleanly Collapsed Learn Accordion
   const renderStageFooterAndLearn = (stageDef: StageDefinition) => {
     const learnOpen = isStageLearnOpen(stageDef.id);
     const prevStage = stageDef.id > 1 ? STAGES[stageDef.id - 2] : null;
@@ -999,22 +955,22 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
 
     return (
       <div className="flex flex-col gap-3 pt-1">
-        {/* Collapsible Learn This Layer & Study Links Accordion */}
+        {/* Collapsible Learn & Study Links Accordion */}
         <div className="cyber-panel overflow-hidden">
           <button
             type="button"
             onClick={() => toggleStageLearn(stageDef.id)}
-            className="w-full px-4 py-3 bg-[#0d121d]/90 hover:bg-[#141821] flex items-center justify-between gap-2 font-mono text-[11px] text-[#00f0ff] font-bold uppercase tracking-wider transition-colors cursor-pointer"
+            className="w-full px-4 py-2.5 flex items-center justify-between gap-2 font-sans text-[12px] font-medium text-[#94a3b8] hover:text-[#f8fafc] transition-colors cursor-pointer"
           >
             <span className="flex items-center gap-2">
-              <span>🎓 LEARN STAGE {stageDef.stepCode} ({stageDef.shortTitle}) &amp; STUDY LINKS</span>
+              <span>Learn &amp; Study Links ({stageDef.shortTitle})</span>
               {experienceMode === 'rookie' && (
-                <span className="px-2 py-0.5 rounded bg-[#00f0ff]/15 border border-[#00f0ff]/40 text-[9px] text-[#dbfcff]">
-                  ROOKIE GUIDE
+                <span className="px-1.5 py-0.5 rounded bg-[#3b82f6]/15 border border-[#3b82f6]/30 font-mono text-[10px] text-[#60a5fa]">
+                  Rookie Guide
                 </span>
               )}
             </span>
-            <span>{learnOpen ? 'HIDE ▴' : 'EXPAND ▾'}</span>
+            <span className="font-mono text-[11px]">{learnOpen ? 'Hide ▴' : 'Learn & Study Links ▾'}</span>
           </button>
 
           <AnimatePresence initial={false}>
@@ -1024,35 +980,32 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
                 transition={{ duration: 0.18, ease: 'easeOut' }}
-                className="overflow-hidden border-t border-white/[0.08] bg-[#090d16]/90 p-4 flex flex-col gap-3"
+                className="overflow-hidden border-t border-white/[0.06] bg-[#0d1017] p-4 flex flex-col gap-3"
               >
-                <div className="grid grid-cols-1 gap-3">
+                <div className="divide-y divide-white/[0.06]">
                   {stageDef.mentorKeys.map((mKey) => {
                     const mentor = getRookieMentorGuide(mKey, symbol);
                     return (
-                      <div
-                        key={mKey}
-                        className="rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg flex flex-col gap-2"
-                      >
+                      <div key={mKey} className="py-3 first:pt-0 last:pb-0 flex flex-col gap-2">
                         <div className="flex items-center justify-between gap-2 flex-wrap">
-                          <span className="font-mono text-[11px] font-bold text-[#00f0ff] uppercase">
-                            🧠 {mKey.replace(/_/g, ' ')} — MENTAL MODEL
+                          <span className="font-sans text-[12px] font-semibold text-[#f8fafc] capitalize">
+                            {mKey.replace(/_/g, ' ')} — Mental Model
                           </span>
-                          <span className="font-mono text-[10px] text-[#849495]">
-                            STD NORM: {mentor.standardRangeGuide.normal}
+                          <span className="font-mono text-[11px] text-[#64748b]">
+                            Norm: {mentor.standardRangeGuide.normal}
                           </span>
                         </div>
-                        <p className="font-sans text-[13px] text-[#cbd5e1] leading-relaxed">
-                          <strong className="text-[#fcd34d] font-mono">Analogy: </strong>
+                        <p className="font-sans text-[12.5px] text-[#94a3b8] leading-relaxed">
+                          <strong className="text-[#f8fafc] font-medium">Analogy: </strong>
                           {mentor.familiarBridge}
                         </p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 font-sans text-[12px] pt-1">
-                          <div className="rounded-lg p-3 bg-[#090c12] border-l-2 border-l-[#4edea3] text-[#dbfcff]">
-                            <strong className="text-[#4edea3] font-mono">✓ DO THIS: </strong>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 font-sans text-[12px] pt-1">
+                          <div className="rounded-md p-2.5 bg-[#12161f] border border-white/[0.06] text-[#cbd5e1]">
+                            <strong className="text-[#10b981] font-mono text-[11px]">DO: </strong>
                             {mentor.rookieActionRule.doThis}
                           </div>
-                          <div className="rounded-lg p-3 bg-[#090c12] border-l-2 border-l-[#ffb4ab] text-[#dbfcff]">
-                            <strong className="text-[#ffb4ab] font-mono">✕ AVOID TRAP: </strong>
+                          <div className="rounded-md p-2.5 bg-[#12161f] border border-white/[0.06] text-[#cbd5e1]">
+                            <strong className="text-[#f43f5e] font-mono text-[11px]">AVOID: </strong>
                             {mentor.rookieActionRule.avoidTrap}
                           </div>
                         </div>
@@ -1061,11 +1014,11 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                   })}
                 </div>
 
-                {/* Curated External Study Links + Interactive Reverse X-Ray Quiz Shortcut */}
-                <div className="flex items-center justify-between gap-2 flex-wrap pt-2 border-t border-white/[0.08]">
+                {/* External Study References */}
+                <div className="flex items-center justify-between gap-2 flex-wrap pt-3 border-t border-white/[0.06]">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-[10px] text-[#849495] uppercase">
-                      EXTERNAL STUDY REFERENCES:
+                    <span className="font-mono text-[10px] text-[#64748b] uppercase">
+                      Study References:
                     </span>
                     {stageDef.studyLinks.map((link, idx) => (
                       <a
@@ -1073,9 +1026,9 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                         href={link.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-2.5 py-1.5 rounded-lg bg-[#141821] hover:bg-[#191c22] border border-[#00f0ff]/30 text-[#00f0ff] font-mono text-[10px] font-semibold transition-colors"
+                        className="px-2.5 py-1 rounded-md bg-[#12161f] hover:bg-[#171c28] border border-white/[0.07] text-[#94a3b8] hover:text-[#f8fafc] font-sans text-[11px] transition-colors"
                       >
-                        📖 {link.label} ({link.source}) ↗
+                        {link.label} ({link.source}) ↗
                       </a>
                     ))}
                   </div>
@@ -1087,9 +1040,9 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                       setShowReverseXRay(true);
                       onToggleWorkspaceExpand?.(true);
                     }}
-                    className="text-[11px] font-semibold px-3.5 py-2 rounded-lg bg-[#c084fc]/15 hover:bg-[#c084fc]/25 border border-[#c084fc]/40 text-[#e9d5ff] font-mono uppercase cursor-pointer transition-all shadow-sm"
+                    className="text-[11px] font-medium px-3 py-1.5 rounded-md bg-[#171c28] hover:bg-[#1e2536] border border-white/[0.08] text-[#f8fafc] font-sans cursor-pointer transition-colors"
                   >
-                    📚 OPEN CODEX &amp; LIVE X-RAY →
+                    Open Learn &amp; X-Ray →
                   </button>
                 </div>
               </motion.div>
@@ -1098,19 +1051,19 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
         </div>
 
         {/* Sequential Stage Stepper Buttons */}
-        <div className="flex items-center justify-between gap-2 flex-wrap rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-3.5 shadow-lg font-mono">
+        <div className="flex items-center justify-between gap-2 flex-wrap cyber-panel px-4 py-2.5 font-sans text-[12px]">
           <div>
             {prevStage ? (
               <button
                 type="button"
                 onClick={() => handleStageSelect(prevStage.id)}
-                className="text-[11px] sm:text-[12px] font-semibold px-3.5 py-2 rounded-lg bg-[#141821] hover:bg-[#191c22] text-[#e1e2eb] border border-white/15 uppercase transition-all shadow-sm cursor-pointer"
+                className="font-medium px-3 py-1.5 rounded-md bg-[#171c28] hover:bg-[#1e2536] text-[#cbd5e1] border border-white/[0.08] transition-colors cursor-pointer"
               >
-                ← PREV STAGE ({prevStage.stepCode} {prevStage.shortTitle})
+                ← {prevStage.stepperLabel}
               </button>
             ) : (
-              <span className="text-[11px] text-[#849495] px-2 font-semibold">
-                FUNNEL START // STAGE 01
+              <span className="text-[11px] text-[#64748b] font-mono">
+                Stage 1 of 6
               </span>
             )}
           </div>
@@ -1124,9 +1077,9 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                   handleStageSelect(6);
                   onToggleWorkspaceExpand?.(false);
                 }}
-                className="text-[11px] sm:text-[12px] font-semibold px-3.5 py-2 rounded-lg bg-[#4edea3]/15 hover:bg-[#4edea3]/25 text-[#4edea3] border border-[#4edea3]/40 uppercase transition-all shadow-sm cursor-pointer"
+                className="font-medium px-3 py-1.5 rounded-md bg-[#171c28] hover:bg-[#1e2536] text-[#cbd5e1] border border-white/[0.08] transition-colors cursor-pointer"
               >
-                🎯 EXECUTE &amp; SIZER
+                Execute &amp; Size
               </button>
             )}
 
@@ -1134,9 +1087,9 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
               <button
                 type="button"
                 onClick={() => handleStageSelect(nextStage.id)}
-                className="text-[11px] sm:text-[12px] font-semibold px-4 py-2 rounded-lg bg-[#00f0ff]/15 hover:bg-[#00f0ff]/25 text-[#00f0ff] border border-[#00f0ff]/50 uppercase tracking-wider shadow-[0_0_14px_rgba(0,240,255,0.18)] transition-all cursor-pointer"
+                className="px-3.5 py-1.5 bg-[#6366f1]/15 hover:bg-[#6366f1]/25 text-[#a5b4fc] border border-[#6366f1]/30 rounded-lg font-medium transition-colors cursor-pointer"
               >
-                NEXT STAGE: {nextStage.stepCode} {nextStage.shortTitle} →
+                Next: {nextStage.stepperLabel} →
               </button>
             )}
           </div>
@@ -1146,7 +1099,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
   };
 
   // ============================================================================
-  // STAGE 01 CONTENT: PRICE & STRUCTURE (Candles, Wicks & S/R)
+  // STAGE 1 CONTENT: PRICE & STRUCTURE (Hairline Key-Value List)
   // ============================================================================
   const renderStage01Price = () => {
     const wickPct = Math.round((candlestickResult.anatomy?.wickRejectionRatio || 0.5) * 100);
@@ -1163,316 +1116,188 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
       ? candlestickResult.recentPatterns.filter((p) => p.isAtKeyLevel)
       : candlestickResult.recentPatterns;
 
+    const primaryBias: 'BULLISH' | 'BEARISH' | 'NEUTRAL' =
+      candlestickResult.primaryPattern?.bias === 'BULLISH'
+        ? 'BULLISH'
+        : candlestickResult.primaryPattern?.bias === 'BEARISH'
+        ? 'BEARISH'
+        : 'NEUTRAL';
+
+    const clvBias: 'BULLISH' | 'BEARISH' | 'NEUTRAL' =
+      clvPct >= 65 ? 'BULLISH' : clvPct <= 35 ? 'BEARISH' : 'NEUTRAL';
+
+    const wickBias: 'BULLISH' | 'BEARISH' | 'NEUTRAL' =
+      wickPct >= 50
+        ? clvPct >= 50
+          ? 'BULLISH'
+          : 'BEARISH'
+        : 'NEUTRAL';
+
     return (
-      <div className="flex flex-col p-4 gap-4">
+      <div className="flex flex-col p-4 gap-3.5">
         {renderStageVerdictBanner(STAGES[0])}
 
-        {/* CARD 1: Primary Candlestick Pattern & Wick Anatomy Card */}
+        {/* Hairline Metric List Card: Candle Anatomy & Support/Resistance */}
         <div className="cyber-panel p-4 flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-2 flex-wrap border-b border-[#1e2636] pb-2.5">
-            <div className="flex items-center gap-2">
-              <span className="text-[16px]">🕯️</span>
-              <span className="font-mono text-[11px] font-bold text-[#00f0ff] uppercase tracking-wider">
-                CARD 1A // PRIMARY CANDLESTICK PATTERN &amp; WICK ANATOMY
-              </span>
-            </div>
-            {candlestickResult.primaryPattern && (
-              <div className="flex items-center gap-1.5 font-mono text-[10px] tabular-nums">
-                <SignalBiasPill
-                  size="sm"
-                  bias={candlestickResult.primaryPattern.bias}
-                  label={candlestickResult.primaryPattern.bias}
-                />
-                <span className="px-2 py-0.5 bg-[#0b0e14] border border-[#1e2636] text-[#00f0ff] font-bold rounded">
-                  QUALITY: {candlestickResult.primaryPattern.quality}%
-                </span>
-              </div>
-            )}
-          </div>
-
-          {candlestickResult.primaryPattern ? (
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <h4 className="font-mono text-[15px] sm:text-[16px] font-bold tracking-tight text-white">
-                  {candlestickResult.primaryPattern.name}
-                </h4>
-                <span className="font-mono text-[10.5px] text-[#849495] tabular-nums">
-                  {candlestickResult.primaryPattern.barsAgo === 0
-                    ? 'Active Bar'
-                    : `${candlestickResult.primaryPattern.barsAgo} Bars Ago`}{' '}
-                  • RVOL {candlestickResult.primaryPattern.rvol.toFixed(2)}x • Tested:{' '}
-                  <strong className="text-[#00f0ff]">
-                    {candlestickResult.primaryPattern.testedLevelName || 'Intraday S/R'}
-                  </strong>
-                </span>
-              </div>
-              <p className="font-sans text-[13px] text-[#cbd5e1] leading-relaxed">
-                {candlestickResult.primaryPattern.description}
-              </p>
-            </div>
-          ) : (
-            <div className="font-mono text-[12px] text-[#849495]">
-              No high-conviction candlestick reversal or continuation pattern on the immediate bar.
-            </div>
-          )}
-
-          {/* 3-Metric Wick Anatomy Strip */}
-          {(() => {
-            const lastBar = klines[klines.length - 1];
-            const isGreenBar = !lastBar || lastBar.close >= lastBar.open;
-            const wickBias =
-              clvPct >= 55 && wickPct >= 40
-                ? 'BULLISH'
-                : clvPct <= 45 && wickPct >= 40
-                ? 'BEARISH'
-                : 'NEUTRAL';
-            const clvBias = clvPct >= 60 ? 'BULLISH' : clvPct <= 40 ? 'BEARISH' : 'NEUTRAL';
-            const bodyBias =
-              bodyAtr >= 0.9 ? (isGreenBar ? 'BULLISH' : 'BEARISH') : 'NEUTRAL';
-            const bodyLabel =
-              bodyAtr >= 0.9
-                ? isGreenBar
-                  ? 'BULLISH IMPULSE'
-                  : 'BEARISH IMPULSE'
-                : 'COMPRESSION';
-
-            return (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 tabular-nums">
-                <div className="rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg flex flex-col justify-between gap-1.5">
-                  <div className="flex items-center justify-between gap-1.5">
-                    <span className="font-mono text-[10px] text-[#849495] uppercase">
-                      WICK REJECTION RATIO
-                    </span>
-                    <SignalBiasPill size="xs" bias={wickBias} />
-                  </div>
-                  <div className="font-mono text-[18px] font-bold text-[#4edea3]">{wickPct}%</div>
-                  <span className="font-mono text-[9.5px] text-[#849495]">
-                    {wickPct >= 55
-                      ? 'Strong liquidity sweep & rejection tail'
-                      : 'Standard intrabar shadow proportion'}
-                  </span>
-                </div>
-
-                <div className="rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg flex flex-col justify-between gap-1.5">
-                  <div className="flex items-center justify-between gap-1.5">
-                    <span className="font-mono text-[10px] text-[#849495] uppercase">
-                      CLOSE LOCATION (CLV)
-                    </span>
-                    <SignalBiasPill size="xs" bias={clvBias} />
-                  </div>
-                  <div className="font-mono text-[18px] font-bold text-[#dbfcff]">{clvPct}%</div>
-                  <span className="font-mono text-[9.5px] text-[#849495]">
-                    {clvPct >= 70
-                      ? 'Buyers closed near bar high'
-                      : clvPct <= 30
-                      ? 'Sellers closed near bar low'
-                      : 'Balanced mid-bar close'}
-                  </span>
-                </div>
-
-                <div className="rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg flex flex-col justify-between gap-1.5">
-                  <div className="flex items-center justify-between gap-1.5">
-                    <span className="font-mono text-[10px] text-[#849495] uppercase">
-                      BODY / 14-BAR ATR
-                    </span>
-                    <SignalBiasPill size="xs" bias={bodyBias} label={bodyLabel} />
-                  </div>
-                  <div className="font-mono text-[18px] font-bold text-[#f59e0b]">
-                    {bodyAtr.toFixed(2)}x
-                  </div>
-                  <span className="font-mono text-[9.5px] text-[#849495]">
-                    {bodyAtr >= 1.35
-                      ? 'Expansion displacement candle'
-                      : bodyAtr <= 0.4
-                      ? 'Indecision / Doji compression'
-                      : 'Normal bar body range'}
-                  </span>
-                </div>
-              </div>
-            );
-          })()}
-
-          {renderBenchmarkRangeStrip(
-            wickPct,
-            wickPct >= 55 ? '#4edea3' : '#00f0ff',
-            '0% (Full Body)',
-            'STD NORM: 25%–55% Wick',
-            '85%+ (Pinbar Sweep)'
-          )}
-
-          {/* Optional Toggle to View All 22 Scanned Candlestick Patterns */}
-          <div className="pt-1">
-            <button
-              type="button"
-              onClick={() => setShowFullPatternScanner((prev) => !prev)}
-              className="font-mono text-[9.5px] text-[#00f0ff] hover:underline uppercase font-bold cursor-pointer"
-            >
-              {showFullPatternScanner
-                ? '▴ HIDE 22-PATTERN MULTI-BAR SCANNER'
-                : `▾ VIEW 22-PATTERN SCANNER LOG (${candlestickResult.recentPatterns.length} SIGNALS)`}
-            </button>
-            {showFullPatternScanner && (
-              <div className="mt-2 p-2.5 bg-[#090c12] border border-[#1e2636] flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-[9px] text-[#849495] uppercase">
-                    RECENT FORMATIONS ACROSS LAST 25 BARS
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setFilterOnlyKeyLevels((p) => !p)}
-                    className="px-2 py-0.5 bg-[#141821] border border-[#1e2636] font-mono text-[8.5px] text-[#00f0ff] cursor-pointer"
-                  >
-                    {filterOnlyKeyLevels ? '● KEY S/R ONLY' : '○ SHOW ALL'}
-                  </button>
-                </div>
-                <div className="overflow-x-auto no-scrollbar max-h-48">
-                  <table className="w-full text-left font-mono text-[9.5px] tabular-nums">
-                    <thead>
-                      <tr className="text-[#849495] border-b border-[#1e2636]">
-                        <th className="py-1 pr-2">BAR</th>
-                        <th className="py-1 pr-2">PATTERN</th>
-                        <th className="py-1 pr-2">BIAS</th>
-                        <th className="py-1 pr-2">LEVEL</th>
-                        <th className="py-1 text-right">QUAL</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#1e2636]/60">
-                      {visiblePatterns.map((p, idx) => (
-                        <tr key={idx} className="hover:bg-[#141821]">
-                          <td className="py-1 pr-2 text-[#849495]">
-                            {p.barsAgo === 0 ? 'Now' : `${p.barsAgo}b`}
-                          </td>
-                          <td className="py-1 pr-2 font-bold text-[#dbfcff]">{p.name}</td>
-                          <td
-                            className={`py-1 pr-2 font-bold ${
-                              p.bias === 'BULLISH' ? 'text-[#4edea3]' : 'text-[#ffb4ab]'
-                            }`}
-                          >
-                            {p.bias}
-                          </td>
-                          <td className="py-1 pr-2 text-[#00f0ff]">
-                            {p.testedLevelName || 'Mid'}
-                          </td>
-                          <td className="py-1 text-right text-[#e1e2eb] font-bold">{p.quality}%</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* CARD 2: Key Support & Resistance Proximity Card */}
-        <div className="cyber-panel p-4 flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-2 flex-wrap border-b border-[#1e2636] pb-2.5">
-            <span className="font-mono text-[11px] font-bold text-[#00f0ff] uppercase tracking-wider">
-              CARD 1B // KEY SUPPORT &amp; RESISTANCE PROXIMITY (CLICK TO SPOTLIGHT)
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-sans text-[13px] font-semibold text-[#f8fafc]">
+              Price Action &amp; Structural Levels
             </span>
-            <div className="flex items-center gap-2 flex-wrap">
-              <SignalBiasPill
-                size="sm"
-                bias={
-                  rangePositionPct <= 35
-                    ? 'BULLISH'
-                    : rangePositionPct >= 65
-                    ? 'BEARISH'
-                    : 'NEUTRAL'
-                }
-                label={
-                  rangePositionPct <= 35
-                    ? 'BULLISH DEMAND'
-                    : rangePositionPct >= 65
-                    ? 'BEARISH SUPPLY'
-                    : 'MID-RANGE'
-                }
-              />
-              <span className="font-mono text-[10px] text-[#849495] tabular-nums">
-                NEAREST: <strong className="text-[#dbfcff]">{candlestickResult.anatomy?.nearestSrName || 'S/R Pivot'}</strong> (
-                {(candlestickResult.anatomy?.nearestSrDistancePct || 0.45).toFixed(2)}% away)
-              </span>
-            </div>
+            <span className="font-mono text-[11px] text-[#64748b] tabular-nums">
+              Spot: ${formatP(currentPrice)}
+            </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 tabular-nums">
-            {/* SR_LOW Support Floor */}
-            <div
-              onClick={(e) => toggleTrackPrice(e, 'SR_LOW (PIVOT SUPPORT)', srLow)}
-              className={`cyber-panel border-l-2 border-l-[#4edea3] p-3.5 flex flex-col justify-between cursor-pointer ${
-                isPriceTracked(srLow) ? 'cyber-panel-tracked' : ''
-              }`}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-mono text-[10px] font-bold text-[#4edea3] uppercase">
-                  SR_LOW // STRUCTURAL SUPPORT
+          <div className="divide-y divide-white/[0.06] font-mono text-[12px] tabular-nums">
+            {/* Row 1: Primary Candlestick Pattern */}
+            <div className="py-2.5 flex items-center justify-between gap-3">
+              <div className="flex flex-col">
+                <span className="font-sans text-[12.5px] text-[#cbd5e1] font-medium">
+                  Primary Candlestick Pattern
                 </span>
-                <div className="flex items-center gap-1.5">
-                  <SignalBiasPill
-                    size="xs"
-                    bias="BULLISH"
-                    label={distLowPct <= 1.2 ? 'BULLISH DEMAND ACTIVE' : 'BULLISH FLOOR'}
-                  />
-                  <span className="px-1.5 py-0.5 bg-[#0b0e14] border border-[#4edea3]/40 font-mono text-[8.5px] text-[#4edea3] font-bold rounded">
-                    {isPriceTracked(srLow) ? '🎯 ON' : '🎯 TRACK'}
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-baseline justify-between mt-2">
-                <span className="font-mono text-[18px] font-bold text-[#4edea3]">
-                  ${formatP(srLow)}
-                </span>
-                <span className="font-mono text-[11px] text-[#b9cacb]">
-                  -{distLowPct.toFixed(2)}% below spot
+                <span className="font-sans text-[11px] text-[#64748b]">
+                  {candlestickResult.primaryPattern?.description || 'Active bar formation'}
                 </span>
               </div>
-              <span className="font-mono text-[9px] text-[#849495] mt-1">
-                Fractal swing demand floor — primary invalidation anchor for longs
-              </span>
+              <div className="flex items-center gap-3">
+                <span className="text-[#f8fafc] font-semibold">
+                  {candlestickResult.primaryPattern?.name || 'Neutral Bar'} ({candlestickResult.primaryPattern?.quality ?? 68}%)
+                </span>
+                <SignalBiasPill bias={primaryBias} />
+              </div>
             </div>
 
-            {/* SR_HIGH Resistance Ceiling */}
+            {/* Row 2: Wick Rejection Ratio */}
+            <div className="py-2.5 flex items-center justify-between gap-3">
+              <div className="flex flex-col">
+                <span className="font-sans text-[12.5px] text-[#cbd5e1] font-medium">
+                  Wick Rejection Ratio
+                </span>
+                <span className="font-sans text-[11px] text-[#64748b]">
+                  {wickPct >= 55 ? 'Strong limit absorption tail' : 'Standard intrabar wick'}
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-[#f8fafc] font-semibold">{wickPct}%</span>
+                <SignalBiasPill bias={wickBias} />
+              </div>
+            </div>
+
+            {/* Row 3: Close Location Value (CLV) */}
+            <div className="py-2.5 flex items-center justify-between gap-3">
+              <div className="flex flex-col">
+                <span className="font-sans text-[12.5px] text-[#cbd5e1] font-medium">
+                  Close Location Value (CLV) &amp; Body Impulse
+                </span>
+                <span className="font-sans text-[11px] text-[#64748b]">
+                  Where candle closed within its High–Low range
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-[#f8fafc] font-semibold">
+                  {clvPct}% CLV • {bodyAtr.toFixed(2)}x ATR
+                </span>
+                <SignalBiasPill bias={clvBias} />
+              </div>
+            </div>
+
+            {/* Row 4: Nearest Structural Support (SR Low) */}
             <div
-              onClick={(e) => toggleTrackPrice(e, 'SR_HIGH (PIVOT RESISTANCE)', srHigh)}
-              className={`cyber-panel border-l-2 border-l-[#ffb4ab] p-3.5 flex flex-col justify-between cursor-pointer ${
-                isPriceTracked(srHigh) ? 'cyber-panel-tracked' : ''
-              }`}
+              onClick={(e) => toggleTrackPrice(e, 'Support (SR Low)', srLow)}
+              className="py-2.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-white/[0.02] -mx-2 px-2 rounded transition-colors"
             >
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-mono text-[10px] font-bold text-[#ffb4ab] uppercase">
-                  SR_HIGH // STRUCTURAL RESISTANCE
+              <div className="flex flex-col">
+                <span className="font-sans text-[12.5px] text-[#cbd5e1] font-medium">
+                  Structural Support (SR Low)
                 </span>
-                <div className="flex items-center gap-1.5">
-                  <SignalBiasPill
-                    size="xs"
-                    bias="BEARISH"
-                    label={distHighPct <= 1.2 ? 'BEARISH SUPPLY ACTIVE' : 'BEARISH CEILING'}
-                  />
-                  <span className="px-1.5 py-0.5 bg-[#0b0e14] border border-[#ffb4ab]/40 font-mono text-[8.5px] text-[#ffb4ab] font-bold rounded">
-                    {isPriceTracked(srHigh) ? '🎯 ON' : '🎯 TRACK'}
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-baseline justify-between mt-2">
-                <span className="font-mono text-[18px] font-bold text-[#ffb4ab]">
-                  ${formatP(srHigh)}
-                </span>
-                <span className="font-mono text-[11px] text-[#b9cacb]">
-                  +{distHighPct.toFixed(2)}% above spot
+                <span className="font-sans text-[11px] text-[#64748b]">
+                  Click to highlight level on chart ({distLowPct.toFixed(2)}% below spot)
                 </span>
               </div>
-              <span className="font-mono text-[9px] text-[#849495] mt-1">
-                Fractal swing supply ceiling — primary take-profit or short rejection zone
-              </span>
+              <div className="flex items-center gap-3">
+                <span className="text-[#10b981] font-semibold">${formatP(srLow)}</span>
+                <SignalBiasPill
+                  bias={distLowPct <= 1.2 ? 'BULLISH' : 'NEUTRAL'}
+                  label={distLowPct <= 1.2 ? 'BULLISH DEMAND' : 'SUPPORT'}
+                />
+              </div>
+            </div>
+
+            {/* Row 5: Nearest Structural Resistance (SR High) */}
+            <div
+              onClick={(e) => toggleTrackPrice(e, 'Resistance (SR High)', srHigh)}
+              className="py-2.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-white/[0.02] -mx-2 px-2 rounded transition-colors"
+            >
+              <div className="flex flex-col">
+                <span className="font-sans text-[12.5px] text-[#cbd5e1] font-medium">
+                  Structural Resistance (SR High)
+                </span>
+                <span className="font-sans text-[11px] text-[#64748b]">
+                  Click to highlight level on chart ({distHighPct.toFixed(2)}% above spot)
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-[#f43f5e] font-semibold">${formatP(srHigh)}</span>
+                <SignalBiasPill
+                  bias={distHighPct <= 1.2 ? 'BEARISH' : 'NEUTRAL'}
+                  label={distHighPct <= 1.2 ? 'BEARISH SUPPLY' : 'RESISTANCE'}
+                />
+              </div>
             </div>
           </div>
 
           {renderBenchmarkRangeStrip(
             rangePositionPct,
-            rangePositionPct <= 25 ? '#4edea3' : rangePositionPct >= 75 ? '#ffb4ab' : '#00f0ff',
-            `SR_LOW ($${formatP(srLow)})`,
-            `Spot Position: ${Math.round(rangePositionPct)}% of S/R Corridor`,
-            `SR_HIGH ($${formatP(srHigh)})`
+            rangePositionPct <= 30 ? '#10b981' : rangePositionPct >= 70 ? '#f43f5e' : '#3b82f6',
+            `Support $${formatP(srLow)}`,
+            `Range Position: ${rangePositionPct.toFixed(0)}%`,
+            `Resistance $${formatP(srHigh)}`
+          )}
+
+          {/* Optional Multi-Bar Pattern Scanner Drawer */}
+          <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setShowFullPatternScanner((prev) => !prev)}
+              className="font-sans text-[12px] font-medium text-[#60a5fa] hover:text-[#93c5fd] cursor-pointer"
+            >
+              {showFullPatternScanner
+                ? 'Hide Recent Candlestick History ▴'
+                : `View Recent Candlestick History (${candlestickResult.recentPatterns.length}) ▾`}
+            </button>
+
+            {showFullPatternScanner && (
+              <button
+                type="button"
+                onClick={() => setFilterOnlyKeyLevels((prev) => !prev)}
+                className={`px-2.5 py-1 rounded border font-mono text-[10px] cursor-pointer ${
+                  filterOnlyKeyLevels
+                    ? 'bg-[#3b82f6]/15 text-[#60a5fa] border-[#3b82f6]/40'
+                    : 'bg-[#171c28] text-[#94a3b8] border-white/[0.08]'
+                }`}
+              >
+                {filterOnlyKeyLevels ? 'Showing Key Level Hits Only' : 'Filter: Key Levels Only'}
+              </button>
+            )}
+          </div>
+
+          {showFullPatternScanner && (
+            <div className="divide-y divide-white/[0.06] border-t border-white/[0.06] pt-1 font-mono text-[11px]">
+              {visiblePatterns.slice(0, 6).map((pat, idx) => (
+                <div key={idx} className="py-2 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#f8fafc] font-semibold">{pat.name}</span>
+                    <span className="text-[#64748b] text-[10px]">
+                      {pat.barsAgo === 0 ? 'Current Bar' : `${pat.barsAgo}b ago`} • {pat.testedLevelName || 'Structure'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#94a3b8]">Q:{pat.quality}%</span>
+                    <SignalBiasPill bias={pat.bias} />
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
 
@@ -1482,279 +1307,161 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
   };
 
   // ============================================================================
-  // STAGE 02 CONTENT: VOLUME & VALUE AREA (POC, VAH/VAL & Session RVOL)
+  // STAGE 2 CONTENT: VOLUME & VALUE AREA (Hairline Key-Value List)
   // ============================================================================
   const renderStage02Volume = () => {
     const rvols = calculateRVOL(klines);
-    const sesRvol = telemetry.sessionRvol || rvols[rvols.length - 1] || 1.0;
+    const curRvol = rvols[rvols.length - 1] || 1.0;
+    const sesRvol = telemetry.sessionRvol || curRvol;
     const isDiscount = currentPrice < volumeProfile.val;
     const isPremium = currentPrice > volumeProfile.vah;
-    const auctionState = isDiscount
-      ? 'DISCOUNT (< VAL — BUYER VALUE ZONE)'
-      : isPremium
-      ? 'PREMIUM (> VAH — OVEREXTENDED)'
-      : 'FAIR VALUE (INSIDE 70% VALUE AREA)';
-
-    // Find POC bucket bid vs ask split if available
-    const pocBucket =
-      volumeProfile.buckets && volumeProfile.buckets.length > 0
-        ? volumeProfile.buckets.reduce(
-            (best, b) => (b.volume > (best?.volume || 0) ? b : best),
-            volumeProfile.buckets[0]
-          )
-        : null;
-
-    const pocBuyPct =
-      pocBucket && pocBucket.volume > 0
-        ? Math.round(
-            ((((pocBucket as any).upVolume ?? pocBucket.volume * 0.52) as number) /
-              pocBucket.volume) *
-              100
-          )
-        : 52;
-
-    const vaRangePct =
-      volumeProfile.vah > volumeProfile.val
-        ? ((currentPrice - volumeProfile.val) / (volumeProfile.vah - volumeProfile.val)) * 100
-        : 50;
+    const vaWidth = Math.max(volumeProfile.vah - volumeProfile.val, currentPrice * 0.005);
+    const vaPosPct = ((currentPrice - volumeProfile.val) / vaWidth) * 100;
 
     return (
-      <div className="flex flex-col p-4 gap-4">
+      <div className="flex flex-col p-4 gap-3.5">
         {renderStageVerdictBanner(STAGES[1])}
 
-        {/* CARD 1: Volume Profile Auction Map Card */}
         <div className="cyber-panel p-4 flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-2 flex-wrap border-b border-[#1e2636] pb-2.5">
-            <span className="font-mono text-[11px] font-bold text-[#00f0ff] uppercase tracking-wider">
-              CARD 2A // VOLUME PROFILE 70% AUCTION MAP (CLICK TO SPOTLIGHT)
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-sans text-[13px] font-semibold text-[#f8fafc]">
+              Volume Profile (70% Value Area) &amp; Relative Volume
             </span>
-            <span
-              className={`px-2 py-0.5 font-mono text-[9.5px] font-bold border ${
-                isDiscount
-                  ? 'bg-[#4edea3]/10 text-[#4edea3] border-[#4edea3]/30'
-                  : isPremium
-                  ? 'bg-[#ffb4ab]/10 text-[#ffb4ab] border-[#ffb4ab]/30'
-                  : 'bg-[#00f0ff]/10 text-[#00f0ff] border-[#00f0ff]/30'
-              }`}
-            >
-              {auctionState}
+            <span className="font-mono text-[11px] text-[#64748b]">
+              {isDiscount ? 'Discount Zone' : isPremium ? 'Premium Zone' : 'Inside Value Area'}
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 tabular-nums">
-            {/* VAH */}
+          <div className="divide-y divide-white/[0.06] font-mono text-[12px] tabular-nums">
+            {/* VAL */}
             <div
-              onClick={(e) => toggleTrackPrice(e, 'VAH (70% Value Area High)', volumeProfile.vah)}
-              className={`cyber-panel border-l-2 border-l-[#00dbe9] p-3.5 flex flex-col justify-between cursor-pointer ${
-                isPriceTracked(volumeProfile.vah) ? 'cyber-panel-tracked' : ''
-              }`}
+              onClick={(e) => toggleTrackPrice(e, 'Value Area Low (VAL)', volumeProfile.val)}
+              className="py-2.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-white/[0.02] -mx-2 px-2 rounded transition-colors"
             >
-              <div className="flex items-center justify-between gap-1">
-                <span className="font-mono text-[10px] font-bold text-[#00dbe9]">
-                  VAH // VALUE HIGH
+              <div className="flex flex-col">
+                <span className="font-sans text-[12.5px] text-[#cbd5e1] font-medium">
+                  Value Area Low (VAL — 70% Lower Boundary)
                 </span>
+                <span className="font-sans text-[11px] text-[#64748b]">
+                  Institutional discount boundary — click to highlight on chart
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-[#10b981] font-semibold">${formatP(volumeProfile.val)}</span>
                 <SignalBiasPill
-                  size="xs"
-                  bias={
-                    currentPrice > volumeProfile.vah
-                      ? 'BEARISH'
-                      : currentPrice >= volumeProfile.poc
-                      ? 'BULLISH'
-                      : 'NEUTRAL'
-                  }
-                  label={
-                    currentPrice > volumeProfile.vah
-                      ? 'BEARISH PREMIUM > VAH'
-                      : currentPrice >= volumeProfile.poc
-                      ? 'BULLISH UPPER VA'
-                      : 'BELOW VAH'
-                  }
+                  bias={currentPrice <= volumeProfile.val * 1.003 ? 'BULLISH' : 'NEUTRAL'}
+                  label={currentPrice <= volumeProfile.val * 1.003 ? 'DISCOUNT BID' : 'VAL'}
                 />
               </div>
-              <div className="flex items-baseline justify-between mt-1.5">
-                <span className="font-mono text-[17px] font-bold text-[#dbfcff]">
-                  ${formatP(volumeProfile.vah)}
-                </span>
-                <span className="font-mono text-[8.5px] text-[#00dbe9]">
-                  {isPriceTracked(volumeProfile.vah) ? '🎯 ON' : '🎯 TRACK'}
-                </span>
-              </div>
-              <span className="font-mono text-[8.5px] text-[#849495] mt-1">
-                Upper 70% institutional bell-curve boundary
-              </span>
             </div>
 
             {/* POC */}
             <div
-              onClick={(e) => toggleTrackPrice(e, 'POC (Point of Control)', volumeProfile.poc)}
-              className={`cyber-panel border-l-2 border-l-[#f59e0b] p-3.5 flex flex-col justify-between cursor-pointer ${
-                isPriceTracked(volumeProfile.poc) ? 'cyber-panel-tracked' : ''
-              }`}
+              onClick={(e) => toggleTrackPrice(e, 'Point of Control (POC)', volumeProfile.poc)}
+              className="py-2.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-white/[0.02] -mx-2 px-2 rounded transition-colors"
             >
-              <div className="flex items-center justify-between gap-1">
-                <span className="font-mono text-[10px] font-bold text-[#f59e0b]">
-                  POC // FAIR VALUE
+              <div className="flex flex-col">
+                <span className="font-sans text-[12.5px] text-[#cbd5e1] font-medium">
+                  Point of Control (POC — Peak Traded Volume)
                 </span>
+                <span className="font-sans text-[11px] text-[#64748b]">
+                  Highest volume price magnet — click to highlight on chart
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-[#f59e0b] font-semibold">${formatP(volumeProfile.poc)}</span>
                 <SignalBiasPill
-                  size="xs"
                   bias={currentPrice >= volumeProfile.poc ? 'BULLISH' : 'BEARISH'}
-                  label={
-                    currentPrice >= volumeProfile.poc
-                      ? 'BULLISH ABOVE POC'
-                      : 'BEARISH BELOW POC'
-                  }
+                  label={currentPrice >= volumeProfile.poc ? 'ABOVE POC' : 'BELOW POC'}
                 />
               </div>
-              <div className="flex items-baseline justify-between mt-1.5">
-                <span className="font-mono text-[17px] font-bold text-[#fcd34d]">
-                  ${formatP(volumeProfile.poc)}
-                </span>
-                <span className="font-mono text-[8.5px] text-[#f59e0b]">
-                  {isPriceTracked(volumeProfile.poc) ? '🎯 ON' : '🎯 TRACK'}
-                </span>
-              </div>
-              <span className="font-mono text-[8.5px] text-[#849495] mt-1">
-                Highest transacted node ({pocBuyPct}% Bid / {100 - pocBuyPct}% Ask)
-              </span>
             </div>
 
-            {/* VAL */}
+            {/* VAH */}
             <div
-              onClick={(e) => toggleTrackPrice(e, 'VAL (70% Value Area Low)', volumeProfile.val)}
-              className={`cyber-panel border-l-2 border-l-[#4edea3] p-3.5 flex flex-col justify-between cursor-pointer ${
-                isPriceTracked(volumeProfile.val) ? 'cyber-panel-tracked' : ''
-              }`}
+              onClick={(e) => toggleTrackPrice(e, 'Value Area High (VAH)', volumeProfile.vah)}
+              className="py-2.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-white/[0.02] -mx-2 px-2 rounded transition-colors"
             >
-              <div className="flex items-center justify-between gap-1">
-                <span className="font-mono text-[10px] font-bold text-[#4edea3]">
-                  VAL // VALUE LOW
+              <div className="flex flex-col">
+                <span className="font-sans text-[12.5px] text-[#cbd5e1] font-medium">
+                  Value Area High (VAH — 70% Upper Boundary)
                 </span>
+                <span className="font-sans text-[11px] text-[#64748b]">
+                  Institutional premium boundary — click to highlight on chart
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-[#f43f5e] font-semibold">${formatP(volumeProfile.vah)}</span>
                 <SignalBiasPill
-                  size="xs"
-                  bias={currentPrice <= volumeProfile.val * 1.004 ? 'BULLISH' : 'BULLISH'}
-                  label={
-                    currentPrice <= volumeProfile.val * 1.004
-                      ? 'BULLISH DISCOUNT < VAL'
-                      : 'BULLISH HOLDING > VAL'
+                  bias={currentPrice >= volumeProfile.vah * 0.997 ? 'BEARISH' : 'NEUTRAL'}
+                  label={currentPrice >= volumeProfile.vah * 0.997 ? 'PREMIUM SUPPLY' : 'VAH'}
+                />
+              </div>
+            </div>
+
+            {/* Session RVOL */}
+            <div className="py-2.5 flex items-center justify-between gap-3">
+              <div className="flex flex-col">
+                <span className="font-sans text-[12.5px] text-[#cbd5e1] font-medium">
+                  Time-of-Day Session RVOL
+                </span>
+                <span className="font-sans text-[11px] text-[#64748b]">
+                  {sesRvol <= 0.45
+                    ? 'VDU seller exhaustion (< 0.45x)'
+                    : sesRvol >= 2.0
+                    ? 'Institutional volume expansion (> 2.0x)'
+                    : 'Normal session volume participation'}
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-[#f8fafc] font-semibold">{sesRvol.toFixed(2)}x</span>
+                <SignalBiasPill
+                  bias={
+                    sesRvol >= 1.5
+                      ? telemetry.cvdDelta >= 0
+                        ? 'BULLISH'
+                        : 'BEARISH'
+                      : sesRvol <= 0.45
+                      ? 'BULLISH'
+                      : 'NEUTRAL'
                   }
                 />
               </div>
-              <div className="flex items-baseline justify-between mt-1.5">
-                <span className="font-mono text-[17px] font-bold text-[#4edea3]">
-                  ${formatP(volumeProfile.val)}
+            </div>
+
+            {/* Rolling 20-Bar RVOL */}
+            <div className="py-2.5 flex items-center justify-between gap-3">
+              <div className="flex flex-col">
+                <span className="font-sans text-[12.5px] text-[#cbd5e1] font-medium">
+                  Rolling 20-Bar Relative Volume
                 </span>
-                <span className="font-mono text-[8.5px] text-[#4edea3]">
-                  {isPriceTracked(volumeProfile.val) ? '🎯 ON' : '🎯 TRACK'}
+                <span className="font-sans text-[11px] text-[#64748b]">
+                  Current candle volume vs 20-bar moving average
                 </span>
               </div>
-              <span className="font-mono text-[8.5px] text-[#849495] mt-1">
-                Lower 70% institutional discount boundary
-              </span>
+              <div className="flex items-center gap-3">
+                <span className="text-[#f8fafc] font-semibold">{curRvol.toFixed(2)}x</span>
+                <SignalBiasPill
+                  bias={
+                    curRvol >= 1.4
+                      ? telemetry.cvdDelta >= 0
+                        ? 'BULLISH'
+                        : 'BEARISH'
+                      : 'NEUTRAL'
+                  }
+                />
+              </div>
             </div>
           </div>
 
           {renderBenchmarkRangeStrip(
-            vaRangePct,
-            isDiscount ? '#4edea3' : isPremium ? '#ffb4ab' : '#f59e0b',
-            `DISCOUNT < $${formatP(volumeProfile.val)}`,
-            `POC FAIR VALUE $${formatP(volumeProfile.poc)}`,
-            `PREMIUM > $${formatP(volumeProfile.vah)}`
+            vaPosPct,
+            isDiscount ? '#10b981' : isPremium ? '#f43f5e' : '#3b82f6',
+            `VAL $${formatP(volumeProfile.val)}`,
+            `POC $${formatP(volumeProfile.poc)}`,
+            `VAH $${formatP(volumeProfile.vah)}`
           )}
         </div>
-
-        {/* CARD 2: Session-Normalized RVOL Card */}
-        {(() => {
-          const rvolBias =
-            (sesRvol >= 1.2 && telemetry.cvdDelta >= 0) ||
-            (sesRvol <= 0.45 && currentPrice <= volumeProfile.poc)
-              ? 'BULLISH'
-              : sesRvol >= 1.2 && telemetry.cvdDelta < 0
-              ? 'BEARISH'
-              : 'NEUTRAL';
-          const rvolBiasLabel =
-            rvolBias === 'BULLISH'
-              ? sesRvol <= 0.45
-                ? 'BULLISH VDU EXHAUSTION'
-                : 'BULLISH FLOW'
-              : rvolBias === 'BEARISH'
-              ? 'BEARISH FLOW'
-              : 'NORMAL FLOW';
-
-          return (
-            <div className="cyber-panel p-4 flex flex-col gap-3">
-              <div className="flex items-center justify-between gap-2 flex-wrap border-b border-[#1e2636] pb-2.5">
-                <span className="font-mono text-[11px] font-bold text-[#00f0ff] uppercase tracking-wider">
-                  CARD 2B // SESSION-NORMALIZED RELATIVE VOLUME (SES-RVOL)
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <SignalBiasPill size="sm" bias={rvolBias} label={rvolBiasLabel} />
-                  <span
-                    className={`px-2 py-0.5 font-mono text-[10px] font-bold border rounded ${
-                      sesRvol <= 0.45
-                        ? 'bg-[#00f0ff]/15 text-[#00f0ff] border-[#00f0ff]/40'
-                        : sesRvol >= 2.0
-                        ? 'bg-[#f59e0b]/15 text-[#fcd34d] border-[#f59e0b]/40'
-                        : 'bg-[#4edea3]/10 text-[#4edea3] border-[#4edea3]/30'
-                    }`}
-                  >
-                    {sesRvol <= 0.45
-                      ? '💧 VDU EXHAUSTION (<= 0.45x)'
-                      : sesRvol >= 2.0
-                      ? '🔥 VOLUME IGNITION (>= 2.0x)'
-                      : 'NORMAL SESSION FLOW (0.8x–1.5x)'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center tabular-nums">
-                <div className="rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg flex items-center justify-between">
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-[10px] text-[#849495] uppercase">
-                        LIVE SESSION RVOL MULTIPLIER
-                      </span>
-                      <SignalBiasPill size="xs" bias={rvolBias} label={rvolBiasLabel} />
-                    </div>
-                    <div className="font-mono text-[22px] font-bold text-[#dbfcff]">
-                      <ScrambleValue text={`${sesRvol.toFixed(2)}x`} />
-                    </div>
-                    <span className="font-mono text-[9.5px] text-[#849495]">
-                      Normalized against active UTC session baseline
-                    </span>
-                  </div>
-                  <AsciiWaveSparkline
-                    values={klines.slice(-10).map((k) => k.volume)}
-                    isStreaming={true}
-                    barsCount={8}
-                  />
-                </div>
-
-                <div className="rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg flex flex-col gap-1.5 font-sans text-[12px] text-[#cbd5e1]">
-                  <div className="flex items-center justify-between font-mono text-[10.5px]">
-                    <span className="text-[#00f0ff] font-bold">💧 VDU (&le; 0.45x):</span>
-                    <span>Seller exhaustion at pullbacks (Spring setup)</span>
-                  </div>
-                  <div className="flex items-center justify-between font-mono text-[10.5px]">
-                    <span className="text-[#fcd34d] font-bold">🔥 IGNITION (&ge; 2.0x):</span>
-                    <span>Institutional breakout displacement</span>
-                  </div>
-                  <div className="flex items-center justify-between font-mono text-[10.5px]">
-                    <span className="text-[#849495] font-bold">NORMAL (0.8x–1.5x):</span>
-                    <span>Standard two-sided rotation</span>
-                  </div>
-                </div>
-              </div>
-
-              {renderBenchmarkRangeStrip(
-                Math.min(96, (sesRvol / 2.5) * 100),
-                sesRvol <= 0.45 ? '#00f0ff' : sesRvol >= 2.0 ? '#f59e0b' : '#4edea3',
-                '0.0x (💧 VDU <= 0.45x)',
-                'STD NORM: 0.80x – 1.50x',
-                '2.5x+ (🔥 Ignition >= 2.0x)'
-              )}
-            </div>
-          );
-        })()}
 
         {renderStageFooterAndLearn(STAGES[1])}
       </div>
@@ -1762,147 +1469,109 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
   };
 
   // ============================================================================
-  // STAGE 03 CONTENT: MOVING AVERAGES & TREND (EMA Ribbon, VWAP, Stretch & MTF)
+  // STAGE 3 CONTENT: MOVING AVERAGES & TREND (Hairline Key-Value List)
   // ============================================================================
   const renderStage03Trend = () => {
     const stretch = maResult.stretchScoreAtr;
-    const absStretch = Math.abs(stretch);
-    const stretchPct = ((stretch + 3.0) / 6.0) * 100;
+    const stretchPct = ((stretch + 3) / 6) * 100;
+    const ribbonBiasNormalized: 'BULLISH' | 'BEARISH' | 'NEUTRAL' =
+      maResult.ribbonBias === 'BULLISH'
+        ? 'BULLISH'
+        : maResult.ribbonBias === 'BEARISH'
+        ? 'BEARISH'
+        : 'NEUTRAL';
 
-    const maList = [
-      maResult.mas.ema9,
-      maResult.mas.ema21,
-      maResult.mas.ema50,
-      maResult.mas.ema200,
-      maResult.mas.sma200,
-      maResult.mas.vwap,
+    const maRows = [
+      { label: 'EMA 9 (Fast Momentum)', data: maResult.mas.ema9 },
+      { label: 'EMA 21 (Dynamic Pullback Trigger)', data: maResult.mas.ema21 },
+      { label: 'EMA 50 (Intermediate Trend Baseline)', data: maResult.mas.ema50 },
+      { label: 'EMA 200 (Macro Institutional Bias)', data: maResult.mas.ema200 },
+      { label: 'Session VWAP (Volume-Weighted Fair Price)', data: maResult.mas.vwap },
     ];
 
     return (
-      <div className="flex flex-col p-4 gap-4">
+      <div className="flex flex-col p-4 gap-3.5">
         {renderStageVerdictBanner(STAGES[2])}
 
-        {/* CARD 1: EMA Ribbon & VWAP Stack Card */}
         <div className="cyber-panel p-4 flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-2 flex-wrap border-b border-[#1e2636] pb-2.5">
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-[11px] font-bold text-[#00f0ff] uppercase tracking-wider">
-                CARD 3A // EMA RIBBON &amp; SESSION VWAP STACK ({klines.length || 1000}B CONVERGENCE)
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 font-mono text-[9.5px]">
-              <SignalBiasPill
-                size="sm"
-                bias={
-                  maResult.ribbonBias === 'BULLISH'
-                    ? 'BULLISH'
-                    : maResult.ribbonBias === 'BEARISH'
-                    ? 'BEARISH'
-                    : 'NEUTRAL'
-                }
-                label={`${maResult.ribbonBias} STACK`}
-              />
-              <span className="px-2 py-0.5 bg-[#0b0e14] border border-[#1e2636] text-[#b9cacb] rounded">
-                {maResult.emaCross50200}
-              </span>
-            </div>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <span className="font-sans text-[13px] font-semibold text-[#f8fafc]">
+              EMA Ribbon Stack, Session VWAP &amp; ATR Stretch
+            </span>
+            <SignalBiasPill
+              bias={ribbonBiasNormalized}
+              label={`${maResult.ribbonAlignment}`}
+            />
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 tabular-nums">
-            {maList.map((ma) => {
-              const isAboveMa = currentPrice >= ma.price;
+          <div className="divide-y divide-white/[0.06] font-mono text-[12px] tabular-nums">
+            {maRows.map((row, idx) => {
+              const above = row.data.distancePct >= 0;
               return (
                 <div
-                  key={ma.name}
-                  onClick={(e) => toggleTrackPrice(e, `${ma.name} LEVEL`, ma.price)}
-                  className={`cyber-panel p-3 flex flex-col justify-between cursor-pointer ${
-                    isPriceTracked(ma.price) ? 'cyber-panel-tracked' : ''
-                  }`}
+                  key={idx}
+                  onClick={(e) => toggleTrackPrice(e, row.label, row.data.price)}
+                  className="py-2.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-white/[0.02] -mx-2 px-2 rounded transition-colors"
                 >
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="font-mono text-[10px] font-bold text-[#dbfcff] uppercase">
-                      {ma.name}
+                  <div className="flex flex-col">
+                    <span className="font-sans text-[12.5px] text-[#cbd5e1] font-medium">
+                      {row.label}
                     </span>
+                    <span className="font-sans text-[11px] text-[#64748b]">
+                      Status: {row.data.status} ({row.data.distancePct >= 0 ? '+' : ''}
+                      {row.data.distancePct.toFixed(2)}% from spot)
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[#f8fafc] font-semibold">${formatP(row.data.price)}</span>
                     <SignalBiasPill
-                      size="xs"
-                      bias={isAboveMa ? 'BULLISH' : 'BEARISH'}
-                      label={isAboveMa ? 'BULLISH' : 'BEARISH'}
+                      bias={above ? 'BULLISH' : 'BEARISH'}
+                      label={above ? 'ABOVE' : 'BELOW'}
                     />
-                  </div>
-                  <div className="font-mono text-[15px] font-bold text-[#e1e2eb] mt-1.5">
-                    ${formatP(ma.price)}
-                  </div>
-                  <div className="flex items-center justify-between mt-1 font-mono text-[8.5px] text-[#849495]">
-                    <span>
-                      {ma.distancePct >= 0 ? '+' : ''}
-                      {ma.distancePct.toFixed(2)}%
-                      {ma.slopeBpsPerBar !== undefined &&
-                        ` • ${ma.slopeBpsPerBar >= 0 ? '+' : ''}${ma.slopeBpsPerBar.toFixed(1)} bps/b`}
-                    </span>
-                    <span className="text-[#00f0ff]">
-                      {isPriceTracked(ma.price) ? '🎯 ON' : '🎯'}
-                    </span>
                   </div>
                 </div>
               );
             })}
-          </div>
-        </div>
 
-        {/* CARD 2: ATR Rubber-Band Stretch & 4-Timeframe Trend Alignment Card */}
-        <div className="cyber-panel p-4 flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-2 flex-wrap border-b border-[#1e2636] pb-2.5">
-            <span className="font-mono text-[11px] font-bold text-[#00f0ff] uppercase tracking-wider">
-              CARD 3B // ATR RUBBER-BAND STRETCH &amp; 4-TIMEFRAME (15M/1H/4H/1D) ALIGNMENT
-            </span>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <SignalBiasPill
-                size="sm"
-                bias={
-                  stretch > 2.1
-                    ? 'BEARISH'
-                    : stretch < -2.1
-                    ? 'BULLISH'
-                    : stretch >= 0
-                    ? 'BULLISH'
-                    : 'BEARISH'
-                }
-                label={
-                  stretch > 2.1
-                    ? 'BEARISH OVERBOUGHT'
-                    : stretch < -2.1
-                    ? 'BULLISH OVERSOLD SNAP'
-                    : stretch >= 0
-                    ? 'BULLISH TREND'
-                    : 'BEARISH TREND'
-                }
-              />
-              <span
-                className={`px-2 py-0.5 font-mono text-[10px] font-bold border rounded ${
-                  absStretch >= 2.2
-                    ? 'bg-[#ffb4ab]/15 text-[#ffb4ab] border-[#ffb4ab]/40'
-                    : 'bg-[#4edea3]/10 text-[#4edea3] border-[#4edea3]/30'
-                }`}
-              >
-                {stretch >= 0 ? '+' : ''}
-                {stretch.toFixed(2)} ATR ({maResult.overextensionStatus})
-              </span>
+            {/* ATR Rubber-Band Stretch Row */}
+            <div className="py-2.5 flex items-center justify-between gap-3">
+              <div className="flex flex-col">
+                <span className="font-sans text-[12.5px] text-[#cbd5e1] font-medium">
+                  ATR Rubber-Band Stretch (Distance from EMA 21)
+                </span>
+                <span className="font-sans text-[11px] text-[#64748b]">
+                  {maResult.overextensionStatus} — values beyond ±2.0 ATR signal mean-reversion risk
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-[#f8fafc] font-semibold">
+                  {stretch >= 0 ? '+' : ''}
+                  {stretch.toFixed(2)} ATR
+                </span>
+                <SignalBiasPill
+                  bias={
+                    stretch <= -1.8
+                      ? 'BULLISH'
+                      : stretch >= 1.8
+                      ? 'BEARISH'
+                      : ribbonBiasNormalized
+                  }
+                />
+              </div>
             </div>
           </div>
 
           {renderBenchmarkRangeStrip(
             stretchPct,
-            absStretch >= 2.2 ? '#ffb4ab' : '#4edea3',
-            '-3.0 ATR (Oversold Snap)',
-            'STD NORM: -1.5 to +1.5 ATR (Safe Pullback Zone)',
-            '+3.0 ATR (Overbought Exhaustion)'
+            Math.abs(stretch) >= 2.0 ? '#f43f5e' : '#10b981',
+            '-3.0 ATR (Oversold)',
+            `Current: ${stretch >= 0 ? '+' : ''}${stretch.toFixed(2)} ATR`,
+            '+3.0 ATR (Overbought)'
           )}
-
-          {/* Multi-Timeframe Confluence Matrix */}
-          <div className="pt-1">
-            <ConfluenceMatrix confluence={confluence} matrix={matrix} symbol={symbol} />
-          </div>
         </div>
+
+        {/* Multi-Timeframe Alignment Matrix */}
+        <ConfluenceMatrix matrix={matrix} confluence={confluence} />
 
         {renderStageFooterAndLearn(STAGES[2])}
       </div>
@@ -1910,345 +1579,148 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
   };
 
   // ============================================================================
-  // STAGE 04 CONTENT: ORDERFLOW & SMART MONEY (Order Blocks, AMD, CVD & Spot vs Perp)
+  // STAGE 4 CONTENT: ORDERFLOW & SMART MONEY (Hairline Key-Value List)
   // ============================================================================
   const renderStage04Orderflow = () => {
-    const spotDelta = telemetry.spotPerpDivergence?.spotDeltaPct ?? 0;
-    const perpDelta = telemetry.spotPerpDivergence?.perpDeltaPct ?? 0;
-    const basisBps = telemetry.spotPerpDivergence?.basisBps ?? 0;
-    const bidWallPrice = liquidity?.bidLiquidityPrice || currentPrice * 0.985;
-    const askWallPrice = liquidity?.askLiquidityPrice || currentPrice * 1.015;
+    const spotPerp = telemetry.spotPerpDivergence;
 
     return (
-      <div className="flex flex-col p-4 gap-4">
+      <div className="flex flex-col p-4 gap-3.5">
         {renderStageVerdictBanner(STAGES[3])}
 
-        {/* CARD 1: Order Block Mitigation & Wyckoff AMD Cycle Card */}
         <div className="cyber-panel p-4 flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-2 flex-wrap border-b border-[#1e2636] pb-2.5">
-            <span className="font-mono text-[11px] font-bold text-[#00f0ff] uppercase tracking-wider">
-              CARD 4A // ORDER BLOCK MITIGATION &amp; WYCKOFF AMD CYCLE
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-sans text-[13px] font-semibold text-[#f8fafc]">
+              Institutional Order Blocks, CVD Delta &amp; Spot vs Perp Basis
             </span>
-            <span className="font-mono text-[10px] text-[#00f0ff] font-bold">
-              PHASE: {amdPhase.phase}
+            <span className="font-mono text-[11px] text-[#64748b]">
+              AMD Phase: {amdPhase.phase}
             </span>
           </div>
 
-          {/* Bull & Bear Order Block Cards (Click to spotlight 50% Mean Threshold on chart) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 tabular-nums">
+          <div className="divide-y divide-white/[0.06] font-mono text-[12px] tabular-nums">
+            {/* Bullish Order Block */}
             <div
-              onClick={(e) =>
-                bullOB &&
-                toggleTrackPrice(
-                  e,
-                  `BULL OB 50% MT (Q:${bullOB.qualityScore ?? 80})`,
-                  bullOB.midpoint
-                )
-              }
-              className={`cyber-panel border-l-2 border-l-[#4edea3] p-3.5 flex flex-col justify-between cursor-pointer ${
-                bullOB && isPriceTracked(bullOB.midpoint) ? 'cyber-panel-tracked' : ''
-              }`}
+              onClick={(e) => bullOB && toggleTrackPrice(e, 'Bull OB 50% Mean', bullOB.midpoint)}
+              className="py-2.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-white/[0.02] -mx-2 px-2 rounded transition-colors"
             >
-              <div className="flex items-center justify-between gap-1.5 flex-wrap">
-                <span className="font-mono text-[10px] font-bold text-[#4edea3] uppercase">
-                  BULL OB // INSTITUTIONAL DEMAND
+              <div className="flex flex-col">
+                <span className="font-sans text-[12.5px] text-[#cbd5e1] font-medium">
+                  Unmitigated Bullish Order Block (50% Mean Threshold)
                 </span>
-                <div className="flex items-center gap-1">
-                  <SignalBiasPill
-                    size="xs"
-                    bias={
-                      bullOB &&
-                      currentPrice > 0 &&
-                      Math.abs(currentPrice - bullOB.midpoint) / currentPrice <= 0.015
-                        ? 'BULLISH'
-                        : 'BULLISH'
-                    }
-                    label={
-                      bullOB &&
-                      currentPrice > 0 &&
-                      Math.abs(currentPrice - bullOB.midpoint) / currentPrice <= 0.015
-                        ? 'BULLISH ACTIVE'
-                        : 'BULLISH OB FLOOR'
-                    }
-                  />
-                  <span className="px-1.5 py-0.5 bg-[#0b0e14] border border-[#4edea3]/40 font-mono text-[8.5px] text-[#4edea3] font-bold rounded">
-                    {bullOB && isPriceTracked(bullOB.midpoint)
-                      ? '🎯 ON'
-                      : `Q:${bullOB?.qualityScore ?? 80} 🎯`}
-                  </span>
-                </div>
+                <span className="font-sans text-[11px] text-[#64748b]">
+                  {bullOB
+                    ? `Range $${formatP(bullOB.low)} – $${formatP(bullOB.high)} • Displacement ${bullOB.displacementAtrRatio ?? bullOB.impulseAtrMultiple ?? 1.8}x ATR`
+                    : 'No unmitigated bullish footprint in active window'}
+                </span>
               </div>
-              {bullOB ? (
-                <>
-                  <div className="font-mono text-[16px] font-bold text-[#4edea3] mt-1.5">
-                    50% Mean: ${formatP(bullOB.midpoint)}
-                  </div>
-                  <div className="flex items-center justify-between font-mono text-[9.5px] text-[#b9cacb] mt-1">
-                    <span>
-                      Zone: ${formatP(bullOB.low)} – ${formatP(bullOB.high)}
-                    </span>
-                    <span className="text-[#849495]">
-                      {bullOB.mitigationStatus || 'FRESH'} ({Math.round(bullOB.mitigationPct || 0)}% mit)
-                    </span>
-                  </div>
-                </>
-              ) : (
-                <span className="font-mono text-[11px] text-[#849495] mt-2">
-                  No active unmitigated Bullish Order Block in scan window
+              <div className="flex items-center gap-3">
+                <span className="text-[#10b981] font-semibold">
+                  {bullOB ? `$${formatP(bullOB.midpoint)} (Q:${bullOB.qualityScore ?? 80})` : 'None'}
                 </span>
-              )}
+                <SignalBiasPill bias={bullOB ? 'BULLISH' : 'NEUTRAL'} />
+              </div>
             </div>
 
+            {/* Bearish Order Block */}
             <div
-              onClick={(e) =>
-                bearOB &&
-                toggleTrackPrice(
-                  e,
-                  `BEAR OB 50% MT (Q:${bearOB.qualityScore ?? 80})`,
-                  bearOB.midpoint
-                )
-              }
-              className={`cyber-panel border-l-2 border-l-[#ffb4ab] p-3.5 flex flex-col justify-between cursor-pointer ${
-                bearOB && isPriceTracked(bearOB.midpoint) ? 'cyber-panel-tracked' : ''
-              }`}
+              onClick={(e) => bearOB && toggleTrackPrice(e, 'Bear OB 50% Mean', bearOB.midpoint)}
+              className="py-2.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-white/[0.02] -mx-2 px-2 rounded transition-colors"
             >
-              <div className="flex items-center justify-between gap-1.5 flex-wrap">
-                <span className="font-mono text-[10px] font-bold text-[#ffb4ab] uppercase">
-                  BEAR OB // INSTITUTIONAL SUPPLY
+              <div className="flex flex-col">
+                <span className="font-sans text-[12.5px] text-[#cbd5e1] font-medium">
+                  Unmitigated Bearish Order Block (50% Mean Threshold)
                 </span>
-                <div className="flex items-center gap-1">
-                  <SignalBiasPill
-                    size="xs"
-                    bias={
-                      bearOB &&
-                      currentPrice > 0 &&
-                      Math.abs(currentPrice - bearOB.midpoint) / currentPrice <= 0.015
-                        ? 'BEARISH'
-                        : 'BEARISH'
-                    }
-                    label={
-                      bearOB &&
-                      currentPrice > 0 &&
-                      Math.abs(currentPrice - bearOB.midpoint) / currentPrice <= 0.015
-                        ? 'BEARISH ACTIVE'
-                        : 'BEARISH OB CEILING'
-                    }
-                  />
-                  <span className="px-1.5 py-0.5 bg-[#0b0e14] border border-[#ffb4ab]/40 font-mono text-[8.5px] text-[#ffb4ab] font-bold rounded">
-                    {bearOB && isPriceTracked(bearOB.midpoint)
-                      ? '🎯 ON'
-                      : `Q:${bearOB?.qualityScore ?? 80} 🎯`}
-                  </span>
-                </div>
+                <span className="font-sans text-[11px] text-[#64748b]">
+                  {bearOB
+                    ? `Range $${formatP(bearOB.low)} – $${formatP(bearOB.high)} • Displacement ${bearOB.displacementAtrRatio ?? bearOB.impulseAtrMultiple ?? 1.8}x ATR`
+                    : 'No unmitigated bearish footprint in active window'}
+                </span>
               </div>
-              {bearOB ? (
-                <>
-                  <div className="font-mono text-[16px] font-bold text-[#ffb4ab] mt-1.5">
-                    50% Mean: ${formatP(bearOB.midpoint)}
-                  </div>
-                  <div className="flex items-center justify-between font-mono text-[9.5px] text-[#b9cacb] mt-1">
-                    <span>
-                      Zone: ${formatP(bearOB.low)} – ${formatP(bearOB.high)}
-                    </span>
-                    <span className="text-[#849495]">
-                      {bearOB.mitigationStatus || 'FRESH'} ({Math.round(bearOB.mitigationPct || 0)}% mit)
-                    </span>
-                  </div>
-                </>
-              ) : (
-                <span className="font-mono text-[11px] text-[#849495] mt-2">
-                  No active unmitigated Bearish Order Block in scan window
+              <div className="flex items-center gap-3">
+                <span className="text-[#f43f5e] font-semibold">
+                  {bearOB ? `$${formatP(bearOB.midpoint)} (Q:${bearOB.qualityScore ?? 80})` : 'None'}
                 </span>
-              )}
+                <SignalBiasPill bias={bearOB ? 'BEARISH' : 'NEUTRAL'} />
+              </div>
             </div>
-          </div>
 
-          {/* Wyckoff AMD Cycle Engine */}
-          <div className="pt-1">
-            <AMDPhaseEngine amdPhase={amdPhase} symbol={symbol} />
-          </div>
-        </div>
-
-        {/* CARD 2: True Taker CVD Delta, Absorption & Spot-vs-Perp Flow Card */}
-        <div className="cyber-panel p-4 flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-2 flex-wrap border-b border-[#1e2636] pb-2.5">
-            <span className="font-mono text-[11px] font-bold text-[#00f0ff] uppercase tracking-wider">
-              CARD 4B // TRUE TAKER CVD DELTA, ABSORPTION &amp; SPOT-VS-PERP FLOW
-            </span>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <SignalBiasPill
-                size="sm"
-                bias={
-                  spotDelta > 0 && spotDelta >= perpDelta
-                    ? 'BULLISH'
-                    : perpDelta > 3 && spotDelta <= 0
-                    ? 'BEARISH'
-                    : spotDelta < 0
-                    ? 'BEARISH'
-                    : telemetry.cvdDelta >= 0
-                    ? 'BULLISH'
-                    : 'BEARISH'
-                }
-                label={
-                  spotDelta > 0 && spotDelta >= perpDelta
-                    ? 'BULLISH WHALE FLOW'
-                    : perpDelta > 3 && spotDelta <= 0
-                    ? 'BEARISH PERP TRAP'
-                    : spotDelta < 0
-                    ? 'BEARISH DISTRIBUTION'
-                    : telemetry.cvdDelta >= 0
-                    ? 'BULLISH CVD FLOW'
-                    : 'BEARISH CVD FLOW'
-                }
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 tabular-nums">
-            <div className="rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg flex flex-col justify-between gap-1">
-              <div className="flex items-center justify-between gap-1">
-                <span className="font-mono text-[10px] text-[#849495] uppercase">
-                  CUMULATIVE VOLUME DELTA
+            {/* Cumulative Volume Delta (CVD) */}
+            <div className="py-2.5 flex items-center justify-between gap-3">
+              <div className="flex flex-col">
+                <span className="font-sans text-[12.5px] text-[#cbd5e1] font-medium">
+                  Cumulative Volume Delta (CVD) &amp; Aggression
+                </span>
+                <span className="font-sans text-[11px] text-[#64748b]">
+                  Net market buy minus market sell taker volume
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span
+                  className={`font-semibold ${
+                    telemetry.cvdDelta >= 0 ? 'text-[#10b981]' : 'text-[#f43f5e]'
+                  }`}
+                >
+                  {telemetry.cvdDelta >= 0 ? '+' : ''}
+                  {Math.round(telemetry.cvdDelta).toLocaleString()}
                 </span>
                 <SignalBiasPill
-                  size="xs"
-                  bias={telemetry.cvdDelta >= 0 ? 'BULLISH' : 'BEARISH'}
-                  label={telemetry.cvdDelta >= 0 ? 'BULLISH ABSORPTION' : 'BEARISH PRESSURE'}
-                />
-              </div>
-              <div
-                className={`font-mono text-[17px] font-bold mt-1 ${
-                  telemetry.cvdDelta >= 0 ? 'text-[#4edea3]' : 'text-[#ffb4ab]'
-                }`}
-              >
-                {telemetry.cvdDelta >= 0 ? '+' : ''}
-                {Math.round(telemetry.cvdDelta).toLocaleString()}
-              </div>
-              <span className="font-mono text-[9.5px] text-[#849495] mt-0.5">
-                {telemetry.divergenceBias}
-              </span>
-            </div>
-
-            <div className="rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg flex flex-col justify-between gap-1">
-              <div className="flex items-center justify-between gap-1">
-                <span className="font-mono text-[10px] text-[#849495] uppercase">
-                  SPOT Δ VS PERP Δ FLOW
-                </span>
-                <SignalBiasPill
-                  size="xs"
                   bias={
-                    spotDelta > 0 && spotDelta >= perpDelta
+                    telemetry.cvdDelta > 0
                       ? 'BULLISH'
-                      : perpDelta > 3 && spotDelta <= 0
-                      ? 'BEARISH'
-                      : spotDelta < 0
+                      : telemetry.cvdDelta < 0
                       ? 'BEARISH'
                       : 'NEUTRAL'
                   }
-                  label={
-                    spotDelta > 0 && spotDelta >= perpDelta
-                      ? 'BULLISH WHALE FLOW'
-                      : perpDelta > 3 && spotDelta <= 0
-                      ? 'BEARISH PERP TRAP'
-                      : spotDelta < 0
-                      ? 'BEARISH DISTRIBUTION'
-                      : 'SYNCED'
+                />
+              </div>
+            </div>
+
+            {/* Spot vs Perp Basis Flow */}
+            <div className="py-2.5 flex items-center justify-between gap-3">
+              <div className="flex flex-col">
+                <span className="font-sans text-[12.5px] text-[#cbd5e1] font-medium">
+                  Spot vs Perpetual Futures CVD Divergence
+                </span>
+                <span className="font-sans text-[11px] text-[#64748b]">
+                  {spotPerp?.headline || 'Comparing cash Spot flow against leveraged Perp flow'}
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-[#f8fafc] font-semibold">
+                  {spotPerp?.flowRegime ? spotPerp.flowRegime.replace(/_/g, ' ') : 'SYNCHRONIZED'}
+                </span>
+                <SignalBiasPill
+                  bias={
+                    spotPerp?.flowRegime === 'SPOT_DRIVEN_EXPANSION' ||
+                    spotPerp?.flowRegime === 'SPOT_ABSORPTION_ACCUMULATION'
+                      ? 'BULLISH'
+                      : spotPerp?.flowRegime === 'LEVERAGE_TRAP_LONG' ||
+                        spotPerp?.flowRegime === 'LEVERAGE_TRAP_SHORT'
+                      ? 'BEARISH'
+                      : 'NEUTRAL'
                   }
                 />
               </div>
-              <div className="font-mono text-[13px] font-bold text-[#dbfcff] mt-1 flex items-center gap-2">
-                <span className="text-[#4edea3]">
-                  Spot: {spotDelta >= 0 ? '+' : ''}
-                  {spotDelta.toFixed(1)}%
-                </span>
-                <span>•</span>
-                <span className="text-[#00f0ff]">
-                  Perp: {perpDelta >= 0 ? '+' : ''}
-                  {perpDelta.toFixed(1)}%
-                </span>
-              </div>
-              <span className="font-mono text-[9.5px] text-[#fcd34d] mt-0.5">
-                Perp-Spot Basis: {basisBps >= 0 ? '+' : ''}
-                {basisBps.toFixed(1)} bps
-              </span>
-            </div>
-
-            <div className="rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg flex flex-col justify-between gap-1">
-              <div className="flex items-center justify-between gap-1">
-                <span className="font-mono text-[10px] text-[#849495] uppercase">
-                  ORDERBOOK TUG-OF-WAR
-                </span>
-                <SignalBiasPill
-                  size="xs"
-                  bias={spotDelta > 0.3 ? 'BULLISH' : spotDelta < -0.3 ? 'BEARISH' : 'NEUTRAL'}
-                  label={spotDelta > 0.3 ? 'BULLISH BIDS' : spotDelta < -0.3 ? 'BEARISH ASKS' : 'BALANCED'}
-                />
-              </div>
-              <div className="mt-1.5">
-                <AsciiOrderflowBar
-                  buyRatio={Math.max(0.15, Math.min(0.85, 0.5 + spotDelta / 100))}
-                  width={14}
-                />
-              </div>
-              <span className="font-mono text-[9.5px] text-[#849495] mt-1">
-                500-Depth Bid vs Ask Resting Walls
-              </span>
             </div>
           </div>
 
-          {/* Clickable 500-Depth Bid & Ask Limit Walls */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 tabular-nums">
-            <div
-              onClick={(e) => toggleTrackPrice(e, 'ORDERBOOK BID WALL', bidWallPrice)}
-              className={`rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg border-l-2 border-l-[#4edea3] flex items-center justify-between cursor-pointer ${
-                isPriceTracked(bidWallPrice) ? 'cyber-panel-tracked' : ''
-              }`}
-            >
-              <div>
-                <span className="font-mono text-[10px] text-[#4edea3] font-bold uppercase block">
-                  500-DEPTH BID WALL (SUPPORT)
-                </span>
-                <span className="font-mono text-[15px] font-bold text-[#dbfcff]">
-                  ${formatP(bidWallPrice)}
-                </span>
-              </div>
-              <span className="font-mono text-[10px] text-[#4edea3] font-bold">
-                {liquidity?.bidLiquidityQty
-                  ? `${liquidity.bidLiquidityQty.toFixed(1)} ${baseAsset} 🎯`
-                  : '🎯 TRACK'}
-              </span>
-            </div>
-
-            <div
-              onClick={(e) => toggleTrackPrice(e, 'ORDERBOOK ASK WALL', askWallPrice)}
-              className={`rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg border-l-2 border-l-[#ffb4ab] flex items-center justify-between cursor-pointer ${
-                isPriceTracked(askWallPrice) ? 'cyber-panel-tracked' : ''
-              }`}
-            >
-              <div>
-                <span className="font-mono text-[10px] text-[#ffb4ab] font-bold uppercase block">
-                  500-DEPTH ASK WALL (SUPPLY)
-                </span>
-                <span className="font-mono text-[15px] font-bold text-[#dbfcff]">
-                  ${formatP(askWallPrice)}
-                </span>
-              </div>
-              <span className="font-mono text-[10px] text-[#ffb4ab] font-bold">
-                {liquidity?.askLiquidityQty
-                  ? `${liquidity.askLiquidityQty.toFixed(1)} ${baseAsset} 🎯`
-                  : '🎯 TRACK'}
-              </span>
-            </div>
+          <div className="pt-2 border-t border-white/[0.06]">
+            <AsciiOrderflowBar
+              buyRatio={
+                volumeProfile.totalAskVolume && volumeProfile.totalBidVolume
+                  ? volumeProfile.totalAskVolume /
+                    Math.max(1, volumeProfile.totalAskVolume + volumeProfile.totalBidVolume)
+                  : telemetry.cvdDelta >= 0
+                  ? 0.58
+                  : 0.42
+              }
+            />
           </div>
-
-          {renderBenchmarkRangeStrip(
-            50 + spotDelta * 1.5,
-            spotDelta >= 0 ? '#4edea3' : '#ffb4ab',
-            'PERP-ONLY CHASE TRAP',
-            'BALANCED SPOT & PERP FLOW',
-            'INSTITUTIONAL SPOT ACCUMULATION'
-          )}
         </div>
+
+        {/* Wyckoff AMD Cycle Component */}
+        <AMDPhaseEngine amdPhase={amdPhase} symbol={symbol} />
 
         {renderStageFooterAndLearn(STAGES[3])}
       </div>
@@ -2256,327 +1728,184 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
   };
 
   // ============================================================================
-  // STAGE 05 CONTENT: QUANT & DERIVATIVES (Hurst, ADX, Z-Score, Options GEX & Funding/OI)
+  // STAGE 5 CONTENT: QUANT & DERIVATIVES (Hairline Key-Value List)
   // ============================================================================
   const renderStage05Quant = () => {
     const hurst = candlestickResult.marketRegime?.hurstExponent ?? 0.5;
-    const adx = candlestickResult.marketRegime?.adx14 ?? 20;
+    const adx = candlestickResult.marketRegime?.adx14 ?? 22;
+    const vwmaZ = telemetry.zScore ?? 0;
     const sharpe = sharpeSortino?.sharpeRatio ?? 1.0;
-    const sortino = sharpeSortino?.sortinoRatio ?? 1.3;
+    const sortino = sharpeSortino?.sortinoRatio ?? 1.25;
     const zeroGamma = optionsData.zeroGammaLevel || optionsData.maxPain;
 
     return (
-      <div className="flex flex-col p-4 gap-4">
+      <div className="flex flex-col p-4 gap-3.5">
         {renderStageVerdictBanner(STAGES[4])}
 
-        {/* CARD 1: Statistical Regime Gate Card (Hurst, ADX, Z-Score, Sharpe/Sortino) */}
         <div className="cyber-panel p-4 flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-2 flex-wrap border-b border-[#1e2636] pb-2.5">
-            <span className="font-mono text-[11px] font-bold text-[#00f0ff] uppercase tracking-wider">
-              CARD 5A // STATISTICAL REGIME GATE (HURST, ADX, Z-SCORE &amp; SHARPE)
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-sans text-[13px] font-semibold text-[#f8fafc]">
+              Statistical Regime Math &amp; Options Dealer Positioning
             </span>
-            <span
-              className={`px-2 py-0.5 font-mono text-[9.5px] font-bold border ${
-                candlestickResult.marketRegime?.isBreakoutActive
-                  ? 'bg-[#f59e0b]/15 text-[#fcd34d] border-[#f59e0b]/40'
-                  : 'bg-[#4edea3]/10 text-[#4edea3] border-[#4edea3]/30'
-              }`}
-            >
-              {candlestickResult.marketRegime?.regimeHeadline || 'MEAN-REVERTING ROTATION'}
+            <span className="font-mono text-[11px] text-[#64748b]">
+              {candlestickResult.marketRegime?.regimeHeadline || 'Balanced Regime'}
             </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 tabular-nums">
-            <div className="rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg flex flex-col justify-between gap-1">
-              <div className="flex items-center justify-between gap-1 flex-wrap">
-                <span className="font-mono text-[10px] text-[#849495] uppercase">
-                  HURST EXPONENT (H)
+          <div className="divide-y divide-white/[0.06] font-mono text-[12px] tabular-nums">
+            {/* Hurst Exponent & Wilder ADX */}
+            <div className="py-2.5 flex items-center justify-between gap-3">
+              <div className="flex flex-col">
+                <span className="font-sans text-[12.5px] text-[#cbd5e1] font-medium">
+                  Hurst Exponent (H) &amp; Wilder ADX(14)
+                </span>
+                <span className="font-sans text-[11px] text-[#64748b]">
+                  H &gt; 0.55 persistent trend • H &lt; 0.45 mean reversion • ADX &gt; 25 strong trend
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-[#f8fafc] font-semibold">
+                  H={hurst.toFixed(2)} • ADX={adx.toFixed(1)}
                 </span>
                 <SignalBiasPill
-                  size="xs"
                   bias={
-                    hurst > 0.53
-                      ? currentPrice >= telemetry.vwma50
-                        ? 'BULLISH'
-                        : 'BEARISH'
+                    hurst >= 0.55 && adx >= 25
+                      ? maResult.ribbonBias === 'BEARISH'
+                        ? 'BEARISH'
+                        : 'BULLISH'
                       : 'NEUTRAL'
                   }
-                  label={
-                    hurst > 0.53
-                      ? currentPrice >= telemetry.vwma50
-                        ? 'BULLISH TREND REGIME'
-                        : 'BEARISH TREND REGIME'
-                      : hurst < 0.48
-                      ? 'MEAN-REVERTING RANGE'
-                      : 'RANDOM WALK'
-                  }
+                  label={hurst >= 0.55 ? 'TRENDING' : hurst <= 0.45 ? 'MEAN REVERT' : 'ROTATION'}
                 />
               </div>
-              <div className="font-mono text-[17px] font-bold text-[#00f0ff] mt-1">
-                {hurst.toFixed(2)}
-              </div>
-              <span className="font-mono text-[9.5px] text-[#849495] mt-0.5">
-                {hurst < 0.48
-                  ? 'H < 0.48: Mean-Reverting'
-                  : hurst > 0.55
-                  ? 'H > 0.55: Persistent Trend'
-                  : 'Random Walk Transition'}
-              </span>
             </div>
 
-            <div className="rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg flex flex-col justify-between gap-1">
-              <div className="flex items-center justify-between gap-1 flex-wrap">
-                <span className="font-mono text-[10px] text-[#849495] uppercase">
-                  WILDER&apos;S ADX(14)
+            {/* VWMA Z-Score */}
+            <div className="py-2.5 flex items-center justify-between gap-3">
+              <div className="flex flex-col">
+                <span className="font-sans text-[12.5px] text-[#cbd5e1] font-medium">
+                  20-Bar VWMA Z-Score (Statistical Deviation)
+                </span>
+                <span className="font-sans text-[11px] text-[#64748b]">
+                   Beyond ±2.0σ indicates 95% statistical exhaustion
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-[#f8fafc] font-semibold">
+                  {vwmaZ >= 0 ? '+' : ''}
+                  {vwmaZ.toFixed(2)}σ
                 </span>
                 <SignalBiasPill
-                  size="xs"
-                  bias={
-                    adx >= 25
-                      ? currentPrice >= maResult.mas.ema21.price
-                        ? 'BULLISH'
-                        : 'BEARISH'
-                      : 'NEUTRAL'
-                  }
-                  label={
-                    adx >= 25
-                      ? currentPrice >= maResult.mas.ema21.price
-                        ? 'BULLISH STRENGTH'
-                        : 'BEARISH STRENGTH'
-                      : 'LOW TREND STRENGTH'
-                  }
+                  bias={vwmaZ <= -1.8 ? 'BULLISH' : vwmaZ >= 1.8 ? 'BEARISH' : 'NEUTRAL'}
                 />
               </div>
-              <div className="font-mono text-[17px] font-bold text-[#dbfcff] mt-1">
-                {adx.toFixed(1)}
-              </div>
-              <span className="font-mono text-[9.5px] text-[#849495] mt-0.5">
-                {adx >= 25 ? 'ADX >= 25: Active Trend' : 'ADX < 25: Range Bound'}
-              </span>
             </div>
 
+            {/* Rolling Sharpe & Sortino */}
+            <div className="py-2.5 flex items-center justify-between gap-3">
+              <div className="flex flex-col">
+                <span className="font-sans text-[12.5px] text-[#cbd5e1] font-medium">
+                  Rolling Sharpe &amp; Sortino Risk-Adjusted Return
+                </span>
+                <span className="font-sans text-[11px] text-[#64748b]">
+                  {sharpeSortino?.sharpeRegime || 'Return per unit of total and downside volatility'}
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-[#f8fafc] font-semibold">
+                  Sharpe {sharpe.toFixed(2)} • Sortino {sortino.toFixed(2)}
+                </span>
+                <SignalBiasPill
+                  bias={sharpe >= 1.0 ? 'BULLISH' : sharpe < 0 ? 'BEARISH' : 'NEUTRAL'}
+                />
+              </div>
+            </div>
+
+            {/* Net Dealer GEX & Zero-Gamma Flip */}
             <div
-              onClick={(e) => toggleTrackPrice(e, '50-VWMA FAIR VALUE', telemetry.vwma50)}
-              className={`rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg flex flex-col justify-between gap-1 cursor-pointer ${
-                isPriceTracked(telemetry.vwma50) ? 'cyber-panel-tracked' : ''
-              }`}
+              onClick={(e) => toggleTrackPrice(e, 'Zero-Gamma Flip', zeroGamma)}
+              className="py-2.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-white/[0.02] -mx-2 px-2 rounded transition-colors"
             >
-              <div className="flex items-center justify-between gap-1 flex-wrap">
-                <span className="font-mono text-[10px] text-[#849495] uppercase">
-                  50-VWMA Z-SCORE 🎯
+              <div className="flex flex-col">
+                <span className="font-sans text-[12.5px] text-[#cbd5e1] font-medium">
+                  Options Dealer Net GEX &amp; Zero-Gamma Level
+                </span>
+                <span className="font-sans text-[11px] text-[#64748b]">
+                  Zero-Gamma at ${formatP(zeroGamma)} • Call Wall ${formatP(optionsData.callWall)} • Put Wall ${formatP(optionsData.putWall)}
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span
+                  className={`font-semibold ${
+                    telemetry.netGex >= 0 ? 'text-[#10b981]' : 'text-[#f43f5e]'
+                  }`}
+                >
+                  {telemetry.netGex >= 0 ? '+' : ''}${telemetry.netGex}M GEX
                 </span>
                 <SignalBiasPill
-                  size="xs"
+                  bias={telemetry.netGex >= 0 ? 'BULLISH' : 'BEARISH'}
+                  label={telemetry.netGex >= 0 ? 'LONG GAMMA' : 'SHORT GAMMA'}
+                />
+              </div>
+            </div>
+
+            {/* Perp Funding & Open Interest Delta */}
+            <div className="py-2.5 flex items-center justify-between gap-3">
+              <div className="flex flex-col">
+                <span className="font-sans text-[12.5px] text-[#cbd5e1] font-medium">
+                  Perpetual Funding Rate &amp; Open Interest Delta
+                </span>
+                <span className="font-sans text-[11px] text-[#64748b]">
+                  Negative funding with rising OI signals short-squeeze fuel
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-[#f8fafc] font-semibold">
+                  {(telemetry.fundingRate * 100).toFixed(4)}% • OI {telemetry.oi4hDelta >= 0 ? '+' : ''}
+                  {telemetry.oi4hDelta.toFixed(2)}%
+                </span>
+                <SignalBiasPill
                   bias={
-                    telemetry.zScore <= -1.5
+                    telemetry.fundingRate < 0
                       ? 'BULLISH'
-                      : telemetry.zScore >= 1.8
+                      : telemetry.fundingRate > 0.02
                       ? 'BEARISH'
-                      : telemetry.zScore >= 0
-                      ? 'BULLISH'
-                      : 'BEARISH'
-                  }
-                  label={
-                    telemetry.zScore <= -1.5
-                      ? 'BULLISH SNAPBACK'
-                      : telemetry.zScore >= 1.8
-                      ? 'BEARISH STRETCH'
-                      : telemetry.zScore >= 0
-                      ? 'BULLISH'
-                      : 'BEARISH'
-                  }
-                />
-              </div>
-              <div className="font-mono text-[17px] font-bold text-[#fcd34d] mt-1">
-                {telemetry.zScore >= 0 ? '+' : ''}
-                {telemetry.zScore.toFixed(2)}σ
-              </div>
-              <span className="font-mono text-[9.5px] text-[#849495] mt-0.5">
-                VWMA: ${formatP(telemetry.vwma50)}
-              </span>
-            </div>
-
-            <div className="rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg flex flex-col justify-between gap-1">
-              <div className="flex items-center justify-between gap-1 flex-wrap">
-                <span className="font-mono text-[10px] text-[#849495] uppercase">
-                  SHARPE / SORTINO
-                </span>
-                <SignalBiasPill
-                  size="xs"
-                  bias={sharpe >= 0.5 ? 'BULLISH' : sharpe <= -0.25 ? 'BEARISH' : 'NEUTRAL'}
-                  label={
-                    sharpe >= 0.5
-                      ? 'BULLISH EDGE'
-                      : sharpe <= -0.25
-                      ? 'BEARISH DRAWDOWN'
                       : 'NEUTRAL'
                   }
                 />
               </div>
-              <div
-                className={`font-mono text-[17px] font-bold mt-1 ${
-                  sharpe >= 0.75 ? 'text-[#4edea3]' : sharpe <= -0.5 ? 'text-[#ffb4ab]' : 'text-[#fcd34d]'
-                }`}
-              >
-                {sharpe >= 0 ? '+' : ''}
-                {sharpe.toFixed(2)} / {sortino.toFixed(2)}
-              </div>
-              <span className="font-mono text-[9.5px] text-[#849495] mt-0.5 truncate">
-                {sharpeSortino?.sharpeRegime || 'Dampened Intraday Scaling'}
-              </span>
             </div>
           </div>
 
-          {renderBenchmarkRangeStrip(
-            hurst * 100,
-            hurst > 0.55 ? '#f59e0b' : '#4edea3',
-            'H < 0.45 (Fade Extremes)',
-            'H = 0.50 (Random Walk)',
-            'H > 0.55 (Follow Breakouts)'
-          )}
-        </div>
-
-        {/* CARD 2: Deribit Options GEX & Perpetual Positioning Card */}
-        <div className="cyber-panel p-4 flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-2 flex-wrap border-b border-[#1e2636] pb-2.5">
-            <span className="font-mono text-[11px] font-bold text-[#00f0ff] uppercase tracking-wider">
-              CARD 5B // DERIBIT OPTIONS GEX &amp; PERPETUAL POSITIONING (CLICK STRIKES TO TRACK)
-            </span>
-            <div className="flex items-center gap-1.5">
-              <SignalBiasPill
-                size="sm"
-                bias={telemetry.netGex >= 0 ? 'BULLISH' : 'BEARISH'}
-                label={telemetry.netGex >= 0 ? 'BULLISH +GEX PINNING' : 'BEARISH -GEX VOLATILE'}
-              />
-              <span className="px-2 py-0.5 bg-[#0b0e14] border border-[#ddb7ff]/40 font-mono text-[9.5px] text-[#ddb7ff] font-bold rounded">
-                NET GEX: {telemetry.netGex >= 0 ? '+' : ''}${telemetry.netGex}M
-              </span>
-            </div>
-          </div>
-
-          {/* 4 Clickable Options Strikes */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 tabular-nums">
-            <div
-              onClick={(e) => toggleTrackPrice(e, 'ZERO-GAMMA FLIP (0-Γ)', zeroGamma)}
-              className={`cyber-panel p-3 flex flex-col justify-between cursor-pointer ${
-                isPriceTracked(zeroGamma) ? 'cyber-panel-tracked' : ''
-              }`}
-            >
-              <div className="flex items-center justify-between gap-1">
-                <span className="font-mono text-[9px] text-[#00f0ff] font-bold">
-                  0-Γ FLIP 🎯
-                </span>
-                <SignalBiasPill
-                  size="xs"
-                  bias={currentPrice >= zeroGamma ? 'BULLISH' : 'BEARISH'}
-                  label={currentPrice >= zeroGamma ? 'BULLISH > 0-Γ' : 'BEARISH < 0-Γ'}
-                />
-              </div>
-              <div className="font-mono text-[15px] font-bold text-[#dbfcff] mt-1">
-                ${formatP(zeroGamma)}
-              </div>
-              <span className="font-mono text-[8px] text-[#849495] mt-0.5">
-                Dealer hedging pivot
-              </span>
-            </div>
-
-            <div
-              onClick={(e) => toggleTrackPrice(e, 'MAX PAIN STRIKE', optionsData.maxPain)}
-              className={`cyber-panel p-3 flex flex-col justify-between cursor-pointer ${
-                isPriceTracked(optionsData.maxPain) ? 'cyber-panel-tracked' : ''
-              }`}
-            >
-              <div className="flex items-center justify-between gap-1">
-                <span className="font-mono text-[9px] text-[#ddb7ff] font-bold">
-                  MAX PAIN 🎯
-                </span>
-                <SignalBiasPill
-                  size="xs"
-                  bias={optionsData.maxPain >= currentPrice ? 'BULLISH' : 'BEARISH'}
-                  label={optionsData.maxPain >= currentPrice ? 'BULLISH MAGNET' : 'BEARISH MAGNET'}
-                />
-              </div>
-              <div className="font-mono text-[15px] font-bold text-[#ddb7ff] mt-1">
-                ${formatP(optionsData.maxPain)}
-              </div>
-              <span className="font-mono text-[8px] text-[#849495] mt-0.5">
-                08:00 UTC Expiry Pin
-              </span>
-            </div>
-
-            <div
-              onClick={(e) => toggleTrackPrice(e, 'CALL WALL STRIKE', optionsData.callWall)}
-              className={`cyber-panel p-3 flex flex-col justify-between cursor-pointer ${
-                isPriceTracked(optionsData.callWall) ? 'cyber-panel-tracked' : ''
-              }`}
-            >
-              <div className="flex items-center justify-between gap-1">
-                <span className="font-mono text-[9px] text-[#ffb4ab] font-bold">
-                  CALL WALL 🎯
-                </span>
-                <SignalBiasPill size="xs" bias="BEARISH" label="BEARISH CEILING" />
-              </div>
-              <div className="font-mono text-[15px] font-bold text-[#ffb4ab] mt-1">
-                ${formatP(optionsData.callWall)}
-              </div>
-              <span className="font-mono text-[8px] text-[#849495] mt-0.5">
-                Major overhead call OI
-              </span>
-            </div>
-
-            <div
-              onClick={(e) => toggleTrackPrice(e, 'PUT WALL STRIKE', optionsData.putWall)}
-              className={`cyber-panel p-3 flex flex-col justify-between cursor-pointer ${
-                isPriceTracked(optionsData.putWall) ? 'cyber-panel-tracked' : ''
-              }`}
-            >
-              <div className="flex items-center justify-between gap-1">
-                <span className="font-mono text-[9px] text-[#4edea3] font-bold">
-                  PUT WALL 🎯
-                </span>
-                <SignalBiasPill size="xs" bias="BULLISH" label="BULLISH FLOOR" />
-              </div>
-              <div className="font-mono text-[15px] font-bold text-[#4edea3] mt-1">
-                ${formatP(optionsData.putWall)}
-              </div>
-              <span className="font-mono text-[8px] text-[#849495] mt-0.5">
-                Major downside put OI
-              </span>
-            </div>
-          </div>
-
-          {/* 3x2 Interactive Telemetry Cards (Funding, 4H OI, Z-Score, RSI/CVD, Net GEX, 25d Skew) */}
-          <TelemetryCards
-            metrics={telemetry}
-            symbol={symbol}
-            experienceMode={experienceMode}
-            onHoverLevel={onHoverLevel}
-            highlightedLevel={highlightedLevel}
-            onNavigateMobilePage={onNavigateMobilePage}
-          />
-
-          {/* Collapsible AI Quant Speculation Brief inside Stage 05 */}
-          <div className="pt-1 border-t border-[#1e2636]">
+          <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between gap-2 flex-wrap">
             <button
               type="button"
-              onClick={() => setShowAiBriefInStage5((p) => !p)}
-              className="font-mono text-[9.5px] text-[#00f0ff] hover:underline uppercase font-bold cursor-pointer"
+              onClick={() => setShowAiBriefInStage5((prev) => !prev)}
+              className="font-sans text-[12px] font-medium text-[#60a5fa] hover:text-[#93c5fd] cursor-pointer"
             >
               {showAiBriefInStage5
-                ? '▴ HIDE QUANT AI SYNTHESIS BRIEF'
-                : '▾ OPEN QUANT AI SYNTHESIS BRIEF & RUN QUANT ENGINE'}
+                ? 'Hide Telemetry Cards & Quant Brief ▴'
+                : 'Expand Full Telemetry Cards & Quant Synthesis ▾'}
             </button>
-            {showAiBriefInStage5 && (
-              <div className="mt-2">
-                <SpeculationBrief
-                  brief={brief}
-                  isLoading={isBriefLoading}
-                  onRunQuant={onRunQuant}
-                  onCopyText={onCopyText}
-                />
-              </div>
-            )}
           </div>
+
+          {showAiBriefInStage5 && (
+            <div className="flex flex-col gap-3 pt-2 border-t border-white/[0.06]">
+              <TelemetryCards
+                metrics={telemetry}
+                symbol={symbol}
+                experienceMode={experienceMode}
+                onHoverLevel={onHoverLevel}
+                highlightedLevel={highlightedLevel}
+              />
+              <SpeculationBrief
+                brief={brief}
+                isLoading={isBriefLoading}
+                onRunQuant={onRunQuant}
+                onCopyText={onCopyText}
+              />
+            </div>
+          )}
         </div>
 
         {renderStageFooterAndLearn(STAGES[4])}
@@ -2585,297 +1914,149 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
   };
 
   // ============================================================================
-  // STAGE 06 CONTENT: VERDICT & EXECUTION SIZER
+  // STAGE 6 CONTENT: SUMMARY & EXECUTION SIZER
   // ============================================================================
   const renderStage06Execute = () => {
     const activeSetup = lensSetups[selectedSetupLensId] || lensSetups[1];
 
     return (
-      <div className="flex flex-col p-4 gap-4">
-        {/* 5-Stage Funnel Alignment Summary Bar */}
-        <div className="cyber-panel cyber-scan-active border-l-2 border-l-[#00f0ff] p-4 flex flex-col gap-3">
+      <div className="flex flex-col p-4 gap-3.5">
+        {/* 5-Stage Funnel Summary List */}
+        <div className="cyber-panel p-4 flex flex-col gap-3">
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-2">
-              <span
-                className={`px-2 py-0.5 border font-mono text-[10px] font-bold ${
-                  isLight
-                    ? 'bg-[#ffffff] border-[#0284c7]/40 text-[#0284c7]'
-                    : 'bg-[#0b0e14] border-[#00f0ff]/40 text-[#00f0ff]'
-                }`}
-              >
-                STAGE 06 // FINAL FUNNEL SCORECARD &amp; EXECUTION
-              </span>
-              <span
-                className={`font-mono text-[11px] font-bold ${
-                  isLight ? 'text-[#0f172a]' : 'text-[#dbfcff]'
-                }`}
-              >
-                <ScrambleValue text={`${stageEvaluations[6].score}%`} /> FUNNEL CONFLUENCE
-              </span>
+            <div>
+              <h3 className="font-sans text-[14px] font-semibold text-[#f8fafc]">
+                6. Summary &amp; Execution Sizer
+              </h3>
+              <p className="font-sans text-[12px] text-[#94a3b8]">
+                Review all 5 analytical stages, select a setup template, and calculate exact position size.
+              </p>
             </div>
-
-            <button
-              type="button"
-              onClick={() => setShowReverseXRay((prev) => !prev)}
-              className={`px-3 py-1.5 font-mono text-[9.5px] font-bold uppercase border transition-all cursor-pointer ${
-                showReverseXRay
-                  ? isLight
-                    ? 'bg-[#d97706]/15 text-[#b45309] border-[#d97706]'
-                    : 'bg-[#f59e0b]/20 text-[#fcd34d] border-[#f59e0b]'
-                  : isLight
-                  ? 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0284c7] border-[#0284c7]/40'
-                  : 'bg-[#141821] hover:bg-[#191c22] text-[#00f0ff] border-[#00f0ff]/40'
-              }`}
-            >
-              🔍 {showReverseXRay ? 'HIDE REVERSE X-RAY DECONSTRUCTOR ▴' : 'REVERSE X-RAY DECONSTRUCTOR ▾'}
-            </button>
+            <SignalBiasPill
+              bias={stageEvaluations[6].bias}
+              label={`${stageEvaluations[6].score}% Funnel Alignment`}
+              size="sm"
+            />
           </div>
 
-          {/* Visual Row of Stages 1 to 5 with Pass/Wait Status */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 tabular-nums">
+          <div className="divide-y divide-white/[0.06] font-mono text-[12px] tabular-nums">
             {([1, 2, 3, 4, 5] as const).map((sId) => {
               const st = STAGES[sId - 1];
               const ev = stageEvaluations[sId];
               return (
-                <button
+                <div
                   key={sId}
-                  type="button"
                   onClick={() => handleStageSelect(sId)}
-                  className={`rounded-xl p-3 border flex flex-col gap-1 text-left transition-all shadow-sm cursor-pointer ${
-                    isLight
-                      ? 'bg-[#ffffff] hover:bg-[#f1f5f9] border-[#cbd5e1]'
-                      : 'bg-[#0d121d]/90 hover:bg-[#141821] border-white/[0.08]'
-                  }`}
-                  title={`Click to inspect Stage 0${sId} (${st.shortTitle})`}
+                  className="py-2 flex items-center justify-between gap-3 cursor-pointer hover:bg-white/[0.02] -mx-2 px-2 rounded transition-colors"
                 >
-                  <div className="flex items-center justify-between gap-1">
-                    <span
-                      className={`font-mono text-[10px] font-bold ${
-                        isLight ? 'text-[#475569]' : 'text-[#849495]'
-                      }`}
-                    >
-                      {st.stepCode}. {st.shortTitle}
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="font-sans text-[12px] font-medium text-[#f8fafc] w-24 shrink-0">
+                      {st.stepperLabel}
                     </span>
-                    <span
-                      className="w-2 h-2 rounded-full shrink-0"
-                      style={{ backgroundColor: getReadableStatusColor(ev.dotColor) }}
-                    />
-                  </div>
-                  <div className="flex items-baseline justify-between">
-                    <span
-                      className="font-mono text-[14px] font-bold"
-                      style={{ color: getReadableStatusColor(ev.dotColor) }}
-                    >
-                      {ev.score}%
-                    </span>
-                    <span
-                      className={`font-mono text-[9px] uppercase ${
-                        isLight ? 'text-[#334155]' : 'text-[#b9cacb]'
-                      }`}
-                    >
-                      {ev.status}
+                    <span className="font-sans text-[12px] text-[#94a3b8] truncate">
+                      {ev.headline}
                     </span>
                   </div>
-                </button>
+                  <div className="flex items-center gap-2.5 shrink-0">
+                    <span className="text-[#cbd5e1] font-semibold">{ev.score}%</span>
+                    <SignalBiasPill bias={ev.bias} />
+                  </div>
+                </div>
               );
             })}
           </div>
 
-          {/* Collapsible Reverse X-Ray Deconstructor & Academy Deck */}
-          <AnimatePresence initial={false}>
-            {showReverseXRay && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2, ease: 'easeOut' }}
-                className="overflow-hidden pt-2 border-t border-[#1e2636]"
-              >
-                <ReverseAcademyDeck
-                  symbol={symbol}
-                  currentPrice={currentPrice}
-                  telemetry={telemetry}
-                  volumeProfile={volumeProfile}
-                  bullOB={bullOB}
-                  bearOB={bearOB}
-                  optionsData={optionsData}
-                  liquidity={liquidity}
-                  candlestickResult={candlestickResult}
-                  maResult={maResult}
-                  amdPhase={amdPhase}
-                  calcResult={calcResult}
-                  sharpeSortino={sharpeSortino}
-                  confluence={confluence}
-                  onProgressChange={setAcademyProgress}
-                  focusXRaySignal={externalDeckRequest?.ts}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Shortcut Banner to 14-Model Playbooks & Gann/Lunar Scanner */}
-        <div
-          className={`cyber-panel border-l-2 border-l-[#f59e0b] p-4 flex items-center justify-between gap-3 flex-wrap ${
-            isLight ? 'bg-[#ffffff]' : 'bg-[#0b0e14]'
-          }`}
-        >
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span
-                className={`px-2.5 py-0.5 rounded-md border font-mono text-[10px] font-bold uppercase ${
-                  isLight
-                    ? 'bg-[#d97706]/15 text-[#b45309] border-[#d97706]/40'
-                    : 'bg-[#f59e0b]/20 text-[#fcd34d] border-[#f59e0b]/40'
-                }`}
-              >
-                🏆 14 FAMOUS PLAYBOOKS &amp; GANN / LUNAR SCANNER
+          {/* Setup Lens Selector Row */}
+          <div className="pt-3 border-t border-white/[0.06] flex flex-col gap-2.5">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <span className="font-sans text-[12px] font-medium text-[#94a3b8]">
+                Active Stage Setup Template:
               </span>
-              <span
-                className={`font-mono text-[11px] font-bold ${
-                  isLight ? 'text-[#047857]' : 'text-[#4edea3]'
-                }`}
-              >
-                {readyPlaybooksCount} HIGH-PROBABILITY SETUPS READY ON {symbol}
-              </span>
-            </div>
-            <span
-              className={`font-sans text-[13px] ${
-                isLight ? 'text-[#334155]' : 'text-[#cbd5e1]'
-              }`}
-            >
-              Top Ranked Now:{' '}
-              <strong className={isLight ? 'text-[#0f172a]' : 'text-white'}>
-                {top3PodiumStrategies[0]?.name} ({top3PodiumStrategies[0]?.possibilityScore}% Score •{' '}
-                {top3PodiumStrategies[0]?.backtest250Bars.winRatePct}% {klines.length || 1000}-Bar Win Rate)
-              </strong>
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            {top3PodiumStrategies[0] && (
-              <button
-                type="button"
-                onClick={() => {
-                  const top = top3PodiumStrategies[0];
-                  onLoadSetup(
-                    top.tradePlan.entryPrice,
-                    top.tradePlan.stopLoss,
-                    top.tradePlan.tp1Price,
-                    top.tradePlan.tp2Price
-                  );
-                }}
-                className={`text-[11px] sm:text-[12px] font-semibold px-3.5 py-2 rounded-lg border font-mono uppercase cursor-pointer transition-all shadow-sm ${
-                  isLight
-                    ? 'bg-[#059669]/15 hover:bg-[#059669]/25 text-[#047857] border-[#059669]/40'
-                    : 'bg-[#4edea3]/15 hover:bg-[#4edea3]/25 text-[#4edea3] border-[#4edea3]/40'
-                }`}
-              >
-                ⚡ LOAD #1 ({top3PodiumStrategies[0].name})
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => {
-                setViewMode('PLAYBOOKS');
-                onToggleWorkspaceExpand?.(true);
-              }}
-              className={`text-[11px] sm:text-[12px] font-semibold px-3.5 py-2 rounded-lg border font-mono uppercase cursor-pointer transition-all shadow-sm ${
-                isLight
-                  ? 'bg-[#d97706]/15 hover:bg-[#d97706]/25 text-[#b45309] border-[#d97706]/50'
-                  : 'bg-[#f59e0b]/20 hover:bg-[#f59e0b]/30 text-[#fcd34d] border-[#f59e0b]/50'
-              }`}
-            >
-              🏆 OPEN 14 PLAYBOOKS →
-            </button>
-          </div>
-        </div>
-
-        {/* Lens Setup Selector Pill — 1-Click Load Entry, Stop Loss & Targets from any Stage */}
-        <div className="cyber-panel p-4 flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <span className="font-mono text-[11px] font-bold text-[#00f0ff] uppercase tracking-wider">
-              🎯 1-CLICK STAGE SETUP LOADER (SELECT STAGE THESIS TO POPULATE SIZER)
-            </span>
-            <button
-              type="button"
-              onClick={() =>
-                onLoadSetup(
-                  activeSetup.suggestedEntry,
-                  activeSetup.invalidationPrice,
-                  activeSetup.target1Price,
-                  activeSetup.target2Price
-                )
-              }
-              className="text-[11px] sm:text-[12px] font-semibold px-3.5 py-2 rounded-lg bg-[#4edea3]/15 hover:bg-[#4edea3]/25 text-[#4edea3] border border-[#4edea3]/40 font-mono uppercase cursor-pointer transition-all shadow-sm"
-            >
-              ⚡ LOAD {activeSetup.lensTitle} INTO SIZER
-            </button>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 font-mono text-[10px]">
-            {(
-              [
-                { lensId: 1, label: '01 PRICE & S/R' },
-                { lensId: 3, label: '02 VOLUME & VA' },
-                { lensId: 2, label: '03 TREND & MA' },
-                { lensId: 4, label: '04 ORDERFLOW' },
-                { lensId: 5, label: '05 QUANT & GEX' },
-              ] as const
-            ).map((item) => {
-              const s = lensSetups[item.lensId];
-              const isSel = selectedSetupLensId === item.lensId;
-              return (
-                <button
-                  key={item.lensId}
-                  type="button"
-                  onClick={() => {
-                    setSelectedSetupLensId(item.lensId);
-                    if (s) {
-                      onLoadSetup(
-                        s.suggestedEntry,
-                        s.invalidationPrice,
-                        s.target1Price,
-                        s.target2Price
-                      );
-                    }
-                  }}
-                  className={`rounded-xl px-3 py-2.5 border text-left transition-all cursor-pointer flex flex-col gap-0.5 ${
-                    isSel
-                      ? 'bg-[#00f0ff]/15 border-[#00f0ff] text-[#dbfcff]'
-                      : 'bg-[#0d121d]/90 hover:bg-[#141821] border-white/[0.08] text-[#849495]'
-                  }`}
-                >
-                  <span className="font-bold text-[#00f0ff]">{item.label}</span>
-                  <span className="text-[9.5px] truncate">
-                    Entry ${formatP(s?.suggestedEntry || currentPrice)}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Selected Stage Setup Summary Strip */}
-          {activeSetup && (
-            <div className="rounded-xl bg-[#0d121d]/90 border border-white/[0.08] p-4 shadow-lg flex flex-col gap-2">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <span className="font-mono text-[12px] font-bold text-white">
-                  {activeSetup.setupType} ({activeSetup.bias})
-                </span>
-                <span className="font-mono text-[10.5px] text-[#849495] tabular-nums">
-                  Entry: <strong className="text-[#00f0ff]">${formatP(activeSetup.suggestedEntry)}</strong> • Stop:{' '}
-                  <strong className="text-[#ffb4ab]">${formatP(activeSetup.invalidationPrice)}</strong> • TP1:{' '}
-                  <strong className="text-[#4edea3]">${formatP(activeSetup.target1Price)}</strong> • TP2:{' '}
-                  <strong className="text-[#4edea3]">${formatP(activeSetup.target2Price)}</strong>
-                </span>
+              <div className="flex items-center gap-1.5 flex-wrap font-sans text-[11px]">
+                {(
+                  [
+                    { id: 1, label: '1. Price S/R' },
+                    { id: 3, label: '2. Volume Area' },
+                    { id: 2, label: '3. MA Pullback' },
+                    { id: 4, label: '4. Orderflow OB' },
+                    { id: 5, label: '5. Quant GEX' },
+                  ] as const
+                ).map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedSetupLensId(item.id);
+                      const s = lensSetups[item.id];
+                      if (s) {
+                        onLoadSetup(
+                          s.suggestedEntry,
+                          s.invalidationPrice,
+                          s.target1Price,
+                          s.target2Price
+                        );
+                      }
+                    }}
+                    className={`px-2.5 py-1 rounded-md border font-medium transition-colors cursor-pointer ${
+                      selectedSetupLensId === item.id
+                        ? 'bg-[#3b82f6]/15 text-[#60a5fa] border-[#3b82f6]/40'
+                        : 'bg-[#171c28] hover:bg-[#1e2536] text-[#94a3b8] border-white/[0.07]'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
               </div>
-              <p className="font-sans text-[13px] text-[#cbd5e1] leading-relaxed">
-                {activeSetup.thesis}
-              </p>
             </div>
-          )}
+
+            {activeSetup && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 font-mono text-[11px] tabular-nums">
+                <button
+                  type="button"
+                  onClick={(e) => toggleTrackPrice(e, 'Setup Entry', activeSetup.suggestedEntry)}
+                  className="p-2.5 rounded-lg bg-[#0d1017] border border-white/[0.06] text-left hover:border-white/15 cursor-pointer"
+                >
+                  <span className="block text-[10px] text-[#64748b]">ENTRY</span>
+                  <strong className="text-[#f8fafc] text-[13px]">
+                    ${formatP(activeSetup.suggestedEntry)}
+                  </strong>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => toggleTrackPrice(e, 'Setup Stop', activeSetup.invalidationPrice)}
+                  className="p-2.5 rounded-lg bg-[#0d1017] border border-white/[0.06] text-left hover:border-white/15 cursor-pointer"
+                >
+                  <span className="block text-[10px] text-[#64748b]">STOP LOSS</span>
+                  <strong className="text-[#f43f5e] text-[13px]">
+                    ${formatP(activeSetup.invalidationPrice)}
+                  </strong>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => toggleTrackPrice(e, 'Setup TP1', activeSetup.target1Price)}
+                  className="p-2.5 rounded-lg bg-[#0d1017] border border-white/[0.06] text-left hover:border-white/15 cursor-pointer"
+                >
+                  <span className="block text-[10px] text-[#64748b]">TARGET 1 (TP1)</span>
+                  <strong className="text-[#10b981] text-[13px]">
+                    ${formatP(activeSetup.target1Price)}
+                  </strong>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => toggleTrackPrice(e, 'Setup TP2', activeSetup.target2Price)}
+                  className="p-2.5 rounded-lg bg-[#0d1017] border border-white/[0.06] text-left hover:border-white/15 cursor-pointer"
+                >
+                  <span className="block text-[10px] text-[#64748b]">TARGET 2 (TP2)</span>
+                  <strong className="text-[#10b981] text-[13px]">
+                    ${formatP(activeSetup.target2Price)}
+                  </strong>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* 5-Point Pre-Flight Checklist */}
+        {/* 5-Point Pre-Flight Checklist & Paper Journal */}
         <PreFlightChecklist
           symbol={symbol}
           currentPrice={currentPrice}
@@ -2892,20 +2073,14 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
           currentSetup={activeSetup}
           experienceMode={experienceMode}
           paperTrades={paperTrades}
-          onAddPaperTrade={(trade) =>
-            onAddPaperTrade({
-              ...trade,
-              strategyLensId: selectedSetupLensId,
-              strategyLensName: activeSetup?.lensTitle || `Stage 0${selectedSetupLensId}`,
-            } as any)
-          }
+          onAddPaperTrade={onAddPaperTrade}
           onRemovePaperTrade={onRemovePaperTrade}
         />
 
-        {/* Position Size Calculator */}
+        {/* Position Sizer & Fee Drag Calculator */}
         <ExecutionHelper
-          calc={calcResult}
           baseAsset={baseAsset}
+          calc={calcResult}
           onRiskChange={onRiskChange}
           onEntryChange={onEntryChange}
           onStopChange={onStopChange}
@@ -2920,796 +2095,272 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
   };
 
   // ============================================================================
-  // COMPACT ALL VIEW: Clean Single-Page Vertical Stack of All 6 Stage Summaries
+  // COMPACT ALL 6 STAGES VIEW
   // ============================================================================
   const renderCompactAllStack = () => {
     return (
-      <div className="flex flex-col p-4 gap-4">
-        <div className="cyber-panel border-l-2 border-l-[#00f0ff] p-3.5 flex items-center justify-between gap-2 flex-wrap">
-          <div>
-            <span className="font-mono text-[10px] font-bold text-[#00f0ff] uppercase tracking-wider block">
-              👁️ COMPACT ALL // 6-STAGE PROGRESSIVE FUNNEL OVERVIEW
-            </span>
-            <span className="font-sans text-[11.5px] text-[#b9cacb]">
-              Scan all 6 institutional layers in sequence or click any stage to open its full interactive workspace and sync chart layers.
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setViewMode('GUIDED')}
-            className="px-3 py-1.5 bg-[#00f0ff]/15 hover:bg-[#00f0ff]/25 text-[#00f0ff] border border-[#00f0ff]/40 font-mono text-[9.5px] font-bold uppercase cursor-pointer"
-          >
-            RETURN TO GUIDED FLOW →
-          </button>
-        </div>
-
-        {STAGES.map((st) => {
-          const ev = stageEvaluations[st.id];
-          return (
-            <div
-              key={st.id}
-              className="cyber-panel p-4 flex flex-col gap-2.5 border-l-2"
-              style={{ borderLeftColor: getReadableStatusColor(ev.dotColor) }}
-            >
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="w-2.5 h-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: getReadableStatusColor(ev.dotColor) }}
-                  />
-                  <span
-                    className={`font-mono text-[11px] font-bold uppercase ${
-                      isLight ? 'text-[#0284c7]' : 'text-[#00f0ff]'
-                    }`}
-                  >
-                    {st.fullTitle}
-                  </span>
-                  <span
-                    className={`font-mono text-[9.5px] ${
-                      isLight ? 'text-[#475569]' : 'text-[#849495]'
-                    }`}
-                  >
-                    ({st.subtitle})
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`px-2 py-0.5 border font-mono text-[10px] font-bold tabular-nums ${
-                      isLight
-                        ? 'bg-[#ffffff] border-[#cbd5e1]'
-                        : 'bg-[#090c12] border-[#1e2636]'
-                    }`}
-                    style={{ color: getReadableStatusColor(ev.dotColor) }}
-                  >
-                    {ev.score}% {ev.bias}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setViewMode('GUIDED');
-                      handleStageSelect(st.id);
-                    }}
-                    className={`px-2.5 py-1 border font-mono text-[9px] font-bold uppercase cursor-pointer ${
-                      isLight
-                        ? 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0284c7] border-[#0284c7]/40'
-                        : 'bg-[#141821] hover:bg-[#191c22] text-[#00f0ff] border-[#00f0ff]/40'
-                    }`}
-                  >
-                    JUMP TO STAGE {st.stepCode} →
-                  </button>
-                </div>
-              </div>
-
-              <div
-                className={`font-mono text-[11px] font-bold ${
-                  isLight ? 'text-[#0f172a]' : 'text-[#dbfcff]'
-                }`}
-              >
-                {ev.headline}
-              </div>
-              <p
-                className={`font-sans text-[11.5px] leading-relaxed ${
-                  isLight ? 'text-[#1e293b]' : 'text-[#b9cacb]'
-                }`}
-              >
-                {ev.takeaway}
-              </p>
-            </div>
-          );
-        })}
+      <div className="flex flex-col divide-y divide-white/[0.06]">
+        {renderStage01Price()}
+        {renderStage02Volume()}
+        {renderStage03Trend()}
+        {renderStage04Orderflow()}
+        {renderStage05Quant()}
+        {renderStage06Execute()}
       </div>
     );
   };
 
   // ============================================================================
-  // PLAYBOOKS & GANN / LUNAR / CLASSICAL COMMAND HUB (VIEW MODE: 'PLAYBOOKS')
+  // RULE C: PLAYBOOKS (14) — SCANNABLE SUMMARY FIRST, EXPAND ON CLICK
   // ============================================================================
   const renderPlaybooksAndGannHub = () => {
     const sq9 = gannCyclesTelemetry.sq9Levels;
-    const filteredModels = famousStrategies.filter((s) => {
+
+    const filteredModels = famousStrategies.filter((m) => {
       if (playbookFilter === 'ALL') return true;
-      if (playbookFilter === 'READY') return s.possibilityScore >= 70;
-      return s.era === playbookFilter;
+      if (playbookFilter === 'READY') return m.possibilityScore >= 70;
+      return m.era === playbookFilter;
     });
 
     const handleSpotlightAndLoadGannLevel = (
       e: React.MouseEvent,
-      degreeLabel: string,
-      levelPrice: number,
+      label: string,
+      price: number,
       isSupport: boolean
     ) => {
-      toggleTrackPrice(e, `GANN SQ9 ${degreeLabel} ($${formatP(levelPrice)})`, levelPrice);
-      const atrDist = Math.max(Math.abs(sq9.res45 - sq9.sup45) * 0.5, currentPrice * 0.006);
-      const entry = levelPrice;
-      const stop = isSupport ? entry - atrDist : entry + atrDist;
-      const tp1 = isSupport ? sq9.res90 : sq9.sup90;
-      const tp2 = isSupport ? sq9.res180 : sq9.sup180;
+      e.stopPropagation();
+      if (!price || price <= 0) return;
+      onHoverLevel?.({ label: `Gann ${label}`, price });
+      const stopDist = price * 0.008;
+      const entry = price;
+      const stop = isSupport ? price - stopDist : price + stopDist;
+      const tp1 = isSupport ? price + stopDist * 2.0 : price - stopDist * 2.0;
+      const tp2 = isSupport ? price + stopDist * 3.5 : price - stopDist * 3.5;
       onLoadSetup(entry, stop, tp1, tp2);
-    };
-
-    const getStrategyBadgeColors = (score: number) => {
-      if (score >= 70) {
-        return isLight
-          ? 'bg-[#059669]/15 text-[#047857] border-[#059669]/40'
-          : 'bg-[#4edea3]/15 text-[#4edea3] border-[#4edea3]/40';
-      }
-      if (score >= 50) {
-        return isLight
-          ? 'bg-[#d97706]/15 text-[#b45309] border-[#d97706]/40'
-          : 'bg-[#f59e0b]/15 text-[#fcd34d] border-[#f59e0b]/40';
-      }
-      return isLight
-        ? 'bg-[#dc2626]/15 text-[#b91c1c] border-[#dc2626]/40'
-        : 'bg-[#ffb4ab]/15 text-[#ffb4ab] border-[#ffb4ab]/40';
-    };
-
-    const getBiasBadgeColors = (bias: 'LONG' | 'SHORT' | 'NEUTRAL') => {
-      if (bias === 'LONG') {
-        return isLight
-          ? 'bg-[#059669]/15 text-[#047857] border-[#059669]/40'
-          : 'bg-[#4edea3]/15 text-[#4edea3] border-[#4edea3]/40';
-      }
-      if (bias === 'SHORT') {
-        return isLight
-          ? 'bg-[#dc2626]/15 text-[#b91c1c] border-[#dc2626]/40'
-          : 'bg-[#ffb4ab]/15 text-[#ffb4ab] border-[#ffb4ab]/40';
-      }
-      return isLight
-        ? 'bg-[#e2e8f0] text-[#334155] border-[#cbd5e1]'
-        : 'bg-[#141821] text-[#b9cacb] border-[#1e2636]';
     };
 
     return (
       <div className="flex flex-col p-4 gap-4">
-        {/* Top Command Header */}
-        <div className="cyber-panel cyber-scan-active border-l-2 border-l-[#f59e0b] p-4 flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span
-                className={`px-2 py-0.5 border font-mono text-[9.5px] font-bold uppercase ${
-                  isLight
-                    ? 'bg-[#d97706]/15 text-[#b45309] border-[#d97706]/40'
-                    : 'bg-[#f59e0b]/20 text-[#fcd34d] border-[#f59e0b]/40'
-                }`}
-              >
-                🏆 MULTI-ERA QUANTITATIVE PLAYBOOK &amp; GANN / LUNAR SCANNER
+        {/* 1. Sleek 4-Column Compact Cyclical Context Bar */}
+        <div className="flex flex-col gap-2">
+          <div className="py-2.5 px-3 bg-[#12161f] rounded-lg border border-white/[0.07] grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-[11px] tabular-nums">
+            {/* Col 1: Lunar */}
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[10px] text-[#64748b] uppercase font-sans font-medium">
+                Lunar Cycle (SSRN)
               </span>
-              <span
-                className={`font-mono text-[10.5px] font-bold ${
-                  isLight ? 'text-[#047857]' : 'text-[#4edea3]'
-                }`}
-              >
-                {readyPlaybooksCount} OF 14 MODELS READY TO TRADE ON {symbol}
-              </span>
-            </div>
-            <p
-              className={`font-sans text-[11.5px] ${
-                isLight ? 'text-[#334155]' : 'text-[#b9cacb]'
-              }`}
-            >
-              Live local calculation of W.D. Gann Square of 9 Harmonics, Astronomical Synodic Moon Cycles (Yuan et al. 2006), Classical Tape Legends (Turtle, Crabel NR7, DeMark TD9, Raschke), and SSRN Microstructure Models with {klines.length || 1000}-bar walk-forward backtests.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setViewMode('GUIDED');
-                handleStageSelect(6);
-              }}
-              className={`px-3 py-1.5 border font-mono text-[9.5px] font-bold uppercase cursor-pointer ${
-                isLight
-                  ? 'bg-[#0284c7]/15 hover:bg-[#0284c7]/25 text-[#0284c7] border-[#0284c7]/40'
-                  : 'bg-[#00f0ff]/15 hover:bg-[#00f0ff]/25 text-[#00f0ff] border-[#00f0ff]/40'
-              }`}
-            >
-              OPEN STAGE 06 SIZER →
-            </button>
-          </div>
-        </div>
-
-        {/* ==================================================================== */}
-        {/* SECTION 1: GANN ASTRO-GEOMETRIC, LUNAR & CLASSICAL TELEMETRY BAR      */}
-        {/* ==================================================================== */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 tabular-nums">
-          {/* Card 1: Lunar Synodic Phase (Yuan, Zheng & Zhu 2006 SSRN) */}
-          <div className="cyber-panel p-3.5 flex flex-col justify-between gap-2 border-t-2 border-t-[#c084fc]">
-            <div className="flex items-center justify-between gap-1">
-              <span
-                className={`font-mono text-[9.5px] font-bold uppercase ${
-                  isLight ? 'text-[#7e22ce]' : 'text-[#c084fc]'
-                }`}
-              >
-                🌙 LUNAR SYNODIC CYCLE (SSRN)
-              </span>
-              <SignalBiasPill
-                size="xs"
-                bias={
-                  gannCyclesTelemetry.lunarAgeDays <= 3 || gannCyclesTelemetry.lunarAgeDays >= 26.5
-                    ? 'BULLISH'
-                    : gannCyclesTelemetry.lunarAgeDays >= 13 && gannCyclesTelemetry.lunarAgeDays <= 16.5
-                    ? 'BEARISH'
-                    : 'NEUTRAL'
-                }
-                label={
-                  gannCyclesTelemetry.isLunarInflectionWindow
-                    ? gannCyclesTelemetry.lunarAgeDays <= 7 || gannCyclesTelemetry.lunarAgeDays >= 24
-                      ? 'BULLISH NEW MOON'
-                      : 'BEARISH FULL MOON'
-                    : 'NEUTRAL MID-CYCLE'
-                }
-              />
-            </div>
-
-            <div className="flex items-baseline justify-between gap-2">
-              <span
-                className={`font-mono text-[14px] font-bold ${
-                  isLight ? 'text-[#0f172a]' : 'text-[#dbfcff]'
-                }`}
-              >
-                {gannCyclesTelemetry.phaseEmoji} {gannCyclesTelemetry.phaseName}
-              </span>
-              <span
-                className={`font-mono text-[11px] font-bold ${
-                  isLight ? 'text-[#7e22ce]' : 'text-[#c084fc]'
-                }`}
-              >
-                {gannCyclesTelemetry.illuminationPct}% ILLUM
+              <span className="text-[#f8fafc] font-semibold truncate">
+                Lunar: {gannCyclesTelemetry.phaseName} ({gannCyclesTelemetry.illuminationPct}%)
               </span>
             </div>
 
-            <div
-              className={`grid grid-cols-2 gap-1.5 pt-1.5 border-t font-mono text-[9px] ${
-                isLight ? 'border-[#cbd5e1] text-[#334155]' : 'border-[#1e2636] text-[#b9cacb]'
-              }`}
-            >
-              <div>
-                <span className="block text-[8px] opacity-75">MOON AGE</span>
-                <strong>{gannCyclesTelemetry.lunarAgeDays}d / 29.5d</strong>
-              </div>
-              <div>
-                <span className="block text-[8px] opacity-75">
-                  NEXT {gannCyclesTelemetry.nextInflectionType}
+            {/* Col 2: Solar */}
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[10px] text-[#64748b] uppercase font-sans font-medium">
+                Gann Solar Longitude
+              </span>
+              <span className="text-[#f8fafc] font-semibold truncate">
+                Solar: {gannCyclesTelemetry.solarLongitudeDeg}° ({gannCyclesTelemetry.nearestCardinalLabel})
+              </span>
+            </div>
+
+            {/* Col 3: Gann Sq9 + [ Gann Levels ▾ ] toggle */}
+            <div className="flex flex-col gap-0.5">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[10px] text-[#64748b] uppercase font-sans font-medium">
+                  Gann Square of 9
                 </span>
-                <strong>In {gannCyclesTelemetry.daysToNextInflection}d</strong>
+                <button
+                  type="button"
+                  onClick={() => setShowGannLevelsDrawer((prev) => !prev)}
+                  className="text-[10px] text-[#60a5fa] hover:text-[#93c5fd] font-sans font-medium cursor-pointer"
+                >
+                  [ Gann Levels {showGannLevelsDrawer ? '▴' : '▾'} ]
+                </button>
               </div>
+              <span className="text-[#f8fafc] font-semibold truncate">
+                Gann Sq9: {sq9.nearestSq9Label} (${formatP(sq9.nearestSq9Price)})
+              </span>
             </div>
-            <span
-              className={`font-mono text-[10px] leading-snug break-words ${
-                isLight ? 'text-[#475569]' : 'text-[#849495]'
-              }`}
-              title={gannCyclesTelemetry.lunarBiasNote}
-            >
-              {gannCyclesTelemetry.lunarBiasNote}
-            </span>
+
+            {/* Col 4: Tape Counters */}
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[10px] text-[#64748b] uppercase font-sans font-medium">
+                Classical Tape
+              </span>
+              <span className="text-[#f8fafc] font-semibold truncate">
+                Tape: TD {gannCyclesTelemetry.tdSequentialCount >= 0 ? `+${gannCyclesTelemetry.tdSequentialCount}` : gannCyclesTelemetry.tdSequentialCount} / {gannCyclesTelemetry.isNR7 ? 'NR7' : gannCyclesTelemetry.isNR4 ? 'NR4' : 'Wide'}
+              </span>
+            </div>
           </div>
 
-          {/* Card 2: W.D. Gann Solar Seasonal Cycle & Cardinal Dates */}
-          <div className="cyber-panel p-3.5 flex flex-col justify-between gap-2 border-t-2 border-t-[#f59e0b]">
-            <div className="flex items-center justify-between gap-1">
-              <span
-                className={`font-mono text-[9.5px] font-bold uppercase ${
-                  isLight ? 'text-[#b45309]' : 'text-[#fcd34d]'
-                }`}
+          {/* Expandable Gann Square of 9 Harmonic Levels Drawer */}
+          <AnimatePresence initial={false}>
+            {showGannLevelsDrawer && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.16 }}
+                className="overflow-hidden"
               >
-                ☀️ GANN SOLAR SEASONAL CYCLE
-              </span>
-              <span
-                className={`px-1.5 py-0.5 border font-mono text-[8.5px] font-bold ${
-                  gannCyclesTelemetry.daysToCardinalDate <= 5
-                    ? isLight
-                      ? 'bg-[#d97706]/15 text-[#b45309] border-[#d97706]/40'
-                      : 'bg-[#f59e0b]/20 text-[#fcd34d] border-[#f59e0b]/40'
-                    : isLight
-                    ? 'bg-[#f1f5f9] text-[#475569] border-[#cbd5e1]'
-                    : 'bg-[#141821] text-[#849495] border-[#1e2636]'
-                }`}
-              >
-                {gannCyclesTelemetry.solarLongitudeDeg}° ECLIPTIC
-              </span>
-            </div>
+                <div className="p-3 bg-[#0d1017] rounded-lg border border-white/[0.07] grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-[11px] tabular-nums">
+                  <button
+                    type="button"
+                    onClick={(e) => handleSpotlightAndLoadGannLevel(e, '-90° Sup', sq9.sup90, true)}
+                    className={`p-2 rounded border text-left transition-colors cursor-pointer ${
+                      isPriceTracked(sq9.sup90)
+                        ? 'bg-[#10b981]/15 border-[#10b981]/40 text-[#10b981]'
+                        : 'bg-[#12161f] hover:bg-[#171c28] border-white/[0.06] text-[#cbd5e1]'
+                    }`}
+                  >
+                    <span className="block text-[9.5px] text-[#64748b]">-90° HARMONIC SUP</span>
+                    <strong className="text-[#10b981]">${formatP(sq9.sup90)}</strong>
+                  </button>
 
-            <div className="flex items-baseline justify-between gap-2">
-              <span
-                className={`font-mono text-[11.5px] font-bold leading-snug break-words ${
-                  isLight ? 'text-[#0f172a]' : 'text-[#dbfcff]'
-                }`}
-              >
-                {gannCyclesTelemetry.activeQuadrant}
-              </span>
-            </div>
+                  <button
+                    type="button"
+                    onClick={(e) => handleSpotlightAndLoadGannLevel(e, '+90° Res', sq9.res90, false)}
+                    className={`p-2 rounded border text-left transition-colors cursor-pointer ${
+                      isPriceTracked(sq9.res90)
+                        ? 'bg-[#f43f5e]/15 border-[#f43f5e]/40 text-[#f43f5e]'
+                        : 'bg-[#12161f] hover:bg-[#171c28] border-white/[0.06] text-[#cbd5e1]'
+                    }`}
+                  >
+                    <span className="block text-[9.5px] text-[#64748b]">+90° HARMONIC RES</span>
+                    <strong className="text-[#f43f5e]">${formatP(sq9.res90)}</strong>
+                  </button>
 
-            <div
-              className={`grid grid-cols-2 gap-1.5 pt-1.5 border-t font-mono text-[9px] ${
-                isLight ? 'border-[#cbd5e1] text-[#334155]' : 'border-[#1e2636] text-[#b9cacb]'
-              }`}
-            >
-              <div>
-                <span className="block text-[8px] opacity-75">NEXT CARDINAL DATE</span>
-                <strong className="block text-[10px] leading-snug break-words">
-                  {gannCyclesTelemetry.nearestCardinalLabel}
-                </strong>
-              </div>
-              <div>
-                <span className="block text-[8px] opacity-75">TIME WINDOW</span>
-                <strong
-                  className={
-                    gannCyclesTelemetry.daysToCardinalDate <= 5
-                      ? isLight
-                        ? 'text-[#047857]'
-                        : 'text-[#4edea3]'
-                      : ''
-                  }
-                >
-                  In {gannCyclesTelemetry.daysToCardinalDate} days
-                </strong>
-              </div>
-            </div>
-            <span
-              className={`font-mono text-[10px] leading-snug break-words ${
-                isLight ? 'text-[#475569]' : 'text-[#849495]'
-              }`}
-              title={gannCyclesTelemetry.seasonalBiasNote}
-            >
-              {gannCyclesTelemetry.seasonalBiasNote}
-            </span>
-          </div>
+                  <button
+                    type="button"
+                    onClick={(e) => handleSpotlightAndLoadGannLevel(e, '-180° Sup', sq9.sup180, true)}
+                    className={`p-2 rounded border text-left transition-colors cursor-pointer ${
+                      isPriceTracked(sq9.sup180)
+                        ? 'bg-[#10b981]/15 border-[#10b981]/40 text-[#10b981]'
+                        : 'bg-[#12161f] hover:bg-[#171c28] border-white/[0.06] text-[#cbd5e1]'
+                    }`}
+                  >
+                    <span className="block text-[9.5px] text-[#64748b]">-180° OPPOSITION SUP</span>
+                    <strong className="text-[#10b981]">${formatP(sq9.sup180)}</strong>
+                  </button>
 
-          {/* Card 3: W.D. Gann Square of 9 Harmonics (Clickable Chart-Tracking + 1-Click Sizer Load) */}
-          <div className="cyber-panel p-3.5 flex flex-col justify-between gap-2 border-t-2 border-t-[#00f0ff]">
-            <div className="flex items-center justify-between gap-1">
-              <span
-                className={`font-mono text-[9.5px] font-bold uppercase ${
-                  isLight ? 'text-[#0284c7]' : 'text-[#00f0ff]'
-                }`}
-              >
-                📐 GANN SQUARE OF 9 HARMONICS
-              </span>
-              <span
-                className={`px-1.5 py-0.5 border font-mono text-[8.5px] font-bold ${
-                  sq9.distanceToNearestSq9Pct <= 0.35
-                    ? isLight
-                      ? 'bg-[#059669]/15 text-[#047857] border-[#059669]/40'
-                      : 'bg-[#4edea3]/15 text-[#4edea3] border-[#4edea3]/40'
-                    : isLight
-                    ? 'bg-[#f1f5f9] text-[#475569] border-[#cbd5e1]'
-                    : 'bg-[#141821] text-[#849495] border-[#1e2636]'
-                }`}
-              >
-                {sq9.nearestSq9Label} ({sq9.distanceToNearestSq9Pct.toFixed(2)}%)
-              </span>
-            </div>
-
-            {/* 4 Clickable Harmonic Pills: Spotlights on Chart & Loads Sizer */}
-            <div className="grid grid-cols-2 gap-1.5 font-mono">
-              <button
-                type="button"
-                onClick={(e) =>
-                  handleSpotlightAndLoadGannLevel(e, '-90° SUP', sq9.sup90, true)
-                }
-                className={`flex flex-col items-start p-2 gap-0.5 overflow-hidden border text-left transition-all cursor-pointer ${
-                  isPriceTracked(sq9.sup90)
-                    ? 'bg-[#4edea3]/25 border-[#4edea3] text-[#4edea3]'
-                    : isLight
-                    ? 'bg-[#f8fafc] hover:bg-[#e2e8f0] border-[#cbd5e1] text-[#047857]'
-                    : 'bg-[#090c12] hover:bg-[#141821] border-[#1e2636] text-[#4edea3]'
-                }`}
-                title="Click to spotlight -90° Gann Support on Chart & load into Stage 06 Sizer"
-              >
-                <span className="text-[8.5px] opacity-80">-90° SUP</span>
-                <strong className="text-[11.5px] font-bold tabular-nums truncate w-full">
-                  ${formatP(sq9.sup90)}
-                </strong>
-              </button>
-
-              <button
-                type="button"
-                onClick={(e) =>
-                  handleSpotlightAndLoadGannLevel(e, '+90° RES', sq9.res90, false)
-                }
-                className={`flex flex-col items-start p-2 gap-0.5 overflow-hidden border text-left transition-all cursor-pointer ${
-                  isPriceTracked(sq9.res90)
-                    ? 'bg-[#ffb4ab]/25 border-[#ffb4ab] text-[#ffb4ab]'
-                    : isLight
-                    ? 'bg-[#f8fafc] hover:bg-[#e2e8f0] border-[#cbd5e1] text-[#b91c1c]'
-                    : 'bg-[#090c12] hover:bg-[#141821] border-[#1e2636] text-[#ffb4ab]'
-                }`}
-                title="Click to spotlight +90° Gann Resistance on Chart & load into Stage 06 Sizer"
-              >
-                <span className="text-[8.5px] opacity-80">+90° RES</span>
-                <strong className="text-[11.5px] font-bold tabular-nums truncate w-full">
-                  ${formatP(sq9.res90)}
-                </strong>
-              </button>
-
-              <button
-                type="button"
-                onClick={(e) =>
-                  handleSpotlightAndLoadGannLevel(e, '-180° OP', sq9.sup180, true)
-                }
-                className={`flex flex-col items-start p-2 gap-0.5 overflow-hidden border text-left transition-all cursor-pointer ${
-                  isPriceTracked(sq9.sup180)
-                    ? 'bg-[#4edea3]/25 border-[#4edea3] text-[#4edea3]'
-                    : isLight
-                    ? 'bg-[#f8fafc] hover:bg-[#e2e8f0] border-[#cbd5e1] text-[#047857]'
-                    : 'bg-[#090c12] hover:bg-[#141821] border-[#1e2636] text-[#4edea3]'
-                }`}
-                title="Click to spotlight -180° Gann Opposition Support on Chart & load into Stage 06 Sizer"
-              >
-                <span className="text-[8.5px] opacity-80">-180° SUP</span>
-                <strong className="text-[11.5px] font-bold tabular-nums truncate w-full">
-                  ${formatP(sq9.sup180)}
-                </strong>
-              </button>
-
-              <button
-                type="button"
-                onClick={(e) =>
-                  handleSpotlightAndLoadGannLevel(e, '+180° OP', sq9.res180, false)
-                }
-                className={`flex flex-col items-start p-2 gap-0.5 overflow-hidden border text-left transition-all cursor-pointer ${
-                  isPriceTracked(sq9.res180)
-                    ? 'bg-[#ffb4ab]/25 border-[#ffb4ab] text-[#ffb4ab]'
-                    : isLight
-                    ? 'bg-[#f8fafc] hover:bg-[#e2e8f0] border-[#cbd5e1] text-[#b91c1c]'
-                    : 'bg-[#090c12] hover:bg-[#141821] border-[#1e2636] text-[#ffb4ab]'
-                }`}
-                title="Click to spotlight +180° Gann Opposition Resistance on Chart & load into Stage 06 Sizer"
-              >
-                <span className="text-[8.5px] opacity-80">+180° RES</span>
-                <strong className="text-[11.5px] font-bold tabular-nums truncate w-full">
-                  ${formatP(sq9.res180)}
-                </strong>
-              </button>
-            </div>
-
-            <span
-              className={`font-mono text-[8.5px] ${
-                isLight ? 'text-[#475569]' : 'text-[#849495]'
-              }`}
-            >
-              Click any harmonic pill to spotlight on chart &amp; load sizer
-            </span>
-          </div>
-
-          {/* Card 4: Classical Tape Counters (DeMark TD9, Crabel NR7/NR4, Williams %R) */}
-          <div className="cyber-panel p-3.5 flex flex-col justify-between gap-2 border-t-2 border-t-[#4edea3]">
-            <div className="flex items-center justify-between gap-1">
-              <span
-                className={`font-mono text-[9.5px] font-bold uppercase ${
-                  isLight ? 'text-[#047857]' : 'text-[#4edea3]'
-                }`}
-              >
-                🏛️ CLASSICAL TAPE COUNTERS
-              </span>
-              <SignalBiasPill
-                size="xs"
-                bias={
-                  gannCyclesTelemetry.tdSequentialCount <= -7 || gannCyclesTelemetry.williamsR14 <= -80
-                    ? 'BULLISH'
-                    : gannCyclesTelemetry.tdSequentialCount >= 7 || gannCyclesTelemetry.williamsR14 >= -20
-                    ? 'BEARISH'
-                    : 'NEUTRAL'
-                }
-                label={
-                  gannCyclesTelemetry.isNR7
-                    ? 'COIL BREAKOUT'
-                    : gannCyclesTelemetry.tdSequentialCount <= -7
-                    ? 'BULLISH TD BUY'
-                    : gannCyclesTelemetry.tdSequentialCount >= 7
-                    ? 'BEARISH TD SELL'
-                    : 'NEUTRAL RANGE'
-                }
-              />
-            </div>
-
-            <div className="grid grid-cols-3 gap-1.5 font-mono text-[9px]">
-              <div
-                className={`p-1.5 border ${
-                  isLight ? 'bg-[#f8fafc] border-[#cbd5e1]' : 'bg-[#090c12] border-[#1e2636]'
-                }`}
-              >
-                <span className="block text-[8px] opacity-75">TD SEQ (9)</span>
-                <strong
-                  className={
-                    gannCyclesTelemetry.tdSequentialCount <= -7
-                      ? isLight
-                        ? 'text-[#047857]'
-                        : 'text-[#4edea3]'
-                      : gannCyclesTelemetry.tdSequentialCount >= 7
-                      ? isLight
-                        ? 'text-[#b91c1c]'
-                        : 'text-[#ffb4ab]'
-                      : isLight
-                      ? 'text-[#0f172a]'
-                      : 'text-[#dbfcff]'
-                  }
-                >
-                  {gannCyclesTelemetry.tdSequentialCount > 0
-                    ? `+${gannCyclesTelemetry.tdSequentialCount} SELL`
-                    : gannCyclesTelemetry.tdSequentialCount < 0
-                    ? `${gannCyclesTelemetry.tdSequentialCount} BUY`
-                    : '0 NEUT'}
-                </strong>
-              </div>
-
-              <div
-                className={`p-1.5 border ${
-                  isLight ? 'bg-[#f8fafc] border-[#cbd5e1]' : 'bg-[#090c12] border-[#1e2636]'
-                }`}
-              >
-                <span className="block text-[8px] opacity-75">CRABEL NR</span>
-                <strong
-                  className={
-                    gannCyclesTelemetry.isNR7
-                      ? isLight
-                        ? 'text-[#047857]'
-                        : 'text-[#4edea3]'
-                      : isLight
-                      ? 'text-[#0f172a]'
-                      : 'text-[#dbfcff]'
-                  }
-                >
-                  {gannCyclesTelemetry.isNR7 ? 'NR7 COIL' : gannCyclesTelemetry.isNR4 ? 'NR4' : 'WIDE'}
-                </strong>
-              </div>
-
-              <div
-                className={`p-1.5 border ${
-                  isLight ? 'bg-[#f8fafc] border-[#cbd5e1]' : 'bg-[#090c12] border-[#1e2636]'
-                }`}
-              >
-                <span className="block text-[8px] opacity-75">WILLIAMS %R</span>
-                <strong
-                  className={
-                    gannCyclesTelemetry.williamsR14 <= -80
-                      ? isLight
-                        ? 'text-[#047857]'
-                        : 'text-[#4edea3]'
-                      : gannCyclesTelemetry.williamsR14 >= -20
-                      ? isLight
-                        ? 'text-[#b91c1c]'
-                        : 'text-[#ffb4ab]'
-                      : isLight
-                      ? 'text-[#0f172a]'
-                      : 'text-[#dbfcff]'
-                  }
-                >
-                  {gannCyclesTelemetry.williamsR14.toFixed(1)}
-                </strong>
-              </div>
-            </div>
-
-            <span
-              className={`font-mono text-[8.5px] ${
-                isLight ? 'text-[#475569]' : 'text-[#849495]'
-              }`}
-            >
-              20-Bar Donchian: ${formatP(gannCyclesTelemetry.donchian20Low)} – $
-              {formatP(gannCyclesTelemetry.donchian20High)}
-            </span>
-          </div>
+                  <button
+                    type="button"
+                    onClick={(e) => handleSpotlightAndLoadGannLevel(e, '+180° Res', sq9.res180, false)}
+                    className={`p-2 rounded border text-left transition-colors cursor-pointer ${
+                      isPriceTracked(sq9.res180)
+                        ? 'bg-[#f43f5e]/15 border-[#f43f5e]/40 text-[#f43f5e]'
+                        : 'bg-[#12161f] hover:bg-[#171c28] border-white/[0.06] text-[#cbd5e1]'
+                    }`}
+                  >
+                    <span className="block text-[9.5px] text-[#64748b]">+180° OPPOSITION RES</span>
+                    <strong className="text-[#f43f5e]">${formatP(sq9.res180)}</strong>
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
-        {/* ==================================================================== */}
-        {/* SECTION 2: 🎯 TOP 3 BEST AVAILABLE SETUPS TO ASSESS RIGHT NOW         */}
-        {/* ==================================================================== */}
-        <div className="cyber-panel p-4 flex flex-col gap-3 border-l-2 border-l-[#4edea3]">
+        {/* 2. Top 3 Best Available Setups (Clean 3-Column Row) */}
+        <div className="flex flex-col gap-2.5">
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-2">
-              <span
-                className={`px-2 py-0.5 border font-mono text-[9.5px] font-bold uppercase ${
-                  isLight
-                    ? 'bg-[#059669]/15 text-[#047857] border-[#059669]/40'
-                    : 'bg-[#4edea3]/15 text-[#4edea3] border-[#4edea3]/40'
-                }`}
-              >
-                🎯 BEST AVAILABLE SETUPS TO ASSESS RIGHT NOW
-              </span>
-              <span
-                className={`font-mono text-[10px] ${
-                  isLight ? 'text-[#475569]' : 'text-[#849495]'
-                }`}
-              >
-                Ranked by Composite Edge (65% Live Confluence + 35% {klines.length || 1000}-Bar Asset Backtest Win Rate)
-              </span>
-            </div>
+            <span className="font-sans text-[13px] font-semibold text-[#f8fafc]">
+              Top 3 Best Available Setups
+            </span>
+            <span className="font-mono text-[11px] text-[#64748b]">
+              {readyPlaybooksCount} of 14 models ready on {symbol}
+            </span>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5 tabular-nums">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 tabular-nums">
             {top3PodiumStrategies.map((strat, idx) => {
-              const rankLabels = ['#1 BEST EDGE NOW', '#2 RUNNER-UP', '#3 ALTERNATIVE'];
-              const rankBorderColors = [
-                'border-t-2 border-t-[#4edea3]',
-                'border-t-2 border-t-[#00f0ff]',
-                'border-t-2 border-t-[#f59e0b]',
-              ];
+              const rankLabels = ['#1 Best Match', '#2 Runner-Up', '#3 Alternative'];
+              const avgR = strat.backtest250Bars.avgRealizedR;
               return (
                 <div
                   key={strat.id}
-                  className={`rounded-xl p-4 border shadow-lg flex flex-col justify-between gap-3 ${
-                    rankBorderColors[idx]
-                  } ${
-                    isLight
-                      ? 'bg-[#ffffff] border-[#cbd5e1]'
-                      : 'bg-[#0d121d]/90 border-white/[0.08]'
-                  }`}
+                  className="cyber-panel p-3.5 flex flex-col justify-between gap-3"
                 >
-                  <div className="flex flex-col gap-2.5">
-                    <div className="flex items-center justify-between gap-1.5 flex-wrap">
-                      <span
-                        className={`px-2 py-0.5 rounded-md font-mono text-[9px] font-bold uppercase border ${
-                          idx === 0
-                            ? isLight
-                              ? 'bg-[#059669]/15 text-[#047857] border-[#059669]/40'
-                              : 'bg-[#4edea3]/20 text-[#4edea3] border-[#4edea3]/50'
-                            : isLight
-                            ? 'bg-[#0284c7]/15 text-[#0284c7] border-[#0284c7]/40'
-                            : 'bg-[#00f0ff]/15 text-[#00f0ff] border-[#00f0ff]/40'
-                        }`}
-                      >
-                        {rankLabels[idx]} • {strat.era}
+                  <div className="flex flex-col gap-2">
+                    {/* Rank + Direction & Score */}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono text-[10px] font-semibold text-[#94a3b8] uppercase">
+                        {rankLabels[idx]}
                       </span>
-
-                      <div className="flex items-center gap-1">
-                        <SignalBiasPill
-                          size="xs"
-                          bias={
-                            strat.direction === 'LONG'
-                              ? 'BULLISH'
-                              : strat.direction === 'SHORT'
-                              ? 'BEARISH'
-                              : 'NEUTRAL'
-                          }
-                          label={
-                            strat.direction === 'LONG'
-                              ? 'BULLISH (LONG)'
-                              : strat.direction === 'SHORT'
-                              ? 'BEARISH (SHORT)'
-                              : 'NEUTRAL'
-                          }
-                        />
-                        <span
-                          className={`px-2 py-0.5 rounded-md border font-mono text-[10px] font-bold ${getStrategyBadgeColors(
-                            strat.possibilityScore
-                          )}`}
-                        >
-                          {strat.possibilityScore}% MATCH
-                        </span>
-                      </div>
+                      <SignalBiasPill
+                        bias={
+                          strat.direction === 'LONG'
+                            ? 'BULLISH'
+                            : strat.direction === 'SHORT'
+                            ? 'BEARISH'
+                            : 'NEUTRAL'
+                        }
+                        label={`${strat.direction} • ${strat.possibilityScore}%`}
+                      />
                     </div>
 
+                    {/* Strategy Name + Win Rate */}
                     <div>
-                      <div
-                        className={`font-sans text-[15px] sm:text-[16px] font-bold tracking-tight ${
-                          isLight ? 'text-[#0f172a]' : 'text-white'
-                        }`}
-                      >
+                      <div className="font-sans text-[14px] font-semibold text-[#f8fafc] leading-snug">
                         {strat.name}
                       </div>
-                      <div
-                        className={`font-mono text-[10px] mt-0.5 ${
-                          isLight ? 'text-[#475569]' : 'text-[#849495]'
-                        }`}
-                      >
-                        {strat.authorOrPaper} • {klines.length || 1000}-Bar Win Rate:{' '}
-                        <strong className={isLight ? 'text-[#047857]' : 'text-[#4edea3]'}>
-                          {strat.backtest250Bars.winRatePct}% (N={strat.backtest250Bars.signalsCount},{' '}
-                          {strat.backtest250Bars.avgRealizedR}R)
-                        </strong>
+                      <div className="font-mono text-[11px] text-[#10b981] mt-0.5">
+                        {strat.backtest250Bars.winRatePct}% Win • {avgR >= 0 ? '+' : ''}
+                        {avgR}R ({strat.backtest250Bars.signalsCount} trades)
                       </div>
                     </div>
 
-                    <p
-                      className={`font-sans text-[13px] leading-relaxed ${
-                        isLight ? 'text-[#1e293b]' : 'text-[#cbd5e1]'
-                      }`}
-                    >
-                      {strat.tradePlan.triggerNote}
-                    </p>
-
-                    {/* Compact Trade Geometry Strip */}
-                    <div
-                      className={`grid grid-cols-4 gap-1.5 p-2.5 rounded-lg border font-mono text-[9.5px] ${
-                        isLight ? 'bg-[#f8fafc] border-[#cbd5e1]' : 'bg-[#080b12]/90 border-white/[0.08]'
-                      }`}
-                    >
+                    {/* Compact Entry / Stop / Target Row */}
+                    <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-white/[0.06] font-mono text-[11px]">
                       <button
                         type="button"
                         onClick={(e) =>
-                          toggleTrackPrice(
-                            e,
-                            `${strat.name} ENTRY`,
-                            strat.tradePlan.entryPrice
-                          )
+                          toggleTrackPrice(e, `${strat.name} Entry`, strat.tradePlan.entryPrice)
                         }
-                        className="text-left cursor-pointer hover:opacity-80"
-                        title="Click to spotlight Entry on Chart"
+                        className="text-left hover:opacity-80 cursor-pointer"
                       >
-                        <span className="block text-[8px] opacity-70">ENTRY 🎯</span>
-                        <strong className={isLight ? 'text-[#0284c7]' : 'text-[#00f0ff]'}>
+                        <span className="block text-[9.5px] text-[#64748b]">Entry</span>
+                        <strong className="text-[#f8fafc]">
                           ${formatP(strat.tradePlan.entryPrice)}
                         </strong>
                       </button>
                       <button
                         type="button"
                         onClick={(e) =>
-                          toggleTrackPrice(
-                            e,
-                            `${strat.name} STOP`,
-                            strat.tradePlan.stopLoss
-                          )
+                          toggleTrackPrice(e, `${strat.name} Stop`, strat.tradePlan.stopLoss)
                         }
-                        className="text-left cursor-pointer hover:opacity-80"
-                        title="Click to spotlight Stop Loss on Chart"
+                        className="text-left hover:opacity-80 cursor-pointer"
                       >
-                        <span className="block text-[8px] opacity-70">STOP 🎯</span>
-                        <strong className={isLight ? 'text-[#b91c1c]' : 'text-[#ffb4ab]'}>
+                        <span className="block text-[9.5px] text-[#64748b]">Stop</span>
+                        <strong className="text-[#f43f5e]">
                           ${formatP(strat.tradePlan.stopLoss)}
                         </strong>
                       </button>
                       <button
                         type="button"
                         onClick={(e) =>
-                          toggleTrackPrice(e, `${strat.name} TP1`, strat.tradePlan.tp1Price)
+                          toggleTrackPrice(e, `${strat.name} Target`, strat.tradePlan.tp1Price)
                         }
-                        className="text-left cursor-pointer hover:opacity-80"
-                        title="Click to spotlight TP1 on Chart"
+                        className="text-left hover:opacity-80 cursor-pointer"
                       >
-                        <span className="block text-[8px] opacity-70">TP1 🎯</span>
-                        <strong className={isLight ? 'text-[#047857]' : 'text-[#4edea3]'}>
+                        <span className="block text-[9.5px] text-[#64748b]">Target</span>
+                        <strong className="text-[#10b981]">
                           ${formatP(strat.tradePlan.tp1Price)}
-                        </strong>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) =>
-                          toggleTrackPrice(e, `${strat.name} TP2`, strat.tradePlan.tp2Price)
-                        }
-                        className="text-left cursor-pointer hover:opacity-80"
-                        title="Click to spotlight TP2 on Chart"
-                      >
-                        <span className="block text-[8px] opacity-70">TP2 🎯</span>
-                        <strong className={isLight ? 'text-[#047857]' : 'text-[#4edea3]'}>
-                          ${formatP(strat.tradePlan.tp2Price)}
                         </strong>
                       </button>
                     </div>
                   </div>
 
-                  {/* Action Buttons: Assess Rules Modal + 1-Click Load into Stage 06 Sizer */}
-                  <div className="flex items-center gap-2 pt-1">
+                  <div className="flex items-center justify-between gap-2 pt-1">
                     <button
                       type="button"
-                      onClick={() => setAssessedStrategyId(strat.id)}
-                      className={`flex-1 text-[11px] sm:text-[12px] font-semibold px-3.5 py-2 rounded-lg border font-mono uppercase transition-all shadow-sm cursor-pointer ${
-                        isLight
-                          ? 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0284c7] border-[#0284c7]/40'
-                          : 'bg-[#141821] hover:bg-[#191c22] text-[#00f0ff] border-[#00f0ff]/40'
-                      }`}
+                      onClick={() =>
+                        setExpandedPlaybookId((prev) => (prev === strat.id ? null : strat.id))
+                      }
+                      className="px-2.5 py-1.5 rounded-md bg-[#171c28] hover:bg-[#1e2536] border border-white/[0.07] text-[#cbd5e1] font-sans text-[11.5px] font-medium cursor-pointer"
                     >
-                      🔍 ASSESS RULES
+                      {expandedPlaybookId === strat.id ? 'Hide Rules ▴' : 'Details ▾'}
                     </button>
                     <button
                       type="button"
@@ -3724,13 +2375,9 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                         handleStageSelect(6);
                         onToggleWorkspaceExpand?.(false);
                       }}
-                      className={`flex-1 text-[11px] sm:text-[12px] font-semibold px-3.5 py-2 rounded-lg border font-mono uppercase transition-all shadow-sm cursor-pointer ${
-                        isLight
-                          ? 'bg-[#059669]/15 hover:bg-[#059669]/25 text-[#047857] border-[#059669]/40'
-                          : 'bg-[#4edea3]/15 hover:bg-[#4edea3]/25 text-[#4edea3] border-[#4edea3]/40'
-                      }`}
+                      className="flex-1 px-3 py-1.5 bg-[#6366f1]/15 hover:bg-[#6366f1]/25 text-[#a5b4fc] border border-[#6366f1]/30 rounded-lg font-sans text-[11.5px] font-medium transition-colors cursor-pointer"
                     >
-                      ⚡ LOAD INTO SIZER →
+                      Use Setup
                     </button>
                   </div>
                 </div>
@@ -3739,29 +2386,23 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
           </div>
         </div>
 
-        {/* ==================================================================== */}
-        {/* SECTION 3: FULL 14-MODEL RESEARCH LIBRARY WITH ERA FILTERS           */}
-        {/* ==================================================================== */}
-        <div className="cyber-panel p-4 flex flex-col gap-3.5">
+        {/* 3. The 14 Strategy Cards (Accordion Progressive Disclosure) */}
+        <div className="cyber-panel p-4 flex flex-col gap-3">
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <span
-              className={`font-mono text-[11px] font-bold uppercase tracking-wider ${
-                isLight ? 'text-[#0284c7]' : 'text-[#00f0ff]'
-              }`}
-            >
-              📚 14-MODEL QUANTITATIVE &amp; HISTORICAL STRATEGY LIBRARY ({filteredModels.length} SHOWN)
+            <span className="font-sans text-[13px] font-semibold text-[#f8fafc]">
+              All 14 Quantitative Playbooks ({filteredModels.length})
             </span>
 
-            {/* Era Filter Tabs with Spring Gliding Pill */}
-            <div className="flex items-center gap-1.5 flex-wrap font-mono text-[10px]">
+            {/* Clean Era Filter Segmented Bar */}
+            <div className="flex items-center gap-1 flex-wrap p-1 rounded-lg bg-[#0d1017] border border-white/[0.06] font-sans text-[11px]">
               {(
                 [
-                  { id: 'ALL', label: `ALL (${famousStrategies.length})` },
-                  { id: 'READY', label: `🟢 READY TO TRADE (${readyPlaybooksCount})` },
-                  { id: 'GANN & CYCLICAL', label: '🌙 GANN & CYCLICAL' },
-                  { id: 'CLASSICAL LEGENDS', label: '🏛️ CLASSICAL LEGENDS' },
-                  { id: 'SSRN ACADEMIC', label: '📄 SSRN ACADEMIC' },
-                  { id: 'OPTIONS & DEALER', label: '⚡ OPTIONS & ORDERFLOW' },
+                  { id: 'ALL', label: `All (${famousStrategies.length})` },
+                  { id: 'READY', label: `Ready (${readyPlaybooksCount})` },
+                  { id: 'GANN & CYCLICAL', label: 'Gann & Cyclical' },
+                  { id: 'CLASSICAL LEGENDS', label: 'Classical' },
+                  { id: 'SSRN ACADEMIC', label: 'SSRN Academic' },
+                  { id: 'OPTIONS & DEALER', label: 'Options & Flow' },
                 ] as const
               ).map((tab) => {
                 const active = playbookFilter === tab.id;
@@ -3770,23 +2411,17 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                     key={tab.id}
                     type="button"
                     onClick={() => setPlaybookFilter(tab.id)}
-                    className={`relative overflow-hidden px-3 py-1.5 rounded-lg border font-bold uppercase transition-all cursor-pointer ${
+                    className={`relative px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
                       active
-                        ? isLight
-                          ? 'text-[#0284c7] border-[#0284c7]'
-                          : 'text-[#00f0ff] border-[#00f0ff]'
-                        : isLight
-                        ? 'bg-[#f8fafc] hover:bg-[#e2e8f0] text-[#475569] border-[#cbd5e1]'
-                        : 'bg-[#0d121d]/90 hover:bg-[#141821] text-[#849495] border-white/10'
+                        ? 'text-[#f8fafc]'
+                        : 'text-[#64748b] hover:text-[#cbd5e1]'
                     }`}
                   >
                     {active && (
                       <motion.div
                         layoutId="activePlaybookFilterGlow"
                         transition={{ type: 'spring', stiffness: 420, damping: 32 }}
-                        className={`absolute inset-0 rounded-lg pointer-events-none ${
-                          isLight ? 'bg-[#0284c7]/15' : 'bg-[#00f0ff]/20'
-                        }`}
+                        className="absolute inset-0 rounded-md bg-[#1e2536] border border-white/[0.09] pointer-events-none"
                       />
                     )}
                     <span className="relative z-10">{tab.label}</span>
@@ -3796,43 +2431,27 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
             </div>
           </div>
 
-          <div
-            className={`grid grid-cols-1 ${
-              isWorkspaceExpanded ? 'md:grid-cols-2 xl:grid-cols-3' : 'xl:grid-cols-2'
-            } gap-4 tabular-nums`}
-          >
-            {filteredModels.map((model) => (
-              <div
-                key={model.id}
-                className={`rounded-xl p-4 border shadow-lg flex flex-col justify-between gap-3 ${
-                  isLight ? 'bg-[#ffffff] border-[#cbd5e1]' : 'bg-[#0d121d]/90 border-white/[0.08]'
-                }`}
-              >
-                <div className="flex flex-col gap-2.5">
-                  {/* Header: Era Badge + Bias + Possibility Score */}
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span
-                        className={`px-2 py-0.5 rounded-md border font-mono text-[9px] font-bold uppercase ${
-                          isLight
-                            ? 'bg-[#f1f5f9] text-[#334155] border-[#cbd5e1]'
-                            : 'bg-[#141821] text-[#b9cacb] border-white/10'
-                        }`}
-                      >
-                        {model.era}
-                      </span>
-                      <span
-                        className={`font-mono text-[10px] ${
-                          isLight ? 'text-[#475569]' : 'text-[#849495]'
-                        }`}
-                      >
-                        {model.authorOrPaper}
-                      </span>
-                    </div>
+          {/* Accordion List of 14 Strategies */}
+          <div className="flex flex-col gap-2 tabular-nums">
+            {filteredModels.map((model) => {
+              const isExpanded = expandedPlaybookId === model.id;
+              const avgR = model.backtest250Bars.avgRealizedR;
 
-                    <div className="flex items-center gap-1.5">
+              return (
+                <div
+                  key={model.id}
+                  className="rounded-lg bg-[#0d1017] border border-white/[0.07] hover:border-white/[0.13] transition-colors overflow-hidden"
+                >
+                  {/* Collapsed View (Default): Clean horizontal card */}
+                  <div
+                    onClick={() =>
+                      setExpandedPlaybookId((prev) => (prev === model.id ? null : model.id))
+                    }
+                    className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer"
+                  >
+                    {/* Left: Strategy Title, Author/Era Subtitle, and LONG / SHORT badge */}
+                    <div className="flex items-start sm:items-center gap-3 min-w-0">
                       <SignalBiasPill
-                        size="xs"
                         bias={
                           model.direction === 'LONG'
                             ? 'BULLISH'
@@ -3840,181 +2459,224 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                             ? 'BEARISH'
                             : 'NEUTRAL'
                         }
-                        label={
-                          model.direction === 'LONG'
-                            ? 'BULLISH (LONG)'
-                            : model.direction === 'SHORT'
-                            ? 'BEARISH (SHORT)'
-                            : 'NEUTRAL'
-                        }
+                        label={model.direction}
                       />
-                      <span
-                        className={`px-2 py-0.5 rounded-md border font-mono text-[10px] font-bold ${getStrategyBadgeColors(
-                          model.possibilityScore
-                        )}`}
-                      >
-                        {model.possibilityScore}% MATCH ({model.status.replace('_', ' ')})
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Title & Live Verdict */}
-                  <div>
-                    <div
-                      className={`font-sans text-[15px] sm:text-[16px] font-bold tracking-tight ${
-                        isLight ? 'text-[#0f172a]' : 'text-white'
-                      }`}
-                    >
-                      {model.name}
-                    </div>
-                    <p
-                      className={`font-sans text-[13px] mt-1 leading-relaxed ${
-                        isLight ? 'text-[#1e293b]' : 'text-[#cbd5e1]'
-                      }`}
-                    >
-                      {model.tradePlan.triggerNote}
-                    </p>
-                  </div>
-
-                  {/* 4-Rule Live Telemetry Checklist */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {model.rules.map((r, rIdx) => (
-                      <div
-                        key={rIdx}
-                        className={`rounded-lg p-2.5 border flex flex-col gap-0.5 font-mono text-[9.5px] ${
-                          r.passed
-                            ? isLight
-                              ? 'bg-[#059669]/10 border-[#059669]/30'
-                              : 'bg-[#4edea3]/10 border-[#4edea3]/30'
-                            : isLight
-                            ? 'bg-[#f8fafc] border-[#cbd5e1]'
-                            : 'bg-[#080b12]/90 border-white/[0.08]'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-1">
-                          <span
-                            className={`font-bold ${
-                              r.passed
-                                ? isLight
-                                  ? 'text-[#047857]'
-                                  : 'text-[#4edea3]'
-                                : isLight
-                                ? 'text-[#475569]'
-                                : 'text-[#849495]'
-                            }`}
-                          >
-                            {r.passed ? '✓' : '○'} {r.label}
-                          </span>
-                          <span className="text-[8.5px] opacity-75">+25%</span>
+                      <div className="min-w-0">
+                        <div className="font-sans text-[13.5px] font-semibold text-[#f8fafc] truncate">
+                          {model.name}
                         </div>
-                        <span
-                          className={`text-[9px] truncate ${
-                            isLight ? 'text-[#0f172a]' : 'text-[#dbfcff]'
-                          }`}
-                        >
-                          Live: <strong>{r.liveReading}</strong>
-                        </span>
+                        <div className="font-mono text-[11px] text-[#64748b] truncate">
+                          {model.authorOrPaper} • {model.era}
+                        </div>
                       </div>
-                    ))}
-                  </div>
+                    </div>
 
-                  {/* Rolling Walk-Forward Backtest Strip */}
-                  <div
-                    className={`rounded-lg p-2.5 border flex items-center justify-between flex-wrap gap-2 font-mono text-[9.5px] ${
-                      isLight ? 'bg-[#f8fafc] border-[#cbd5e1]' : 'bg-[#080b12]/90 border-white/[0.08]'
-                    }`}
-                  >
-                    <span>
-                      📊 {klines.length || 1000}-BAR WALK-FORWARD BACKTEST:{' '}
-                      <strong className={isLight ? 'text-[#047857]' : 'text-[#4edea3]'}>
-                        {model.backtest250Bars.winRatePct}% WIN RATE
-                      </strong>{' '}
-                      (N={model.backtest250Bars.signalsCount} signals • {model.backtest250Bars.avgRealizedR}R Avg)
-                    </span>
-                    <a
-                      href={model.referenceUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`underline font-bold ${
-                        isLight ? 'text-[#0284c7]' : 'text-[#00f0ff]'
-                      }`}
+                    {/* Right: Match Score, Backtest Win Rate, Details ▾, and Load Setup */}
+                    <div
+                      className="flex items-center justify-between sm:justify-end gap-3 shrink-0"
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      📖 {model.referenceSourceLabel} ↗
-                    </a>
+                      <div className="flex items-center gap-3 font-mono text-[11.5px]">
+                        <div className="text-right">
+                          <span className="block text-[9.5px] text-[#64748b]">MATCH</span>
+                          <strong
+                            className={
+                              model.possibilityScore >= 70
+                                ? 'text-[#10b981]'
+                                : model.possibilityScore >= 50
+                                ? 'text-[#f59e0b]'
+                                : 'text-[#94a3b8]'
+                            }
+                          >
+                            {model.possibilityScore}%
+                          </strong>
+                        </div>
+                        <div className="text-right">
+                          <span className="block text-[9.5px] text-[#64748b]">BACKTEST</span>
+                          <strong className="text-[#cbd5e1]">
+                            {model.backtest250Bars.winRatePct}% • {avgR >= 0 ? '+' : ''}
+                            {avgR}R
+                          </strong>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpandedPlaybookId((prev) =>
+                              prev === model.id ? null : model.id
+                            )
+                          }
+                          className="px-2.5 py-1.5 rounded-md bg-[#171c28] hover:bg-[#1e2536] border border-white/[0.07] text-[#cbd5e1] font-sans text-[11.5px] font-medium cursor-pointer"
+                        >
+                          {isExpanded ? 'Details ▴' : 'Details ▾'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onLoadSetup(
+                              model.tradePlan.entryPrice,
+                              model.tradePlan.stopLoss,
+                              model.tradePlan.tp1Price,
+                              model.tradePlan.tp2Price
+                            );
+                            setViewMode('GUIDED');
+                            handleStageSelect(6);
+                            onToggleWorkspaceExpand?.(false);
+                          }}
+                          className="px-3 py-1.5 bg-[#6366f1]/15 hover:bg-[#6366f1]/25 text-[#a5b4fc] border border-[#6366f1]/30 rounded-lg font-sans text-[11.5px] font-medium transition-colors cursor-pointer"
+                        >
+                          Load Setup
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Rookie vs Pro Explanation */}
-                  <p
-                    className={`font-sans text-[13px] leading-relaxed ${
-                      isLight ? 'text-[#334155]' : 'text-[#cbd5e1]'
-                    }`}
-                  >
-                    <strong className="font-mono text-[10px] uppercase text-[#fcd34d]">
-                      {experienceMode === 'rookie' ? '🎓 ROOKIE GUIDE: ' : '🏛️ QUANT DESK THESIS: '}
-                    </strong>
-                    {experienceMode === 'rookie' ? model.rookieExplanation : model.corePhilosophy}
-                  </p>
+                  {/* Expanded View (When Details ▾ is clicked) */}
+                  <AnimatePresence initial={false}>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.18, ease: 'easeOut' }}
+                        className="overflow-hidden border-t border-white/[0.06] bg-[#12161f] px-4 py-3.5 flex flex-col gap-3"
+                      >
+                        <p className="font-sans text-[12.5px] text-[#cbd5e1] leading-relaxed">
+                          {model.tradePlan.triggerNote}
+                        </p>
+
+                        {/* 4-Rule Live Checklist (Hairline list) */}
+                        <div className="divide-y divide-white/[0.06] border-y border-white/[0.06] font-mono text-[11.5px]">
+                          {model.rules.map((r, rIdx) => (
+                            <div
+                              key={rIdx}
+                              className="py-2 flex items-center justify-between gap-3"
+                            >
+                              <span
+                                className={
+                                  r.passed
+                                    ? 'text-[#10b981] font-medium'
+                                    : 'text-[#64748b]'
+                                }
+                              >
+                                {r.passed ? '✓' : '○'} {r.label}
+                              </span>
+                              <span className="text-[#f8fafc]">{r.liveReading}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Entry / Stop / TP1 / TP2 Prices */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-[11px]">
+                          <button
+                            type="button"
+                            onClick={(e) =>
+                              toggleTrackPrice(
+                                e,
+                                `${model.name} Entry`,
+                                model.tradePlan.entryPrice
+                              )
+                            }
+                            className="p-2 rounded bg-[#0d1017] border border-white/[0.06] text-left hover:border-white/15 cursor-pointer"
+                          >
+                            <span className="block text-[9.5px] text-[#64748b]">ENTRY</span>
+                            <strong className="text-[#f8fafc]">
+                              ${formatP(model.tradePlan.entryPrice)}
+                            </strong>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) =>
+                              toggleTrackPrice(
+                                e,
+                                `${model.name} Stop`,
+                                model.tradePlan.stopLoss
+                              )
+                            }
+                            className="p-2 rounded bg-[#0d1017] border border-white/[0.06] text-left hover:border-white/15 cursor-pointer"
+                          >
+                            <span className="block text-[9.5px] text-[#64748b]">STOP LOSS</span>
+                            <strong className="text-[#f43f5e]">
+                              ${formatP(model.tradePlan.stopLoss)}
+                            </strong>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) =>
+                              toggleTrackPrice(
+                                e,
+                                `${model.name} TP1`,
+                                model.tradePlan.tp1Price
+                              )
+                            }
+                            className="p-2 rounded bg-[#0d1017] border border-white/[0.06] text-left hover:border-white/15 cursor-pointer"
+                          >
+                            <span className="block text-[9.5px] text-[#64748b]">TARGET 1</span>
+                            <strong className="text-[#10b981]">
+                              ${formatP(model.tradePlan.tp1Price)}
+                            </strong>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) =>
+                              toggleTrackPrice(
+                                e,
+                                `${model.name} TP2`,
+                                model.tradePlan.tp2Price
+                              )
+                            }
+                            className="p-2 rounded bg-[#0d1017] border border-white/[0.06] text-left hover:border-white/15 cursor-pointer"
+                          >
+                            <span className="block text-[9.5px] text-[#64748b]">TARGET 2</span>
+                            <strong className="text-[#10b981]">
+                              ${formatP(model.tradePlan.tp2Price)}
+                            </strong>
+                          </button>
+                        </div>
+
+                        {/* Rookie Guide Explanation & Academic/Book Link */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                          <p className="font-sans text-[12px] text-[#94a3b8] leading-relaxed flex-1">
+                            <strong className="text-[#f8fafc] font-medium">
+                              {experienceMode === 'rookie' ? 'Rookie Guide: ' : 'Strategy Thesis: '}
+                            </strong>
+                            {experienceMode === 'rookie'
+                              ? model.rookieExplanation
+                              : model.corePhilosophy}
+                          </p>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={(e) =>
+                                toggleTrackPrice(
+                                  e,
+                                  `${model.name} Entry`,
+                                  model.tradePlan.entryPrice
+                                )
+                              }
+                              className="px-2.5 py-1.5 rounded-md bg-[#171c28] hover:bg-[#1e2536] border border-white/[0.08] text-[#cbd5e1] font-sans text-[11px] font-medium cursor-pointer"
+                            >
+                              Highlight Entry
+                            </button>
+                            <a
+                              href={model.referenceUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-2.5 py-1.5 rounded-md bg-[#171c28] hover:bg-[#1e2536] border border-white/[0.08] text-[#60a5fa] font-sans text-[11px] font-medium"
+                            >
+                              {model.referenceSourceLabel} ↗
+                            </a>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
-
-                {/* Action Footer */}
-                <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-white/[0.08] flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={(e) =>
-                        toggleTrackPrice(
-                          e,
-                          `${model.name} ENTRY ($${formatP(model.tradePlan.entryPrice)})`,
-                          model.tradePlan.entryPrice
-                        )
-                      }
-                      className={`text-[11px] sm:text-[12px] font-semibold px-3.5 py-2 rounded-lg border font-mono uppercase cursor-pointer transition-all shadow-sm ${
-                        isPriceTracked(model.tradePlan.entryPrice)
-                          ? 'bg-[#00f0ff]/25 border-[#00f0ff] text-[#00f0ff]'
-                          : isLight
-                          ? 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#334155] border-[#cbd5e1]'
-                          : 'bg-[#141821] hover:bg-[#191c22] text-[#e1e2eb] border-white/15'
-                      }`}
-                    >
-                      🎯 TRACK ON CHART (${formatP(model.tradePlan.entryPrice)})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setAssessedStrategyId(model.id)}
-                      className={`text-[11px] sm:text-[12px] font-semibold px-3.5 py-2 rounded-lg border font-mono uppercase cursor-pointer transition-all shadow-sm ${
-                        isLight
-                          ? 'bg-[#f1f5f9] hover:bg-[#e2e8f0] text-[#0284c7] border-[#0284c7]/40'
-                          : 'bg-[#141821] hover:bg-[#191c22] text-[#00f0ff] border-[#00f0ff]/40'
-                      }`}
-                    >
-                      🔍 ASSESS RULES
-                    </button>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onLoadSetup(
-                        model.tradePlan.entryPrice,
-                        model.tradePlan.stopLoss,
-                        model.tradePlan.tp1Price,
-                        model.tradePlan.tp2Price
-                      );
-                      setViewMode('GUIDED');
-                      handleStageSelect(6);
-                      onToggleWorkspaceExpand?.(false);
-                    }}
-                    className={`text-[11px] sm:text-[12px] font-semibold px-3.5 py-2 rounded-lg border font-mono uppercase cursor-pointer transition-all shadow-sm ${
-                      isLight
-                        ? 'bg-[#059669]/15 hover:bg-[#059669]/25 text-[#047857] border-[#059669]/40'
-                        : 'bg-[#4edea3]/15 hover:bg-[#4edea3]/25 text-[#4edea3] border-[#4edea3]/40'
-                    }`}
-                  >
-                    ⚡ LOAD INTO SIZER →
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -4022,12 +2684,11 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
   };
 
   // ============================================================================
-  // DEDICATED STRATEGY ASSESSMENT MODAL OVERLAY
+  // DEDICATED STRATEGY ASSESSMENT MODAL OVERLAY (If triggered)
   // ============================================================================
   const renderStrategyAssessmentModal = () => {
     if (!assessedStrategy) return null;
     const s = assessedStrategy;
-    const sq9 = gannCyclesTelemetry.sq9Levels;
 
     return (
       <div
@@ -4035,203 +2696,43 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
         onClick={() => setAssessedStrategyId(null)}
       >
         <div
-          className={`w-full max-w-2xl border-2 p-5 flex flex-col gap-4 max-h-[90vh] overflow-y-auto tabular-nums ${
-            isLight
-              ? 'bg-[#ffffff] border-[#0284c7] text-[#0f172a]'
-              : 'bg-[#0b0e14] border-[#00f0ff] text-[#e1e2eb]'
-          }`}
+          className="cyber-panel max-w-2xl w-full p-5 flex flex-col gap-4 max-h-[85vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Modal Header */}
-          <div className="flex items-start justify-between gap-3 border-b pb-3 border-[#1e2636]/50">
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span
-                  className={`px-2 py-0.5 border font-mono text-[9px] font-bold uppercase ${
-                    isLight
-                      ? 'bg-[#0284c7]/15 text-[#0284c7] border-[#0284c7]/40'
-                      : 'bg-[#00f0ff]/15 text-[#00f0ff] border-[#00f0ff]/40'
-                  }`}
-                >
-                  🔍 STRATEGY ASSESSMENT DIAGNOSTIC // {s.era}
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <span className="font-mono text-[11px] text-[#64748b] uppercase">
+                {s.era} • {s.authorOrPaper}
+              </span>
+              <h3 className="font-sans text-[16px] font-semibold text-[#f8fafc] mt-0.5">
+                {s.name}
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={() => setAssessedStrategyId(null)}
+              className="px-2.5 py-1 rounded bg-[#171c28] text-[#94a3b8] hover:text-white font-mono text-[11px] cursor-pointer"
+            >
+              Close ✕
+            </button>
+          </div>
+
+          <p className="font-sans text-[13px] text-[#cbd5e1] leading-relaxed">
+            {s.tradePlan.triggerNote}
+          </p>
+
+          <div className="divide-y divide-white/[0.06] border-y border-white/[0.06] font-mono text-[12px]">
+            {s.rules.map((r, idx) => (
+              <div key={idx} className="py-2.5 flex items-center justify-between gap-3">
+                <span className={r.passed ? 'text-[#10b981]' : 'text-[#64748b]'}>
+                  {r.passed ? '✓' : '○'} {r.label}
                 </span>
-                <span className="font-mono text-[10px] opacity-80">{s.authorOrPaper}</span>
+                <span className="text-[#f8fafc]">{r.liveReading}</span>
               </div>
-              <h3 className="font-mono text-[15px] font-bold">{s.name}</h3>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setAssessedStrategyId(null)}
-              className="px-2.5 py-1 border font-mono text-[10px] font-bold uppercase cursor-pointer hover:opacity-80"
-            >
-              ✕ CLOSE
-            </button>
+            ))}
           </div>
 
-          {/* Score + Backtest + Bias Summary Strip */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-[10px]">
-            <div
-              className={`p-2.5 border ${
-                isLight ? 'bg-[#f8fafc] border-[#cbd5e1]' : 'bg-[#090c12] border-[#1e2636]'
-              }`}
-            >
-              <span className="block text-[8.5px] opacity-70">LIVE MATCH SCORE</span>
-              <strong className="text-[14px] text-[#4edea3]">
-                {s.possibilityScore}% MATCH ({s.status.replace('_', ' ')})
-              </strong>
-            </div>
-            <div
-              className={`p-2.5 border flex flex-col justify-between ${
-                isLight ? 'bg-[#f8fafc] border-[#cbd5e1]' : 'bg-[#090c12] border-[#1e2636]'
-              }`}
-            >
-              <span className="block text-[8.5px] opacity-70">DIRECTIONAL BIAS</span>
-              <div className="mt-1">
-                <SignalBiasPill
-                  size="sm"
-                  bias={
-                    s.direction === 'LONG'
-                      ? 'BULLISH'
-                      : s.direction === 'SHORT'
-                      ? 'BEARISH'
-                      : 'NEUTRAL'
-                  }
-                  label={
-                    s.direction === 'LONG'
-                      ? 'BULLISH (LONG)'
-                      : s.direction === 'SHORT'
-                      ? 'BEARISH (SHORT)'
-                      : 'NEUTRAL'
-                  }
-                />
-              </div>
-            </div>
-            <div
-              className={`p-2.5 border ${
-                isLight ? 'bg-[#f8fafc] border-[#cbd5e1]' : 'bg-[#090c12] border-[#1e2636]'
-              }`}
-            >
-              <span className="block text-[8.5px] opacity-70">{klines.length || 1000}-BAR WIN RATE</span>
-              <strong className="text-[14px] text-[#00f0ff]">
-                {s.backtest250Bars.winRatePct}% (N={s.backtest250Bars.signalsCount})
-              </strong>
-            </div>
-            <div
-              className={`p-2.5 border ${
-                isLight ? 'bg-[#f8fafc] border-[#cbd5e1]' : 'bg-[#090c12] border-[#1e2636]'
-              }`}
-            >
-              <span className="block text-[8.5px] opacity-70">COMPOSITE EDGE</span>
-              <strong className="text-[14px] text-[#fcd34d]">{s.compositeScore}%</strong>
-            </div>
-          </div>
-
-          {/* 4-Rule Live Telemetry Breakdown */}
-          <div className="flex flex-col gap-2">
-            <span className="font-mono text-[10px] font-bold uppercase text-[#00f0ff]">
-              4-POINT LIVE TELEMETRY RULE AUDIT
-            </span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {s.rules.map((r, idx) => (
-                <div
-                  key={idx}
-                  className={`p-3 border flex flex-col gap-1 font-mono text-[9.5px] ${
-                    r.passed
-                      ? isLight
-                        ? 'bg-[#059669]/10 border-[#059669]/40'
-                        : 'bg-[#4edea3]/10 border-[#4edea3]/40'
-                      : isLight
-                      ? 'bg-[#f8fafc] border-[#cbd5e1]'
-                      : 'bg-[#090c12] border-[#1e2636]'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold">
-                      {r.passed ? '✓ PASS' : '○ WAIT'} // {r.label}
-                    </span>
-                    <span className="text-[8.5px] opacity-75">Weight: +25%</span>
-                  </div>
-                  <div>
-                    Live Reading: <strong>{r.liveReading}</strong>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Clickable Trade Geometry & Gann Context */}
-          <div className="flex flex-col gap-2">
-            <span className="font-mono text-[10px] font-bold uppercase text-[#00f0ff]">
-              CLICKABLE CHART LEVEL SPOTLIGHT &amp; EXECUTION GEOMETRY ({s.backtest250Bars.avgRealizedR}R AVG)
-            </span>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-[10px]">
-              <button
-                type="button"
-                onClick={(e) => toggleTrackPrice(e, `${s.name} ENTRY`, s.tradePlan.entryPrice)}
-                className="p-2.5 border border-[#00f0ff]/40 bg-[#00f0ff]/10 text-left cursor-pointer hover:bg-[#00f0ff]/20"
-              >
-                <span className="block text-[8px] opacity-75">SUGGESTED ENTRY 🎯</span>
-                <strong className="text-[#00f0ff]">${formatP(s.tradePlan.entryPrice)}</strong>
-              </button>
-              <button
-                type="button"
-                onClick={(e) => toggleTrackPrice(e, `${s.name} STOP`, s.tradePlan.stopLoss)}
-                className="p-2.5 border border-[#ffb4ab]/40 bg-[#ffb4ab]/10 text-left cursor-pointer hover:bg-[#ffb4ab]/20"
-              >
-                <span className="block text-[8px] opacity-75">INVALIDATION STOP 🎯</span>
-                <strong className="text-[#ffb4ab]">${formatP(s.tradePlan.stopLoss)}</strong>
-              </button>
-              <button
-                type="button"
-                onClick={(e) => toggleTrackPrice(e, `${s.name} TP1`, s.tradePlan.tp1Price)}
-                className="p-2.5 border border-[#4edea3]/40 bg-[#4edea3]/10 text-left cursor-pointer hover:bg-[#4edea3]/20"
-              >
-                <span className="block text-[8px] opacity-75">TARGET 1 (TP1) 🎯</span>
-                <strong className="text-[#4edea3]">${formatP(s.tradePlan.tp1Price)}</strong>
-              </button>
-              <button
-                type="button"
-                onClick={(e) => toggleTrackPrice(e, `${s.name} TP2`, s.tradePlan.tp2Price)}
-                className="p-2.5 border border-[#4edea3]/40 bg-[#4edea3]/10 text-left cursor-pointer hover:bg-[#4edea3]/20"
-              >
-                <span className="block text-[8px] opacity-75">TARGET 2 (TP2) 🎯</span>
-                <strong className="text-[#4edea3]">${formatP(s.tradePlan.tp2Price)}</strong>
-              </button>
-            </div>
-            <div className="font-mono text-[9px] opacity-80">
-              Gann Sq9 Context: Nearest {sq9.nearestSq9Label} (${formatP(sq9.nearestSq9Price)}) • -90° Sup ${formatP(sq9.sup90)} • +90° Res ${formatP(sq9.res90)} • Lunar: {gannCyclesTelemetry.phaseEmoji} {gannCyclesTelemetry.phaseName} ({gannCyclesTelemetry.lunarAgeDays}d)
-            </div>
-          </div>
-
-          {/* Thesis & Academic Source */}
-          <div className="p-3 border border-[#1e2636] bg-[#090c12]/50 flex flex-col gap-1.5">
-            <div className="font-mono text-[9.5px] font-bold text-[#fcd34d]">
-              INSTITUTIONAL &amp; ROOKIE DECONSTRUCTION
-            </div>
-            <p className="font-sans text-[11.5px] leading-relaxed">{s.corePhilosophy}</p>
-            <p className="font-sans text-[11px] opacity-85 leading-relaxed">
-              <strong>Rookie Summary:</strong> {s.rookieExplanation}
-            </p>
-            <a
-              href={s.referenceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-mono text-[9.5px] text-[#00f0ff] underline font-bold mt-1"
-            >
-              📖 Primary Literature: {s.referenceSourceLabel} ↗
-            </a>
-          </div>
-
-          {/* Modal Footer Actions */}
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#1e2636]/50">
-            <button
-              type="button"
-              onClick={() => setAssessedStrategyId(null)}
-              className="px-3 py-2 border font-mono text-[10px] font-bold uppercase cursor-pointer"
-            >
-              CLOSE
-            </button>
+          <div className="flex items-center justify-end gap-2">
             <button
               type="button"
               onClick={() => {
@@ -4244,10 +2745,11 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                 setAssessedStrategyId(null);
                 setViewMode('GUIDED');
                 handleStageSelect(6);
+                onToggleWorkspaceExpand?.(false);
               }}
-              className="px-4 py-2 bg-[#4edea3]/20 hover:bg-[#4edea3]/30 text-[#4edea3] border border-[#4edea3] font-mono text-[10px] font-bold uppercase cursor-pointer"
+              className="px-4 py-2 rounded-md bg-[#3b82f6] hover:bg-[#2563eb] text-white font-sans text-[12px] font-medium cursor-pointer"
             >
-              ⚡ APPLY TO CHART &amp; STAGE 06 SIZER →
+              Load Setup
             </button>
           </div>
         </div>
@@ -4255,443 +2757,227 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
     );
   };
 
+  // ============================================================================
+  // MAIN RENDER: 4 CLEAN SEGMENTED WORKSPACE TABS + STAGE STEPPER + ACTIVE VIEW
+  // ============================================================================
+  const isAnalysisFlowActive =
+    (viewMode === 'GUIDED' && activeStage <= 5) || viewMode === 'COMPACT_ALL';
+  const isPlaybooksActive = viewMode === 'PLAYBOOKS';
+  const isExecuteActive = viewMode === 'GUIDED' && activeStage === 6;
+  const isCodexActive = viewMode === 'CODEX';
+
   return (
-    <div className={`flex flex-col w-full ${isLight ? 'bg-[#f1f5f9]' : 'bg-[#10131a]'}`}>
+    <div className="flex flex-col w-full">
       {renderStrategyAssessmentModal()}
-      {/* ========================================================================= */}
-      {/* TOP PINNED 4-WORKSPACE PRIMARY MODE DOCK + 6-STAGE PROGRESSIVE STEPPER    */}
-      {/* ========================================================================= */}
-      <div
-        className={`sticky top-0 z-40 backdrop-blur-xl border-b flex flex-col ${
-          isLight
-            ? 'bg-[#ffffff]/95 border-[#cbd5e1]'
-            : 'bg-[#090d16]/95 border-white/10'
-        }`}
-      >
-        {/* THE 4 LARGE, HIGH-VISIBILITY PRIMARY WORKSPACE PILLS WITH SPRING GLIDING INDICATOR */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2.5 border-b border-white/10">
-          {/* 1. 6-STAGE MARKET FLOW */}
-          {(() => {
-            const isFlowActive =
-              (viewMode === 'GUIDED' || viewMode === 'COMPACT_ALL') && activeStage <= 5;
-            return (
-              <button
-                type="button"
-                onClick={() => {
-                  setViewMode('GUIDED');
-                  if (activeStage === 6) {
-                    handleStageSelect(1);
-                  }
-                  onToggleWorkspaceExpand?.(false);
-                }}
-                className={`relative overflow-hidden flex flex-col items-start justify-between text-left rounded-xl px-3.5 py-2.5 border transition-all cursor-pointer ${
-                  isFlowActive
-                    ? isLight
-                      ? 'border-[#0284c7] text-[#0f172a] shadow-sm'
-                      : 'border-[#00f0ff]/60 text-white shadow-[0_0_20px_rgba(0,240,255,0.18)]'
-                    : isLight
-                    ? 'bg-[#f8fafc] hover:bg-[#e2e8f0] border-[#cbd5e1] text-[#334155]'
-                    : 'bg-[#0d121d]/90 hover:bg-[#141821] border-white/[0.08] text-[#cbd5e1]'
-                }`}
-              >
-                {isFlowActive && (
-                  <motion.div
-                    layoutId="activeWorkspaceGlow"
-                    transition={{ type: 'spring', stiffness: 420, damping: 32 }}
-                    className={`absolute inset-0 rounded-xl pointer-events-none ${
-                      isLight
-                        ? 'bg-[#0284c7]/15'
-                        : 'bg-gradient-to-r from-[#00f0ff]/20 to-[#00f0ff]/5'
-                    }`}
-                  />
-                )}
-                <div className="relative z-10 flex items-center justify-between w-full gap-1">
-                  <span className="font-mono text-[11px] sm:text-[12px] font-bold tracking-tight">
-                    📊 6-STAGE MARKET FLOW
-                  </span>
-                  <span
-                    className={`px-1.5 py-0.5 rounded font-mono text-[9px] font-bold ${
-                      isFlowActive
-                        ? 'bg-[#00f0ff]/25 text-[#00f0ff]'
-                        : 'bg-white/[0.06] text-[#849495]'
-                    }`}
-                  >
-                    S0{activeStage <= 5 ? activeStage : 1}
-                  </span>
-                </div>
-                <span className="relative z-10 font-sans text-[11px] text-[#94a3b8] mt-0.5 truncate w-full">
-                  Step-by-Step Analysis
-                </span>
-              </button>
-            );
-          })()}
 
-          {/* 2. 14 PRO PLAYBOOKS */}
-          {(() => {
-            const isPlaybooksActive = viewMode === 'PLAYBOOKS';
-            return (
-              <button
-                type="button"
-                onClick={() => {
-                  setViewMode('PLAYBOOKS');
-                  onToggleWorkspaceExpand?.(true);
-                }}
-                className={`relative overflow-hidden flex flex-col items-start justify-between text-left rounded-xl px-3.5 py-2.5 border transition-all cursor-pointer ${
-                  isPlaybooksActive
-                    ? isLight
-                      ? 'border-[#d97706] text-[#b45309] shadow-sm'
-                      : 'border-[#f59e0b]/60 text-[#fcd34d] shadow-[0_0_20px_rgba(245,158,11,0.2)]'
-                    : isLight
-                    ? 'bg-[#f8fafc] hover:bg-[#e2e8f0] border-[#cbd5e1] text-[#334155]'
-                    : 'bg-[#0d121d]/90 hover:bg-[#141821] border-white/[0.08] text-[#cbd5e1]'
-                }`}
-              >
-                {isPlaybooksActive && (
-                  <motion.div
-                    layoutId="activeWorkspaceGlow"
-                    transition={{ type: 'spring', stiffness: 420, damping: 32 }}
-                    className={`absolute inset-0 rounded-xl pointer-events-none ${
-                      isLight
-                        ? 'bg-[#d97706]/15'
-                        : 'bg-gradient-to-r from-[#f59e0b]/25 to-[#f59e0b]/5'
-                    }`}
-                  />
-                )}
-                <div className="relative z-10 flex items-center justify-between w-full gap-1">
-                  <span className="font-mono text-[11px] sm:text-[12px] font-bold tracking-tight">
-                    🏆 14 PRO PLAYBOOKS
-                  </span>
-                  <span
-                    className={`px-1.5 py-0.5 rounded font-mono text-[9px] font-bold ${
-                      isPlaybooksActive
-                        ? 'bg-[#f59e0b]/30 text-[#fcd34d]'
-                        : 'bg-[#f59e0b]/15 text-[#fcd34d]'
-                    }`}
-                  >
-                    {readyPlaybooksCount} READY
-                  </span>
-                </div>
-                <span className="relative z-10 font-sans text-[11px] text-[#94a3b8] mt-0.5 truncate w-full">
-                  Gann • Lunar • SSRN ({readyPlaybooksCount} Ready)
-                </span>
-              </button>
-            );
-          })()}
+      {/* Sticky Top Navigation Header */}
+      <div className="sticky top-0 z-30 flex flex-col bg-[#09090b] border-b border-white/[0.07] p-2.5 gap-2">
+        {/* Rule A: Primary Top Navigation (Recessed Zinc Track with Elevated Pill Tabs) */}
+        <div className="bg-[#0c0c0f] p-1 rounded-xl border border-white/[0.06] grid grid-cols-2 sm:grid-cols-4 gap-1">
+          {/* 1. Analysis Flow */}
+          <button
+            type="button"
+            onClick={() => {
+              setViewMode('GUIDED');
+              if (activeStage === 6) handleStageSelect(1);
+              onToggleWorkspaceExpand?.(false);
+            }}
+            className={`relative overflow-hidden flex flex-col items-start justify-between text-left rounded-lg px-3 py-2 border transition-colors cursor-pointer ${
+              isAnalysisFlowActive
+                ? 'bg-[#1c1c22] text-white border-white/[0.1] shadow-sm'
+                : 'border-transparent hover:bg-white/[0.03] text-[#a1a1aa]'
+            }`}
+          >
+            <div className="relative z-10 flex items-center justify-between w-full gap-1">
+              <span className="flex items-center gap-1.5 font-sans text-[12.5px] font-semibold">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#38bdf8]" />
+                <span>Analysis Flow</span>
+              </span>
+              <span className="font-mono text-[10px] text-[#38bdf8]">
+                {stageEvaluations[activeStage <= 5 ? activeStage : 1].score}%
+              </span>
+            </div>
+            <span className="relative z-10 font-sans text-[11px] text-[#71717a] truncate w-full">
+              The 6 Stages
+            </span>
+          </button>
 
-          {/* 3. EXECUTE & SIZER */}
-          {(() => {
-            const isExecuteActive = viewMode === 'GUIDED' && activeStage === 6;
-            return (
-              <button
-                type="button"
-                onClick={() => {
-                  setViewMode('GUIDED');
-                  handleStageSelect(6);
-                  onToggleWorkspaceExpand?.(false);
-                }}
-                className={`relative overflow-hidden flex flex-col items-start justify-between text-left rounded-xl px-3.5 py-2.5 border transition-all cursor-pointer ${
-                  isExecuteActive
-                    ? isLight
-                      ? 'border-[#059669] text-[#047857] shadow-sm'
-                      : 'border-[#4edea3]/60 text-[#4edea3] shadow-[0_0_20px_rgba(78,222,163,0.18)]'
-                    : isLight
-                    ? 'bg-[#f8fafc] hover:bg-[#e2e8f0] border-[#cbd5e1] text-[#334155]'
-                    : 'bg-[#0d121d]/90 hover:bg-[#141821] border-white/[0.08] text-[#cbd5e1]'
-                }`}
-              >
-                {isExecuteActive && (
-                  <motion.div
-                    layoutId="activeWorkspaceGlow"
-                    transition={{ type: 'spring', stiffness: 420, damping: 32 }}
-                    className={`absolute inset-0 rounded-xl pointer-events-none ${
-                      isLight
-                        ? 'bg-[#059669]/15'
-                        : 'bg-gradient-to-r from-[#4edea3]/20 to-[#4edea3]/5'
-                    }`}
-                  />
-                )}
-                <div className="relative z-10 flex items-center justify-between w-full gap-1">
-                  <span className="font-mono text-[11px] sm:text-[12px] font-bold tracking-tight">
-                    🎯 EXECUTE &amp; SIZER
-                  </span>
-                  <span
-                    className={`px-1.5 py-0.5 rounded font-mono text-[9px] font-bold ${
-                      isExecuteActive
-                        ? 'bg-[#4edea3]/25 text-[#4edea3]'
-                        : 'bg-white/[0.06] text-[#849495]'
-                    }`}
-                  >
-                    {stageEvaluations[6].score}%
-                  </span>
-                </div>
-                <span className="relative z-10 font-sans text-[11px] text-[#94a3b8] mt-0.5 truncate w-full">
-                  Pre-Flight &amp; Risk Calc
-                </span>
-              </button>
-            );
-          })()}
+          {/* 2. Playbooks (14) */}
+          <button
+            type="button"
+            onClick={() => {
+              setViewMode('PLAYBOOKS');
+              onToggleWorkspaceExpand?.(true);
+            }}
+            className={`relative overflow-hidden flex flex-col items-start justify-between text-left rounded-lg px-3 py-2 border transition-colors cursor-pointer ${
+              isPlaybooksActive
+                ? 'bg-[#1c1c22] text-white border-white/[0.1] shadow-sm'
+                : 'border-transparent hover:bg-white/[0.03] text-[#a1a1aa]'
+            }`}
+          >
+            <div className="relative z-10 flex items-center justify-between w-full gap-1">
+              <span className="flex items-center gap-1.5 font-sans text-[12.5px] font-semibold">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#6366f1]" />
+                <span>Playbooks (14)</span>
+              </span>
+              <span className="font-mono text-[10px] text-[#10b981]">
+                {readyPlaybooksCount} Ready
+              </span>
+            </div>
+            <span className="relative z-10 font-sans text-[11px] text-[#71717a] truncate w-full">
+              Famous, Gann &amp; SSRN Models
+            </span>
+          </button>
 
-          {/* 4. CODEX & ACADEMY */}
-          {(() => {
-            const isCodexActive = viewMode === 'CODEX';
-            return (
-              <button
-                type="button"
-                onClick={() => {
-                  setViewMode('CODEX');
-                  onToggleWorkspaceExpand?.(true);
-                }}
-                className={`relative overflow-hidden flex flex-col items-start justify-between text-left rounded-xl px-3.5 py-2.5 border transition-all cursor-pointer ${
-                  isCodexActive
-                    ? isLight
-                      ? 'border-[#7e22ce] text-[#6d28d9] shadow-sm'
-                      : 'border-[#c084fc]/60 text-[#e9d5ff] shadow-[0_0_20px_rgba(192,132,252,0.2)]'
-                    : isLight
-                    ? 'bg-[#f8fafc] hover:bg-[#e2e8f0] border-[#cbd5e1] text-[#334155]'
-                    : 'bg-[#0d121d]/90 hover:bg-[#141821] border-white/[0.08] text-[#cbd5e1]'
-                }`}
-              >
-                {isCodexActive && (
-                  <motion.div
-                    layoutId="activeWorkspaceGlow"
-                    transition={{ type: 'spring', stiffness: 420, damping: 32 }}
-                    className={`absolute inset-0 rounded-xl pointer-events-none ${
-                      isLight
-                        ? 'bg-[#7e22ce]/15'
-                        : 'bg-gradient-to-r from-[#c084fc]/25 to-[#c084fc]/5'
-                    }`}
-                  />
-                )}
-                <div className="relative z-10 flex items-center justify-between w-full gap-1">
-                  <span className="font-mono text-[11px] sm:text-[12px] font-bold tracking-tight">
-                    📚 CODEX &amp; ACADEMY
-                  </span>
-                  <span
-                    className={`px-1.5 py-0.5 rounded font-mono text-[9px] font-bold ${
-                      isCodexActive
-                        ? 'bg-[#c084fc]/30 text-[#e9d5ff]'
-                        : 'bg-[#c084fc]/15 text-[#c084fc]'
-                    }`}
-                  >
-                    LEARN
-                  </span>
-                </div>
-                <span className="relative z-10 font-sans text-[11px] text-[#94a3b8] mt-0.5 truncate w-full">
-                  Learn All Elements &amp; X-Ray
-                </span>
-              </button>
-            );
-          })()}
+          {/* 3. Execute & Size */}
+          <button
+            type="button"
+            onClick={() => {
+              setViewMode('GUIDED');
+              handleStageSelect(6);
+              onToggleWorkspaceExpand?.(false);
+            }}
+            className={`relative overflow-hidden flex flex-col items-start justify-between text-left rounded-lg px-3 py-2 border transition-colors cursor-pointer ${
+              isExecuteActive
+                ? 'bg-[#1c1c22] text-white border-white/[0.1] shadow-sm'
+                : 'border-transparent hover:bg-white/[0.03] text-[#a1a1aa]'
+            }`}
+          >
+            <div className="relative z-10 flex items-center justify-between w-full gap-1">
+              <span className="flex items-center gap-1.5 font-sans text-[12.5px] font-semibold">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#38bdf8]" />
+                <span>Execute &amp; Size</span>
+              </span>
+              <span className="font-mono text-[10px] text-[#a1a1aa]">
+                {stageEvaluations[6].score}%
+              </span>
+            </div>
+            <span className="relative z-10 font-sans text-[11px] text-[#71717a] truncate w-full">
+              Pre-Flight &amp; Position Calculator
+            </span>
+          </button>
+
+          {/* 4. Learn & X-Ray */}
+          <button
+            type="button"
+            onClick={() => {
+              setViewMode('CODEX');
+              onToggleWorkspaceExpand?.(true);
+            }}
+            className={`relative overflow-hidden flex flex-col items-start justify-between text-left rounded-lg px-3 py-2 border transition-colors cursor-pointer ${
+              isCodexActive
+                ? 'bg-[#1c1c22] text-white border-white/[0.1] shadow-sm'
+                : 'border-transparent hover:bg-white/[0.03] text-[#a1a1aa]'
+            }`}
+          >
+            <div className="relative z-10 flex items-center justify-between w-full gap-1">
+              <span className="flex items-center gap-1.5 font-sans text-[12.5px] font-semibold">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#6366f1]" />
+                <span>Learn &amp; X-Ray</span>
+              </span>
+              <span className="font-mono text-[10px] text-[#a5b4fc]">Codex</span>
+            </div>
+            <span className="relative z-10 font-sans text-[11px] text-[#71717a] truncate w-full">
+              Codex, Rookie Guides &amp; Signal X-Ray
+            </span>
+          </button>
         </div>
 
-        {/* Sub-Bar: Workspace Context + Guided/Compact Toggle + Desktop Full-Screen / Split-View Toggle */}
-        <div
-          className={`flex items-center justify-between px-3 py-2 border-b gap-2 flex-wrap ${
-            isLight ? 'border-[#cbd5e1]/80 bg-[#f8fafc]' : 'border-white/10 bg-[#080b12]/90'
-          }`}
-        >
-          <div className="flex items-center gap-2 flex-wrap">
-            {viewMode === 'PLAYBOOKS' ? (
-              <span className="font-mono text-[11px] font-bold text-[#fcd34d] uppercase tracking-wider">
-                🏆 14 PRO PLAYBOOKS &amp; GANN / LUNAR SCANNER ({readyPlaybooksCount} READY ON {symbol})
-              </span>
-            ) : viewMode === 'CODEX' ? (
-              <span className="font-mono text-[11px] font-bold text-[#e9d5ff] uppercase tracking-wider">
-                📚 INFERNO CODEX // VISUAL ELEMENT ATLAS, 14 MASTERCLASSES &amp; LIVE X-RAY
-              </span>
-            ) : (
-              <>
-                <span
-                  className={`px-2 py-0.5 rounded border font-mono text-[10px] font-bold tracking-wider ${
-                    isLight
-                      ? 'bg-[#0284c7]/15 text-[#0284c7] border-[#0284c7]/40'
-                      : 'bg-[#00f0ff]/15 text-[#00f0ff] border-[#00f0ff]/40'
+        {/* Sub-Bar: Stage Stepper Pills (Recessed Zinc Track) + View Controls */}
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          {viewMode === 'GUIDED' || viewMode === 'COMPACT_ALL' ? (
+            <div className="bg-[#0c0c0f] p-1 rounded-xl border border-white/[0.06] flex items-center gap-1 overflow-x-auto no-scrollbar">
+              {STAGES.map((stage) => {
+                const isActive = viewMode === 'GUIDED' && activeStage === stage.id;
+                const evalData = stageEvaluations[stage.id];
+                const dotColor = isActive ? '#38bdf8' : getReadableStatusColor(evalData.dotColor);
+
+                return (
+                  <button
+                    key={stage.id}
+                    type="button"
+                    onClick={() => {
+                      setViewMode('GUIDED');
+                      handleStageSelect(stage.id);
+                      if (stage.id === 6) {
+                        onToggleWorkspaceExpand?.(false);
+                      }
+                    }}
+                    className={`relative px-2.5 py-1.5 rounded-lg font-sans text-[12px] font-medium transition-colors shrink-0 flex items-center gap-1.5 border cursor-pointer ${
+                      isActive
+                        ? 'bg-[#1c1c22] text-white border-white/[0.1] shadow-sm'
+                        : 'border-transparent text-[#a1a1aa] hover:text-white'
+                    }`}
+                  >
+                    <span
+                      className="w-1.5 h-1.5 rounded-full shrink-0"
+                      style={{ backgroundColor: dotColor }}
+                    />
+                    <span>{stage.stepperLabel}</span>
+                    <span className="font-mono text-[10px] text-[#71717a]">
+                      {evalData.score}%
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <span className="font-sans text-[12px] font-medium text-[#a1a1aa] px-1">
+              {viewMode === 'PLAYBOOKS'
+                ? `Playbooks (14) — ${readyPlaybooksCount} Ready on ${symbol}`
+                : 'Learn & X-Ray — Visual Element Atlas, 14 Masterclasses & Signal X-Ray'}
+            </span>
+          )}
+
+          {/* Right View Mode & Split/Full Width Controls */}
+          <div className="flex items-center gap-2 ml-auto">
+            {(viewMode === 'GUIDED' || viewMode === 'COMPACT_ALL') && (
+              <div className="flex items-center bg-[#0c0c0f] p-1 rounded-xl border border-white/[0.06] font-sans text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('GUIDED')}
+                  className={`px-2.5 py-1 rounded-lg font-medium border transition-colors cursor-pointer ${
+                    viewMode === 'GUIDED'
+                      ? 'bg-[#1c1c22] text-white border-white/[0.1] shadow-sm'
+                      : 'border-transparent text-[#a1a1aa] hover:text-white'
                   }`}
                 >
-                  6-STAGE FUNNEL
-                </span>
-                <div className="flex items-center gap-1 p-0.5 rounded-lg border border-white/10 bg-[#0d121d] font-mono text-[10px]">
-                  <button
-                    type="button"
-                    onClick={() => setViewMode('GUIDED')}
-                    className={`px-2.5 py-1 rounded-md font-bold uppercase transition-colors cursor-pointer ${
-                      viewMode === 'GUIDED'
-                        ? 'bg-[#00f0ff]/20 text-[#00f0ff] border border-[#00f0ff]/50'
-                        : 'text-[#849495] hover:text-white'
-                    }`}
-                  >
-                    STEP-BY-STEP
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setViewMode('COMPACT_ALL')}
-                    className={`px-2.5 py-1 rounded-md font-bold uppercase transition-colors cursor-pointer ${
-                      viewMode === 'COMPACT_ALL'
-                        ? 'bg-[#00f0ff]/20 text-[#00f0ff] border border-[#00f0ff]/50'
-                        : 'text-[#849495] hover:text-white'
-                    }`}
-                  >
-                    COMPACT ALL (6)
-                  </button>
-                </div>
-              </>
+                  Paged
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('COMPACT_ALL')}
+                  className={`px-2.5 py-1 rounded-lg font-medium border transition-colors cursor-pointer ${
+                    viewMode === 'COMPACT_ALL'
+                      ? 'bg-[#1c1c22] text-white border-white/[0.1] shadow-sm'
+                      : 'border-transparent text-[#a1a1aa] hover:text-white'
+                  }`}
+                >
+                  All 6
+                </button>
+              </div>
             )}
-          </div>
 
-          {/* Desktop Full-Width vs Split-With-Chart Toggle Button */}
-          <div className="hidden lg:flex items-center gap-2">
             <button
               type="button"
               onClick={() => onToggleWorkspaceExpand?.(!isWorkspaceExpanded)}
-              className={`text-[11px] font-semibold px-3.5 py-1.5 rounded-lg border font-mono uppercase transition-all shadow-sm cursor-pointer flex items-center gap-1.5 ${
-                isWorkspaceExpanded
-                  ? 'bg-[#00f0ff]/20 text-[#00f0ff] border-[#00f0ff]/60 shadow-[0_0_14px_rgba(0,240,255,0.2)]'
-                  : 'bg-[#141821] hover:bg-[#191c22] text-[#e1e2eb] border-white/15'
-              }`}
-              title={
-                isWorkspaceExpanded
-                  ? 'Return to 7-col Live Chart + 5-col Command Deck split view'
-                  : 'Expand this workspace across all 12 columns for full-screen reading'
-              }
+              className="hidden lg:inline-flex items-center px-3 py-1.5 bg-[#6366f1]/15 hover:bg-[#6366f1]/25 text-[#a5b4fc] border border-[#6366f1]/30 rounded-lg font-sans text-[11px] font-medium cursor-pointer transition-colors"
             >
-              <span>{isWorkspaceExpanded ? '◫ SPLIT WITH CHART' : '⤢ EXPAND FULL SCREEN'}</span>
+              {isWorkspaceExpanded ? 'Split with Chart' : 'Full Width'}
             </button>
           </div>
         </div>
-
-        {/* 6 Connected Sequential Stage Pills (Shown when in GUIDED or COMPACT_ALL mode) */}
-        {(viewMode === 'GUIDED' || viewMode === 'COMPACT_ALL') && (
-          <div
-            className={`flex sm:grid sm:grid-cols-6 overflow-x-auto no-scrollbar snap-x snap-mandatory gap-1.5 p-2 ${
-              isLight ? 'bg-[#f1f5f9]/95' : 'bg-[#080b12]/90'
-            }`}
-          >
-            {STAGES.map((stage) => {
-              const isActive = viewMode === 'GUIDED' && activeStage === stage.id;
-              const evalData = stageEvaluations[stage.id];
-              const readableDotColor = getReadableStatusColor(evalData.dotColor);
-              const microBiasText =
-                evalData.bias.includes('BULL') || evalData.bias.includes('LONG') || evalData.bias.includes('READY')
-                  ? '▲ BULL'
-                  : evalData.bias.includes('BEAR') || evalData.bias.includes('SHORT') || evalData.bias.includes('AVOID')
-                  ? '▼ BEAR'
-                  : '◆ WAIT';
-              const microBiasClass =
-                microBiasText === '▲ BULL'
-                  ? 'text-[#4edea3]'
-                  : microBiasText === '▼ BEAR'
-                  ? 'text-[#ffb4ab]'
-                  : 'text-[#fcd34d]';
-
-              return (
-                <button
-                  key={stage.id}
-                  type="button"
-                  onClick={() => {
-                    setViewMode('GUIDED');
-                    handleStageSelect(stage.id);
-                    if (stage.id === 6) {
-                      onToggleWorkspaceExpand?.(false);
-                    }
-                  }}
-                  className={`relative overflow-hidden flex flex-col justify-between text-left min-w-[122px] sm:min-w-0 shrink-0 snap-start rounded-xl px-3 py-2 border transition-all cursor-pointer ${
-                    isActive
-                      ? isLight
-                        ? 'text-[#0284c7] border-[#0284c7]/60 shadow-sm'
-                        : 'text-[#00f0ff] border-[#00f0ff]/60 shadow-[0_0_16px_rgba(0,240,255,0.16)]'
-                      : isLight
-                      ? 'bg-[#ffffff] hover:bg-[#f8fafc] text-[#475569] hover:text-[#0f172a] border-[#cbd5e1]'
-                      : 'bg-[#0d121d]/90 hover:bg-[#141821] text-[#849495] hover:text-[#e1e2eb] border-white/10'
-                  }`}
-                >
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeStageGlow"
-                      transition={{ type: 'spring', stiffness: 420, damping: 32 }}
-                      className={`absolute inset-0 rounded-xl pointer-events-none ${
-                        isLight
-                          ? 'bg-[#e2e8f0]/90'
-                          : 'bg-gradient-to-b from-[#00f0ff]/18 via-[#141821] to-[#141821]'
-                      }`}
-                    />
-                  )}
-                  <div className="relative z-10 flex items-center justify-between gap-1 w-full">
-                    <span
-                      className={`font-mono text-[9.5px] font-bold tracking-wider ${
-                        isActive
-                          ? isLight
-                            ? 'text-[#0284c7]'
-                            : 'text-[#00f0ff]'
-                          : isLight
-                          ? 'text-[#475569]'
-                          : 'text-[#849495]'
-                      }`}
-                    >
-                      STAGE {stage.stepCode}
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <span className={`font-mono text-[8px] font-bold ${microBiasClass}`}>
-                        {microBiasText}
-                      </span>
-                      <span
-                        className={`w-2 h-2 rounded-full shrink-0 ${isActive ? 'animate-pulse' : ''}`}
-                        style={{
-                          backgroundColor: readableDotColor,
-                          boxShadow: isActive ? `0 0 8px ${readableDotColor}` : 'none',
-                        }}
-                        title={`Stage ${stage.stepCode}: ${evalData.score}% (${evalData.status})`}
-                      />
-                    </div>
-                  </div>
-                  <div className="relative z-10 flex items-baseline justify-between gap-1 mt-1 w-full">
-                    <span
-                      className={`font-mono text-[11px] font-bold truncate ${
-                        isActive
-                          ? isLight
-                            ? 'text-[#0f172a]'
-                            : 'text-white'
-                          : isLight
-                          ? 'text-[#1e293b]'
-                          : 'text-[#e1e2eb]'
-                      }`}
-                    >
-                      {stage.shortTitle}
-                    </span>
-                    <span
-                      className="font-mono text-[9.5px] font-bold tabular-nums"
-                      style={{ color: readableDotColor }}
-                    >
-                      {evalData.score}%
-                    </span>
-                  </div>
-                  {/* Bottom Progress Bar Proportional to Stage Score */}
-                  <div className="relative z-10 w-full h-1 bg-white/[0.06] rounded-full overflow-hidden mt-1.5">
-                    <div
-                      className="h-full rounded-full transition-all duration-300"
-                      style={{
-                        width: `${Math.max(8, Math.min(100, evalData.score))}%`,
-                        backgroundColor: readableDotColor,
-                      }}
-                    />
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        )}
       </div>
 
-      {/* ========================================================================= */}
-      {/* ACTIVE STAGE BODY, COMPACT ALL STACK, PLAYBOOKS, OR INFERNO CODEX HUB     */}
-      {/* ========================================================================= */}
+      {/* Active Workspace Body */}
       <AnimatePresence mode="wait">
         {viewMode === 'CODEX' ? (
           <motion.div
             key="inferno-codex-view"
-            initial={{ opacity: 0, y: 8, filter: 'blur(3px)' }}
-            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-            exit={{ opacity: 0, y: -6, filter: 'blur(2px)' }}
-            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.16 }}
           >
             <InfernoCodexHub
               symbol={symbol}
@@ -4717,12 +3003,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
                 handleStageSelect(stageId);
               }}
               onLoadSetup={(entry, stop, tp1, tp2) => {
-                onLoadSetup(
-                  entry,
-                  stop,
-                  tp1 ?? entry,
-                  tp2 ?? entry
-                );
+                onLoadSetup(entry, stop, tp1 ?? entry, tp2 ?? entry);
                 setViewMode('GUIDED');
                 handleStageSelect(6);
               }}
@@ -4733,30 +3014,30 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
         ) : viewMode === 'PLAYBOOKS' ? (
           <motion.div
             key="playbooks-gann-view"
-            initial={{ opacity: 0, y: 8, filter: 'blur(3px)' }}
-            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-            exit={{ opacity: 0, y: -6, filter: 'blur(2px)' }}
-            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.16 }}
           >
             {renderPlaybooksAndGannHub()}
           </motion.div>
         ) : viewMode === 'COMPACT_ALL' ? (
           <motion.div
             key="compact-all-view"
-            initial={{ opacity: 0, y: 8, filter: 'blur(3px)' }}
-            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-            exit={{ opacity: 0, y: -6, filter: 'blur(2px)' }}
-            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.16 }}
           >
             {renderCompactAllStack()}
           </motion.div>
         ) : (
           <motion.div
             key={`guided-stage-${activeStage}`}
-            initial={{ opacity: 0, y: 8, filter: 'blur(3px)' }}
-            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-            exit={{ opacity: 0, y: -6, filter: 'blur(2px)' }}
-            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.16 }}
           >
             {activeStage === 1 && renderStage01Price()}
             {activeStage === 2 && renderStage02Volume()}

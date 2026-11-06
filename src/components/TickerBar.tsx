@@ -168,11 +168,10 @@ export const TickerBar: React.FC<TickerBarProps> = ({
 
           <button
             onClick={() => setIsTop50ModalOpen(true)}
-            className="flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded bg-[#0b0e14] border border-[#00f0ff]/50 hover:border-[#00f0ff] text-[#00f0ff] font-mono text-[9px] sm:text-[11px] font-semibold transition-all shadow-[0_0_8px_rgba(0,240,255,0.15)] cursor-pointer shrink-0"
+            className="flex items-center gap-1 px-2.5 py-1 bg-[#6366f1]/15 hover:bg-[#6366f1]/25 text-[#a5b4fc] border border-[#6366f1]/30 rounded-lg font-sans text-[11px] font-medium transition-colors cursor-pointer shrink-0"
             title="Browse full list of Top 50 Binance Perpetual contracts"
           >
-            <span className="material-symbols-outlined text-[12px] sm:text-[13px]">table_rows</span>
-            <span>TOP 50</span>
+            <span>Top 50</span>
           </button>
         </div>
       </div>
@@ -180,7 +179,7 @@ export const TickerBar: React.FC<TickerBarProps> = ({
       {/* Desktop Quick Search Input (Hidden on mobile to save vertical real estate) */}
       <div ref={searchContainerRef} className="relative w-full hidden md:flex flex-col">
         <div className="relative w-full flex items-center">
-          <div className="absolute left-2.5 flex items-center pointer-events-none text-[#849495]">
+          <div className="absolute left-2.5 flex items-center pointer-events-none text-[#8e8e99]">
             <span className="material-symbols-outlined text-[15px]">search</span>
           </div>
           <input
@@ -192,24 +191,24 @@ export const TickerBar: React.FC<TickerBarProps> = ({
               setIsSearchOpen(true);
             }}
             placeholder="Search Top 50 Binance Perps by Symbol or Base Asset (e.g. BTC, SOL, SUI, DOGE)..."
-            className="w-full h-7.5 pl-8 pr-16 rounded bg-[#0b0e14] border border-[#272a31] text-[#e1e2eb] text-[11px] font-mono placeholder:text-[#849495] focus:outline-none focus:border-[#00f0ff] transition-all"
+            className="w-full h-8 pl-8 pr-16 rounded-lg bg-[#0c0c0f] border border-white/[0.06] text-[#f4f4f6] text-[11.5px] font-sans placeholder:text-[#8e8e99] focus:outline-none focus:border-white/[0.16] transition-colors"
           />
           <div className="absolute right-2 flex items-center gap-1">
-            <span className="px-1.5 py-0.2 rounded bg-[#272a31] text-[#00f0ff] font-mono text-[8px] uppercase tracking-wider">
-              TOP 50
+            <span className="px-1.5 py-0.5 rounded bg-[#18181c] text-[#a1a1aa] font-mono text-[9px] uppercase">
+              Top 50
             </span>
           </div>
         </div>
 
         {/* Search Results Dropdown */}
         {isSearchOpen && (
-          <div className="absolute top-8 left-0 w-full bg-[#0b0e14]/98 border border-[#00f0ff]/40 rounded shadow-[0_8px_24px_rgba(0,0,0,0.8)] z-50 max-h-72 overflow-y-auto no-scrollbar py-1">
-            <div className="px-3 py-1 font-mono text-[9px] text-[#849495] uppercase border-b border-[#1e2433] flex justify-between">
-              <span>TOP 50 LIQUID USDT PERPETUALS</span>
-              <span>{searchResults.length} ASSETS</span>
+          <div className="absolute top-9 left-0 w-full bg-[#121215] border border-white/[0.1] rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.65)] z-50 max-h-72 overflow-y-auto no-scrollbar py-1">
+            <div className="px-3 py-1.5 font-mono text-[9.5px] text-[#8e8e99] uppercase border-b border-white/[0.06] flex justify-between">
+              <span>Top 50 Liquid USDT Perpetuals</span>
+              <span>{searchResults.length} Assets</span>
             </div>
             {searchResults.length === 0 ? (
-              <div className="px-3 py-3 text-center font-mono text-[11px] text-[#849495]">
+              <div className="px-3 py-3 text-center font-sans text-[11.5px] text-[#8e8e99]">
                 No matching perpetual pair in Top 50
               </div>
             ) : (
@@ -220,24 +219,24 @@ export const TickerBar: React.FC<TickerBarProps> = ({
                     onSelectPair(pair.symbol);
                     setIsSearchOpen(false);
                   }}
-                  className={`w-full px-3 py-1.5 flex items-center justify-between hover:bg-[#191c22] border-b border-[#191c22]/50 font-mono text-[11px] transition-colors text-left cursor-pointer ${
-                    pair.symbol === activePair.symbol ? 'bg-[#00f0ff]/10 text-[#00f0ff]' : ''
+                  className={`w-full px-3 py-1.5 flex items-center justify-between hover:bg-[#18181c] border-b border-white/[0.04] font-mono text-[11px] transition-colors text-left cursor-pointer ${
+                    pair.symbol === activePair.symbol ? 'bg-[#1c1c22] text-white' : ''
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-[#849495] w-6">#{pair.rank || idx + 1}</span>
-                    <span className="text-[#dbfcff] font-semibold">{pair.symbol}</span>
-                    <span className="text-[#849495] text-[10px]">({pair.baseAsset})</span>
+                    <span className="text-[10px] text-[#8e8e99] w-6">#{pair.rank || idx + 1}</span>
+                    <span className="text-[#f4f4f6] font-semibold">{pair.symbol}</span>
+                    <span className="text-[#8e8e99] text-[10px]">({pair.baseAsset})</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-[#e1e2eb]">
+                    <span className="text-[#f4f4f6]">
                       ${pair.price >= 1000
                         ? pair.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                         : pair.price >= 1
                         ? pair.price.toFixed(2)
                         : pair.price.toFixed(4)}
                     </span>
-                    <span className={`w-14 text-right ${pair.isUp ? 'text-[#4edea3]' : 'text-[#ffb4ab]'}`}>
+                    <span className={`w-14 text-right ${pair.isUp ? 'text-[#10b981]' : 'text-[#f43f5e]'}`}>
                       {pair.delta}
                     </span>
                   </div>
@@ -248,20 +247,20 @@ export const TickerBar: React.FC<TickerBarProps> = ({
         )}
       </div>
 
-      {/* Single Clean Row: Timeframe Selector & Sensitivity / VP Toggles (Horizontal Scroll) */}
+      {/* Single Clean Row: Timeframe Selector & Sensitivity / VP Toggles (Recessed Zinc Track) */}
       <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar whitespace-nowrap py-0.5">
         {/* Timeframe Selector */}
-        <div className="flex items-center rounded bg-[#0b0e14] border border-[#272a31] p-0.5 shrink-0">
+        <div className="flex items-center bg-[#0c0c0f] p-1 rounded-xl border border-white/[0.06] shrink-0 gap-0.5">
           {['5m', '15m', '30m', '1h', '2h', '4h', '12h', '1d', '1w'].map((tf) => {
             const isSelected = selectedTf === tf;
             return (
               <button
                 key={tf}
                 onClick={() => onSelectTf(tf)}
-                className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded font-mono text-[9px] sm:text-[10px] uppercase font-semibold transition-colors shrink-0 cursor-pointer ${
+                className={`px-2 py-1 rounded-lg font-mono text-[10px] uppercase font-medium border transition-colors shrink-0 cursor-pointer ${
                   isSelected
-                    ? 'bg-[#272a31] text-[#00f0ff] border border-[#00f0ff]/40 shadow-sm font-bold'
-                    : 'text-[#849495] hover:text-[#e1e2eb]'
+                    ? 'bg-[#1c1c22] text-white border-white/[0.1] shadow-sm font-semibold'
+                    : 'border-transparent text-[#8e8e99] hover:text-white'
                 }`}
               >
                 {tf.toUpperCase()}
@@ -274,11 +273,11 @@ export const TickerBar: React.FC<TickerBarProps> = ({
         <div className="flex items-center gap-1.5 shrink-0">
           {onSelectCandleDepth && (
             <div
-              className="flex items-center rounded bg-[#0b0e14] border border-[#272a31] p-0.5"
+              className="flex items-center bg-[#0c0c0f] p-1 rounded-xl border border-white/[0.06] gap-0.5"
               title="Historical Candle Depth for EMA 200 Warmup & Strategy Backtest Walk-Forward"
             >
-              <span className="px-1.5 font-mono text-[8.5px] text-[#849495] font-bold uppercase">
-                DEPTH:
+              <span className="px-1.5 font-mono text-[9px] text-[#8e8e99] font-medium uppercase">
+                Depth
               </span>
               {([250, 500, 1000] as const).map((d) => {
                 const isActive = candleDepth === d;
@@ -287,10 +286,10 @@ export const TickerBar: React.FC<TickerBarProps> = ({
                     key={d}
                     type="button"
                     onClick={() => onSelectCandleDepth(d)}
-                    className={`px-1.5 sm:px-2 py-0.5 rounded font-mono text-[9px] sm:text-[10px] font-semibold transition-all cursor-pointer tabular-nums ${
+                    className={`px-2 py-1 rounded-lg font-mono text-[10px] font-medium border transition-colors cursor-pointer tabular-nums ${
                       isActive
-                        ? 'bg-[#00f0ff]/20 text-[#00f0ff] border border-[#00f0ff]/50 font-bold shadow-[0_0_8px_rgba(0,240,255,0.18)]'
-                        : 'text-[#849495] hover:text-[#e1e2eb]'
+                        ? 'bg-[#1c1c22] text-white border-white/[0.1] shadow-sm font-semibold'
+                        : 'border-transparent text-[#8e8e99] hover:text-white'
                     }`}
                   >
                     {d === 1000 ? '1K' : d}
@@ -300,49 +299,49 @@ export const TickerBar: React.FC<TickerBarProps> = ({
             </div>
           )}
 
-          <div className="flex items-center rounded bg-[#0b0e14] border border-[#272a31] p-0.5">
+          <div className="flex items-center bg-[#0c0c0f] p-1 rounded-xl border border-white/[0.06] gap-0.5">
             <button
               onClick={() => onToggleObMode('strict')}
-              className={`px-1.5 sm:px-2 py-0.5 rounded font-mono text-[9px] sm:text-[10px] font-semibold transition-all cursor-pointer ${
+              className={`px-2 py-1 rounded-lg font-mono text-[10px] font-medium border transition-colors cursor-pointer ${
                 obMode === 'strict'
-                  ? 'bg-[#00a572] text-[#00311f] font-bold shadow-sm'
-                  : 'text-[#849495] hover:text-[#e1e2eb]'
+                  ? 'bg-[#1c1c22] text-white border-white/[0.1] shadow-sm font-semibold'
+                  : 'border-transparent text-[#8e8e99] hover:text-white'
               }`}
             >
-              STRICT OB
+              Strict OB
             </button>
             <button
               onClick={() => onToggleObMode('loose')}
-              className={`px-1.5 sm:px-2 py-0.5 rounded font-mono text-[9px] sm:text-[10px] font-semibold transition-all cursor-pointer ${
+              className={`px-2 py-1 rounded-lg font-mono text-[10px] font-medium border transition-colors cursor-pointer ${
                 obMode === 'loose'
-                  ? 'bg-[#272a31] text-[#00f0ff] font-bold'
-                  : 'text-[#849495] hover:text-[#e1e2eb]'
+                  ? 'bg-[#1c1c22] text-white border-white/[0.1] shadow-sm font-semibold'
+                  : 'border-transparent text-[#8e8e99] hover:text-white'
               }`}
             >
-              LOOSE
+              Loose
             </button>
           </div>
 
-          <div className="flex items-center rounded bg-[#0b0e14] border border-[#272a31] p-0.5">
+          <div className="flex items-center bg-[#0c0c0f] p-1 rounded-xl border border-white/[0.06] gap-0.5">
             <button
               onClick={() => onToggleVpMode('vrvp')}
-              className={`px-1.5 sm:px-2 py-0.5 rounded font-mono text-[9px] sm:text-[10px] font-semibold transition-all cursor-pointer ${
+              className={`px-2 py-1 rounded-lg font-mono text-[10px] font-medium border transition-colors cursor-pointer ${
                 vpMode === 'vrvp'
-                  ? 'bg-[#272a31] text-[#00f0ff] border border-[#00f0ff]/40 font-bold'
-                  : 'text-[#849495] hover:text-[#e1e2eb]'
+                  ? 'bg-[#1c1c22] text-white border-white/[0.1] shadow-sm font-semibold'
+                  : 'border-transparent text-[#8e8e99] hover:text-white'
               }`}
             >
               VRVP
             </button>
             <button
               onClick={() => onToggleVpMode('session')}
-              className={`px-1.5 sm:px-2 py-0.5 rounded font-mono text-[9px] sm:text-[10px] font-semibold transition-all cursor-pointer ${
+              className={`px-2 py-1 rounded-lg font-mono text-[10px] font-medium border transition-colors cursor-pointer ${
                 vpMode === 'session'
-                  ? 'bg-[#272a31] text-[#00f0ff] border border-[#00f0ff]/40 font-bold'
-                  : 'text-[#849495] hover:text-[#e1e2eb]'
+                  ? 'bg-[#1c1c22] text-white border-white/[0.1] shadow-sm font-semibold'
+                  : 'border-transparent text-[#8e8e99] hover:text-white'
               }`}
             >
-              SESSION
+              Session
             </button>
           </div>
         </div>

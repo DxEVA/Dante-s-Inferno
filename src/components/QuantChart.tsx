@@ -121,6 +121,7 @@ export const QuantChart: React.FC<QuantChartProps> = ({
   const manualOptionsOverrideRef = useRef<boolean>(false);
   manualOptionsOverrideRef.current = manualOptionsOverride;
   const [mobileHudMode, setMobileHudMode] = useState<'NONE' | 'LEVELS' | 'LAYERS'>('NONE');
+  const [showDesktopLevels, setShowDesktopLevels] = useState<boolean>(false);
 
   const activeStrategyTabRef = useRef<number>(activeStrategyTab);
   activeStrategyTabRef.current = activeStrategyTab;
@@ -1075,13 +1076,13 @@ export const QuantChart: React.FC<QuantChartProps> = ({
       const styles = getComputedStyle(document.documentElement);
       const isLight = document.documentElement.getAttribute('data-theme') === 'light';
       return {
-        bg: styles.getPropertyValue('--chart-bg').trim() || (isLight ? '#ffffff' : '#0b0e14'),
-        text: styles.getPropertyValue('--chart-text').trim() || (isLight ? '#334155' : '#849495'),
-        grid: styles.getPropertyValue('--chart-grid').trim() || (isLight ? '#e2e8f0' : '#191c22'),
-        border: styles.getPropertyValue('--chart-border').trim() || (isLight ? '#cbd5e1' : '#1e2433'),
-        crosshair: styles.getPropertyValue('--chart-crosshair').trim() || (isLight ? '#0284c7' : '#00f0ff'),
-        up: styles.getPropertyValue('--chart-up').trim() || (isLight ? '#059669' : '#4edea3'),
-        down: styles.getPropertyValue('--chart-down').trim() || (isLight ? '#dc2626' : '#ffb4ab'),
+        bg: isLight ? (styles.getPropertyValue('--chart-bg').trim() || '#ffffff') : '#09090b',
+        text: isLight ? (styles.getPropertyValue('--chart-text').trim() || '#334155') : '#8e8e99',
+        grid: isLight ? (styles.getPropertyValue('--chart-grid').trim() || '#e2e8f0') : 'rgba(255, 255, 255, 0.035)',
+        border: isLight ? (styles.getPropertyValue('--chart-border').trim() || '#cbd5e1') : 'rgba(255, 255, 255, 0.07)',
+        crosshair: styles.getPropertyValue('--chart-crosshair').trim() || (isLight ? '#0284c7' : '#38bdf8'),
+        up: isLight ? (styles.getPropertyValue('--chart-up').trim() || '#059669') : '#10b981',
+        down: isLight ? (styles.getPropertyValue('--chart-down').trim() || '#dc2626') : '#f43f5e',
       };
     };
 
@@ -1391,9 +1392,9 @@ export const QuantChart: React.FC<QuantChartProps> = ({
 
       let rvolStatus = 'NORMAL FLOW';
       if (effectiveRvol <= 0.45) {
-        rvolStatus = '💧 SESSION VDU (EXHAUSTION)';
+        rvolStatus = 'VDU EXHAUSTION';
       } else if (effectiveRvol >= 2.0) {
-        rvolStatus = '🔥 SESSION IGNITION SURGE';
+        rvolStatus = 'VOLUME IGNITION';
       }
 
       const baseAsset = symbol.replace('USDT', '');
@@ -1627,75 +1628,76 @@ export const QuantChart: React.FC<QuantChartProps> = ({
                 onClick={() => setAutoSyncTab(!autoSyncTab)}
                 className={`w-full py-1.5 rounded font-mono text-[10px] font-semibold border flex items-center justify-center gap-1 cursor-pointer ${
                   autoSyncTab
-                    ? 'bg-[#00f0ff]/20 border-[#00f0ff]/50 text-[#00f0ff]'
-                    : 'bg-[#f59e0b]/20 border-[#f59e0b]/50 text-[#fcd34d]'
+                    ? 'bg-[#3b82f6]/15 border-[#3b82f6]/40 text-[#60a5fa]'
+                    : 'bg-[#f59e0b]/15 border-[#f59e0b]/40 text-[#f59e0b]'
                 }`}
               >
-                <span className="material-symbols-outlined text-[12px]">
-                  {autoSyncTab ? 'sync' : 'lock'}
-                </span>
                 <span>
-                  {autoSyncTab
-                    ? '🔓 AUTO-SYNC TO STAGE (01–06): ON'
-                    : '🔒 LAYERS LOCKED (MANUAL OVERRIDE)'}
+                  {autoSyncTab ? 'Auto-Sync: On' : 'Layers Locked'}
                 </span>
               </button>
             </div>
           )}
         </div>
-
-        {/* Watermark */}
-        <div className="absolute bottom-2 right-2 pointer-events-none flex flex-col items-end z-20">
-          <span className="font-mono text-[9px] text-[#849495]/50 tracking-wider">
-            INFERNO // HFT ORDERFLOW
-          </span>
-        </div>
       </div>
 
-      {/* Desktop Selective Chart Indicator Toggles Strip + Auto-Sync to Tab (Hidden on mobile where it lives in HUD) */}
-      <div className="hidden lg:flex flex-wrap items-center justify-between gap-1.5 py-1 px-1 bg-[#10131a] rounded-lg border border-[#272a31]">
-        {/* Left: The 6 Selective Indicator Layer Toggles */}
-        <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-          <span className="font-mono text-[9px] text-[#849495] font-bold uppercase tracking-wider pl-1 pr-0.5">
-            LAYERS:
-          </span>
+      {/* Desktop Selective Chart Indicator Toggles Strip + [ Levels ▾ ] + Auto-Sync */}
+      <div className="hidden lg:flex flex-wrap items-center justify-between gap-1.5 py-1.5 px-2 bg-[#12161f] rounded-lg border border-white/[0.07]">
+        {/* Left: The Selective Indicator Layer Toggles + [ Levels ▾ ] */}
+        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
+          {floatingLevelsNode && (
+            <button
+              type="button"
+              onClick={() => setShowDesktopLevels((prev) => !prev)}
+              className={`px-2.5 py-1 rounded-md text-[10px] font-mono font-semibold border transition-colors cursor-pointer ${
+                showDesktopLevels
+                  ? 'bg-[#3b82f6]/15 text-[#60a5fa] border-[#3b82f6]/40'
+                  : 'bg-[#0d1017] text-[#cbd5e1] border-white/[0.08] hover:text-white'
+              }`}
+              title="Toggle structural price levels bar"
+            >
+              Levels {showDesktopLevels ? '▴' : '▾'}
+            </button>
+          )}
+
+          <span className="text-white/10 px-0.5">|</span>
 
           {/* 1. Volume Profile */}
           <button
             type="button"
             onClick={() => handleToggleLayer('vp')}
-            className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border transition-all cursor-pointer ${
+            className={`px-2 py-1 rounded-md text-[10px] font-mono font-semibold border transition-colors cursor-pointer ${
               layers.vp
-                ? 'bg-[#00f0ff]/20 text-[#00f0ff] border-[#00f0ff]/50 shadow-[0_0_8px_rgba(0,240,255,0.2)]'
-                : 'bg-[#191c22] text-[#849495] border-[#272a31] hover:text-[#e1e2eb]'
+                ? 'bg-[#3b82f6]/15 text-[#60a5fa] border-[#3b82f6]/40'
+                : 'bg-[#0d1017] text-[#64748b] border-white/[0.07] hover:text-[#cbd5e1]'
             }`}
             title="Toggle Bid/Ask Split Volume Profile histogram & VAH/POC/VAL levels"
           >
-            VP SPLIT
+            VP Split
           </button>
 
           {/* 2. Order Blocks */}
           <button
             type="button"
             onClick={() => handleToggleLayer('ob')}
-            className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border transition-all cursor-pointer ${
+            className={`px-2 py-1 rounded-md text-[10px] font-mono font-semibold border transition-colors cursor-pointer ${
               layers.ob
-                ? 'bg-[#4edea3]/20 text-[#4edea3] border-[#4edea3]/50 shadow-[0_0_8px_rgba(78,222,163,0.2)]'
-                : 'bg-[#191c22] text-[#849495] border-[#272a31] hover:text-[#e1e2eb]'
+                ? 'bg-[#10b981]/15 text-[#10b981] border-[#10b981]/40'
+                : 'bg-[#0d1017] text-[#64748b] border-white/[0.07] hover:text-[#cbd5e1]'
             }`}
-            title="Toggle Mitigated Bullish & Bearish Order Block zones & Footprint Quality Scores"
+            title="Toggle Mitigated Bullish & Bearish Order Block zones"
           >
-            OB + MT
+            Order Blocks
           </button>
 
           {/* 3. Support & Resistance */}
           <button
             type="button"
             onClick={() => handleToggleLayer('sr')}
-            className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border transition-all cursor-pointer ${
+            className={`px-2 py-1 rounded-md text-[10px] font-mono font-semibold border transition-colors cursor-pointer ${
               layers.sr
-                ? 'bg-[#ffb4ab]/20 text-[#ffb4ab] border-[#ffb4ab]/50 shadow-[0_0_8px_rgba(255,180,171,0.2)]'
-                : 'bg-[#191c22] text-[#849495] border-[#272a31] hover:text-[#e1e2eb]'
+                ? 'bg-[#f43f5e]/15 text-[#f43f5e] border-[#f43f5e]/40'
+                : 'bg-[#0d1017] text-[#64748b] border-white/[0.07] hover:text-[#cbd5e1]'
             }`}
             title="Toggle Orderbook Resting Bids/Asks and S/R levels"
           >
@@ -1706,38 +1708,38 @@ export const QuantChart: React.FC<QuantChartProps> = ({
           <button
             type="button"
             onClick={() => handleToggleLayer('bubbles')}
-            className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border transition-all cursor-pointer ${
+            className={`px-2 py-1 rounded-md text-[10px] font-mono font-semibold border transition-colors cursor-pointer ${
               layers.bubbles
-                ? 'bg-[#38bdf8]/20 text-[#38bdf8] border-[#38bdf8]/50 shadow-[0_0_8px_rgba(56,189,248,0.2)]'
-                : 'bg-[#191c22] text-[#849495] border-[#272a31] hover:text-[#e1e2eb]'
+                ? 'bg-[#3b82f6]/15 text-[#60a5fa] border-[#3b82f6]/40'
+                : 'bg-[#0d1017] text-[#64748b] border-white/[0.07] hover:text-[#cbd5e1]'
             }`}
             title="Toggle Statistical ±2σ Delta Footprint Bubbles & Passive Absorption Rings"
           >
-            Δ BUBBLES
+            Delta Bubbles
           </button>
 
           {/* 5. Options Walls & Max Pain */}
           <button
             type="button"
             onClick={() => handleToggleLayer('options')}
-            className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border transition-all cursor-pointer ${
+            className={`px-2 py-1 rounded-md text-[10px] font-mono font-semibold border transition-colors cursor-pointer ${
               layers.options && (optionsData.isDeribitNative !== false || manualOptionsOverride)
-                ? 'bg-[#c084fc]/20 text-[#c084fc] border-[#c084fc]/50 shadow-[0_0_8px_rgba(192,132,252,0.2)]'
-                : 'bg-[#191c22] text-[#849495] border-[#272a31] hover:text-[#e1e2eb]'
+                ? 'bg-[#8b5cf6]/15 text-[#a78bfa] border-[#8b5cf6]/40'
+                : 'bg-[#0d1017] text-[#64748b] border-white/[0.07] hover:text-[#cbd5e1]'
             }`}
             title="Toggle Deribit Options Call Wall, Put Wall, Zero-Gamma Flip & Max Pain"
           >
-            OPTIONS + 0Γ
+            Options GEX
           </button>
 
           {/* 6. EMA Ribbon & Session VWAP */}
           <button
             type="button"
             onClick={() => handleToggleLayer('ma')}
-            className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border transition-all cursor-pointer ${
+            className={`px-2 py-1 rounded-md text-[10px] font-mono font-semibold border transition-colors cursor-pointer ${
               layers.ma
-                ? 'bg-[#f59e0b]/20 text-[#fcd34d] border-[#f59e0b]/50 shadow-[0_0_8px_rgba(245,158,11,0.2)]'
-                : 'bg-[#191c22] text-[#849495] border-[#272a31] hover:text-[#e1e2eb]'
+                ? 'bg-[#f59e0b]/15 text-[#f59e0b] border-[#f59e0b]/40'
+                : 'bg-[#0d1017] text-[#64748b] border-white/[0.07] hover:text-[#cbd5e1]'
             }`}
             title="Toggle EMA Ribbon (21/50/200) & Session VWAP curves"
           >
@@ -1748,104 +1750,106 @@ export const QuantChart: React.FC<QuantChartProps> = ({
           <button
             type="button"
             onClick={() => handleToggleLayer('rrBox')}
-            className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border transition-all cursor-pointer ${
+            className={`px-2 py-1 rounded-md text-[10px] font-mono font-semibold border transition-colors cursor-pointer ${
               layers.rrBox
-                ? 'bg-[#10b981]/20 text-[#10b981] border-[#10b981]/50 shadow-[0_0_8px_rgba(16,185,129,0.2)]'
-                : 'bg-[#191c22] text-[#849495] border-[#272a31] hover:text-[#e1e2eb]'
+                ? 'bg-[#10b981]/15 text-[#10b981] border-[#10b981]/40'
+                : 'bg-[#0d1017] text-[#64748b] border-white/[0.07] hover:text-[#cbd5e1]'
             }`}
             title="Toggle Long/Short Risk:Reward projection zone"
           >
-            R:R BOX
+            R:R Box
           </button>
         </div>
 
-        {/* Right: Zoom Controls + Auto-Sync to 6-Stage Pipeline or Lock Layers */}
+        {/* Right: Zoom Controls + Auto-Sync */}
         <div className="flex items-center gap-1.5 shrink-0 pl-1">
-          <div className="flex items-center rounded bg-[#0b0e14] border border-[#272a31] p-0.5 font-mono text-[9px]">
+          <div className="flex items-center rounded-md bg-[#0d1017] border border-white/[0.07] p-0.5 font-mono text-[10px]">
             <button
               type="button"
               onClick={handleResetZoom150}
-              className="px-1.5 py-0.5 rounded text-[#00f0ff] hover:bg-[#191c22] font-bold transition-colors cursor-pointer"
-              title="Reset viewport to crisp 150-bar active trading window"
+              className="px-2 py-0.5 rounded text-[#cbd5e1] hover:text-white hover:bg-white/[0.05] font-medium transition-colors cursor-pointer"
+              title="Reset viewport to 150-bar active trading window"
             >
-              🔍 RESET ZOOM (150B)
+              Reset (150B)
             </button>
-            <span className="text-[#272a31] px-0.5">|</span>
+            <span className="text-white/10 px-0.5">|</span>
             <button
               type="button"
               onClick={handleFitAllBars}
-              className="px-1.5 py-0.5 rounded text-[#b9cacb] hover:text-[#00f0ff] hover:bg-[#191c22] font-bold transition-colors cursor-pointer tabular-nums"
+              className="px-2 py-0.5 rounded text-[#64748b] hover:text-white hover:bg-white/[0.05] font-medium transition-colors cursor-pointer tabular-nums"
               title="Fit all loaded historical candles into viewport"
             >
-              FIT ALL ({klines.length}B)
+              Fit All ({klines.length}B)
             </button>
           </div>
 
           <button
             type="button"
             onClick={() => setAutoSyncTab(!autoSyncTab)}
-            className={`px-2 py-0.5 rounded font-mono text-[9px] sm:text-[10px] font-semibold border flex items-center gap-1 cursor-pointer transition-colors ${
+            className={`px-2.5 py-1 rounded-md font-mono text-[10px] font-semibold border cursor-pointer transition-colors ${
               autoSyncTab
-                ? 'bg-[#00f0ff]/20 border-[#00f0ff]/50 text-[#00f0ff]'
-                : 'bg-[#f59e0b]/20 border-[#f59e0b]/50 text-[#fcd34d]'
+                ? 'bg-[#3b82f6]/15 border-[#3b82f6]/40 text-[#60a5fa]'
+                : 'bg-[#f59e0b]/15 border-[#f59e0b]/40 text-[#f59e0b]'
             }`}
-            title="Toggle automatic chart layer synchronization with the 6-Stage Progressive Trader Pipeline or lock current layers"
+            title="Toggle automatic chart layer synchronization with the active stage"
           >
-            <span className="material-symbols-outlined text-[12px]">
-              {autoSyncTab ? 'sync' : 'lock'}
-            </span>
-            <span>
-              {autoSyncTab ? '🔓 AUTO-SYNC STAGE (01–06)' : '🔒 LAYERS LOCKED'}
-            </span>
+            {autoSyncTab ? 'Auto-Sync: On' : 'Layers Locked'}
           </button>
         </div>
       </div>
 
+      {/* Collapsible Desktop Structural Levels Drawer (Hidden by default behind [ Levels ▾ ]) */}
+      {showDesktopLevels && floatingLevelsNode && (
+        <div className="hidden lg:block p-2 rounded-lg bg-[#0d1017] border border-white/[0.07]">
+          {floatingLevelsNode}
+        </div>
+      )}
+
       {/* Touch-Friendly Mobile Layer Chips Strip (Mobile-Only) */}
-      <div className="flex lg:hidden items-center gap-1.5 overflow-x-auto no-scrollbar py-1 px-0.5 font-mono text-[10px] font-bold">
+      <div className="flex lg:hidden items-center gap-1.5 overflow-x-auto no-scrollbar py-1 px-0.5 font-mono text-[10px] font-semibold">
         <button
           type="button"
           onClick={handleResetZoom150}
-          className="px-2.5 py-1 rounded-lg border shrink-0 transition-all cursor-pointer bg-[#00f0ff]/15 text-[#00f0ff] border-[#00f0ff]/40"
+          className="px-2.5 py-1 rounded-md border shrink-0 transition-all cursor-pointer bg-[#12161f] text-[#cbd5e1] border-white/10"
         >
-          🔍 150B ZOOM
+          Reset (150B)
         </button>
         <button
           type="button"
           onClick={handleFitAllBars}
-          className="px-2.5 py-1 rounded-lg border shrink-0 transition-all cursor-pointer bg-[#141821] text-[#b9cacb] border-white/10 tabular-nums"
+          className="px-2.5 py-1 rounded-md border shrink-0 transition-all cursor-pointer bg-[#12161f] text-[#64748b] border-white/10 tabular-nums"
         >
-          FIT ALL ({klines.length}B)
+          Fit All ({klines.length}B)
         </button>
         <button
           type="button"
           onClick={() => handleToggleLayer('vp')}
-          className={`px-2.5 py-1 rounded-lg border shrink-0 transition-all cursor-pointer ${
+          className={`px-2.5 py-1 rounded-md border shrink-0 transition-all cursor-pointer ${
             layers.vp
-              ? 'bg-[#00f0ff]/20 text-[#00f0ff] border-[#00f0ff]/50'
-              : 'bg-[#141821] text-[#849495] border-white/10'
+              ? 'bg-[#3b82f6]/15 text-[#60a5fa] border-[#3b82f6]/40'
+              : 'bg-[#12161f] text-[#64748b] border-white/10'
           }`}
         >
-          VP SPLIT
+          VP Split
         </button>
         <button
           type="button"
           onClick={() => handleToggleLayer('ob')}
-          className={`px-2.5 py-1 rounded-lg border shrink-0 transition-all cursor-pointer ${
+          className={`px-2.5 py-1 rounded-md border shrink-0 transition-all cursor-pointer ${
             layers.ob
-              ? 'bg-[#4edea3]/20 text-[#4edea3] border-[#4edea3]/50'
-              : 'bg-[#141821] text-[#849495] border-white/10'
+              ? 'bg-[#10b981]/15 text-[#10b981] border-[#10b981]/40'
+              : 'bg-[#12161f] text-[#64748b] border-white/10'
           }`}
         >
-          OB + MT
+          Order Blocks
         </button>
         <button
           type="button"
           onClick={() => handleToggleLayer('sr')}
-          className={`px-2.5 py-1 rounded-lg border shrink-0 transition-all cursor-pointer ${
+          className={`px-2.5 py-1 rounded-md border shrink-0 transition-all cursor-pointer ${
             layers.sr
-              ? 'bg-[#ffb4ab]/20 text-[#ffb4ab] border-[#ffb4ab]/50'
-              : 'bg-[#141821] text-[#849495] border-white/10'
+              ? 'bg-[#f43f5e]/15 text-[#f43f5e] border-[#f43f5e]/40'
+              : 'bg-[#12161f] text-[#64748b] border-white/10'
           }`}
         >
           S/R
@@ -1853,32 +1857,32 @@ export const QuantChart: React.FC<QuantChartProps> = ({
         <button
           type="button"
           onClick={() => handleToggleLayer('bubbles')}
-          className={`px-2.5 py-1 rounded-lg border shrink-0 transition-all cursor-pointer ${
+          className={`px-2.5 py-1 rounded-md border shrink-0 transition-all cursor-pointer ${
             layers.bubbles
-              ? 'bg-[#38bdf8]/20 text-[#38bdf8] border-[#38bdf8]/50'
-              : 'bg-[#141821] text-[#849495] border-white/10'
+              ? 'bg-[#3b82f6]/15 text-[#60a5fa] border-[#3b82f6]/40'
+              : 'bg-[#12161f] text-[#64748b] border-white/10'
           }`}
         >
-          Δ BUBBLES
+          Delta Bubbles
         </button>
         <button
           type="button"
           onClick={() => handleToggleLayer('options')}
-          className={`px-2.5 py-1 rounded-lg border shrink-0 transition-all cursor-pointer ${
+          className={`px-2.5 py-1 rounded-md border shrink-0 transition-all cursor-pointer ${
             layers.options && (optionsData.isDeribitNative !== false || manualOptionsOverride)
-              ? 'bg-[#c084fc]/20 text-[#c084fc] border-[#c084fc]/50'
-              : 'bg-[#141821] text-[#849495] border-white/10'
+              ? 'bg-[#8b5cf6]/15 text-[#a78bfa] border-[#8b5cf6]/40'
+              : 'bg-[#12161f] text-[#64748b] border-white/10'
           }`}
         >
-          OPTIONS + 0Γ
+          Options GEX
         </button>
         <button
           type="button"
           onClick={() => handleToggleLayer('ma')}
-          className={`px-2.5 py-1 rounded-lg border shrink-0 transition-all cursor-pointer ${
+          className={`px-2.5 py-1 rounded-md border shrink-0 transition-all cursor-pointer ${
             layers.ma
-              ? 'bg-[#f59e0b]/20 text-[#fcd34d] border-[#f59e0b]/50'
-              : 'bg-[#141821] text-[#849495] border-white/10'
+              ? 'bg-[#f59e0b]/15 text-[#f59e0b] border-[#f59e0b]/40'
+              : 'bg-[#12161f] text-[#64748b] border-white/10'
           }`}
         >
           EMA + VWAP
@@ -1886,59 +1890,51 @@ export const QuantChart: React.FC<QuantChartProps> = ({
         <button
           type="button"
           onClick={() => handleToggleLayer('rrBox')}
-          className={`px-2.5 py-1 rounded-lg border shrink-0 transition-all cursor-pointer ${
+          className={`px-2.5 py-1 rounded-md border shrink-0 transition-all cursor-pointer ${
             layers.rrBox
-              ? 'bg-[#10b981]/20 text-[#10b981] border-[#10b981]/50'
-              : 'bg-[#141821] text-[#849495] border-white/10'
+              ? 'bg-[#10b981]/15 text-[#10b981] border-[#10b981]/40'
+              : 'bg-[#12161f] text-[#64748b] border-white/10'
           }`}
         >
-          R:R BOX
+          R:R Box
         </button>
         <button
           type="button"
           onClick={() => setAutoSyncTab(!autoSyncTab)}
-          className={`px-2.5 py-1 rounded-lg border shrink-0 transition-all cursor-pointer ${
+          className={`px-2.5 py-1 rounded-md border shrink-0 transition-all cursor-pointer ${
             autoSyncTab
-              ? 'bg-[#00f0ff]/20 text-[#00f0ff] border-[#00f0ff]/50'
-              : 'bg-[#f59e0b]/20 text-[#fcd34d] border-[#f59e0b]/50'
+              ? 'bg-[#3b82f6]/15 text-[#60a5fa] border-[#3b82f6]/40'
+              : 'bg-[#f59e0b]/15 text-[#f59e0b] border-[#f59e0b]/40'
           }`}
         >
-          {autoSyncTab ? '🔓 AUTO-SYNC' : '🔒 LOCKED'}
+          {autoSyncTab ? 'Auto-Sync: On' : 'Layers Locked'}
         </button>
       </div>
 
       {/* Chart Status Strip with Session-Normalized RVOL & Live Bar Delta */}
-      <div className="flex flex-wrap items-center justify-between text-[11px] font-mono text-[#b9cacb] px-0.5 gap-2">
-        <div className="flex flex-wrap items-center gap-3 truncate">
+      <div className="flex flex-wrap items-center justify-between text-[11px] font-mono text-[#94a3b8] px-1 gap-2">
+        <div className="flex flex-wrap items-center gap-3 truncate tabular-nums">
           <span>
-            VOL: <strong className="text-[#e1e2eb] font-semibold">{volMetrics.totalVol}</strong>
+            Vol: <strong className="text-[#f8fafc] font-semibold">{volMetrics.totalVol}</strong>
           </span>
           <span>
-            20-MA: <strong className="text-[#00f0ff] font-semibold">{volMetrics.ma20}</strong>
+            20-MA: <strong className="text-[#cbd5e1] font-semibold">{volMetrics.ma20}</strong>
           </span>
           <span>
-            BAR Δ:{' '}
+            Bar Δ:{' '}
             <strong
               className={`font-semibold ${
-                volMetrics.barDeltaPositive ? 'text-[#4edea3]' : 'text-[#ffb4ab]'
+                volMetrics.barDeltaPositive ? 'text-[#10b981]' : 'text-[#f43f5e]'
               }`}
             >
               {volMetrics.barDeltaStr}
             </strong>
           </span>
           <span className="flex items-center gap-1.5">
-            SES-RVOL ({volMetrics.sessionName}):{' '}
-            <strong className="text-[#e1e2eb] font-semibold">{volMetrics.sessionRvol.toFixed(2)}x</strong>
-            <span
-              className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${
-                volMetrics.sessionRvol <= 0.45
-                  ? 'bg-[#00f0ff]/15 text-[#00f0ff] border border-[#00f0ff]/30'
-                  : volMetrics.sessionRvol >= 2.0
-                  ? 'bg-[#f59e0b]/15 text-[#f59e0b] border border-[#f59e0b]/30'
-                  : 'bg-[#202530] text-[#849495]'
-              }`}
-            >
-              {volMetrics.rvolStatus}
+            RVOL ({volMetrics.sessionName}):{' '}
+            <strong className="text-[#f8fafc] font-semibold">{volMetrics.sessionRvol.toFixed(2)}x</strong>
+            <span className="text-[10px] text-[#64748b]">
+              · {volMetrics.rvolStatus}
             </span>
           </span>
         </div>
@@ -1946,11 +1942,11 @@ export const QuantChart: React.FC<QuantChartProps> = ({
         <div className="flex items-center gap-1.5 shrink-0">
           <span
             className={`w-1.5 h-1.5 rounded-full ${
-              isStreaming ? 'bg-[#4edea3] animate-pulse' : 'bg-[#f59e0b]'
+              isStreaming ? 'bg-[#10b981]' : 'bg-[#f59e0b]'
             }`}
-          ></span>
-          <span className="text-[#4edea3] font-semibold text-[10px] tracking-wider uppercase">
-            {isStreaming ? 'LIVE AGGTRADE + KLINE' : 'CONNECTING...'}
+          />
+          <span className="text-[#94a3b8] font-medium text-[10px]">
+            {isStreaming ? 'Live Feed' : 'Connecting...'}
           </span>
         </div>
       </div>

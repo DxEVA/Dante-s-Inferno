@@ -62,7 +62,6 @@ import { Footer } from './components/Footer';
 import { Toast } from './components/Toast';
 import { PaperJournalModal } from './components/PaperJournalModal';
 import { GlossaryModal } from './components/GlossaryModal';
-import { AsciiRadarHeader } from './components/AsciiTelemetry';
 import {
   loadPaperTrades,
   addPaperTrade as addJournalPaperTrade,
@@ -777,9 +776,9 @@ export default function App() {
             if (res.status !== prevStatus) {
               stateChanged = true;
               if (prevStatus === 'PENDING' && res.status === 'OPEN') {
-                showToast(`⚡ LIMIT ORDER FILLED: ${trade.symbol} ${trade.direction} @ $${res.filledEntryPrice}`);
+                showToast(`LIMIT ORDER FILLED: ${trade.symbol} ${trade.direction} @ $${res.filledEntryPrice}`);
               } else if (res.status !== 'OPEN') {
-                showToast(`🔔 PAPER TRADE RESOLVED: ${trade.symbol} ${res.status} (${res.exitReason})`);
+                showToast(`PAPER TRADE RESOLVED: ${trade.symbol} ${res.status} (${res.exitReason})`);
               }
             }
             return res;
@@ -1006,8 +1005,8 @@ export default function App() {
             setViewMode('selector');
             showToast(
               mode === 'rookie'
-                ? '🎓 ROOKIE MENTOR HUD INITIALIZED — SELECT TARGET ASSET'
-                : '⚡ PRO QUANT WORKSTATION INITIALIZED — SELECT TARGET ASSET'
+                ? 'ROOKIE GUIDE INITIALIZED — SELECT TARGET ASSET'
+                : 'PRO WORKSTATION INITIALIZED — SELECT TARGET ASSET'
             );
           }}
         />
@@ -1035,8 +1034,8 @@ export default function App() {
             setExperienceMode(mode);
             showToast(
               mode === 'rookie'
-                ? '🎓 ROOKIE GUIDE MODE ACTIVE'
-                : '⚡ PRO TERMINAL MODE ACTIVE'
+                ? 'ROOKIE GUIDE MODE ACTIVE'
+                : 'PRO TERMINAL MODE ACTIVE'
             );
           }}
           volumeProfile={volumeProfile}
@@ -1054,14 +1053,14 @@ export default function App() {
           onEnterWorkstation={() => {
             setIsRightWorkspaceExpanded(false);
             setViewMode('terminal');
-            showToast(`⚡ ENTERED LIVE WORKSTATION: ${activePair.symbol}`);
+            showToast(`ENTERED LIVE WORKSTATION: ${activePair.symbol}`);
           }}
           onOpenStageInTerminal={(stageId) => {
             setIsRightWorkspaceExpanded(false);
             setActiveStrategyTab(stageId);
             setExternalDeckRequest({ deck: 'LENSES', ts: Date.now() });
             setViewMode('terminal');
-            showToast(`📊 OPENED STAGE 0${stageId} FOR ${activePair.symbol}`);
+            showToast(`OPENED STAGE 0${stageId} FOR ${activePair.symbol}`);
           }}
           onLaunchWithSetup={(entry, stop, tp1, tp2) => {
             setIsRightWorkspaceExpanded(false);
@@ -1074,7 +1073,7 @@ export default function App() {
             setIsRightWorkspaceExpanded(true);
             setExternalDeckRequest({ deck: 'PLAYBOOKS', ts: Date.now() });
             setViewMode('terminal');
-            showToast(`🏆 14 PRO PLAYBOOKS OPENED FOR ${activePair.symbol}`);
+            showToast(`PLAYBOOKS OPENED FOR ${activePair.symbol}`);
           }}
         />
       ) : (
@@ -1094,8 +1093,8 @@ export default function App() {
               setExperienceMode(mode);
               showToast(
                 mode === 'rookie'
-                  ? '🎓 ROOKIE GUIDE MODE: PLAIN-ENGLISH TAKEAWAYS ACTIVE'
-                  : '⚡ PRO TERMINAL MODE: HIGH-DENSITY VIEW ACTIVE'
+                  ? 'ROOKIE GUIDE MODE: PLAIN-ENGLISH TAKEAWAYS ACTIVE'
+                  : 'PRO TERMINAL MODE: HIGH-DENSITY VIEW ACTIVE'
               );
             }}
             onOpenGlossary={() => setShowGlossaryModal(true)}
@@ -1148,21 +1147,8 @@ export default function App() {
               />
             </div>
 
-            {/* Live ASCII Radar Telemetry Strip (Directly above main Chart & Strategy Workspace) */}
-            <AsciiRadarHeader
-              symbol={activePair.symbol}
-              regime={candlestickResult.marketRegime?.regime || confluence.regime}
-              rvol={telemetry.sessionRvol || 1.0}
-              cvdDelta={telemetry.cvdDelta}
-              isStreaming={isStreaming}
-              volumeSeries={klines.slice(-10).map((k) => k.volume)}
-              trackedLevel={highlightedLevel}
-              onClearTrackedLevel={() => setHighlightedLevel(null)}
-              onJumpToChart={() => handleNavigateMobilePage('CHART')}
-            />
-
             {/* Main 12-Column Split Cockpit */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 border-b border-[#1e2433] items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-12 border-b border-white/[0.07] items-start">
               {/* LEFT PANE — LIVE CHART & ACTIONABILITY COCKPIT (Sticky on Desktop; Page-Gated on Mobile; Collapses when Full-Screen Workspace Active) */}
               <div
                 className={`${
@@ -1171,65 +1157,22 @@ export default function App() {
                   isRightWorkspaceExpanded
                     ? 'lg:hidden'
                     : 'lg:flex lg:col-span-7 xl:col-span-7'
-                } lg:sticky lg:top-14 lg:h-[calc(100vh-3.5rem)] lg:overflow-y-auto no-scrollbar border-b lg:border-b-0 lg:border-r border-[#1e2433] bg-[#0b0e14] flex-col`}
+                } lg:sticky lg:top-14 lg:h-[calc(100vh-3.5rem)] lg:overflow-y-auto no-scrollbar border-b lg:border-b-0 lg:border-r border-white/[0.07] bg-[#0b0e14] flex-col`}
               >
-                {/* Brutalist Left Pane Header Bar (Desktop + Mobile Chart Page) */}
+                {/* Chart Canvas (Directly below TickerBar with maximum breathing room) */}
                 <div
                   className={`${
                     mobilePage === 'CHART' ? 'flex' : 'hidden'
-                  } lg:flex items-center justify-between px-3 py-1.5 bg-[#10131a] border-b border-[#1e2433] font-mono text-[10px]`}
+                  } lg:flex flex-col bg-[#0b0e14] px-2 sm:px-3 py-1.5 sm:py-2 gap-1.5 sm:gap-2 border-b border-white/[0.07]`}
                 >
-                  <div className="flex items-center gap-2">
-                    <span className="px-1.5 py-0.5 bg-[#00f0ff]/10 text-[#00f0ff] border border-[#00f0ff]/40 font-bold tracking-wider">
-                      VEC_01
-                    </span>
-                    <span className="text-[#e1e2eb] font-bold uppercase tracking-wider truncate">
-                      LIVE CHART &amp; ORDERFLOW COCKPIT
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-[#849495] tabular-nums shrink-0">
-                    <span>{activePair.symbol}</span>
-                    <span>•</span>
-                    <span className="text-[#00f0ff] font-bold">{selectedTf.toUpperCase()}</span>
-                    <span>•</span>
-                    <span className="text-[#4edea3] font-bold">{klines.length || candleDepth}B</span>
-                    <span className="hidden sm:inline">•</span>
-                    <span className={`hidden sm:inline ${showSetupOnChart ? 'text-[#4edea3]' : 'text-[#849495]'}`}>
-                      R:R BOX {showSetupOnChart ? 'ACTIVE' : 'HIDDEN'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Floating Structural Overlays & Chart Canvas (Shown on Desktop & Mobile CHART page) */}
-                <div
-                  className={`${
-                    mobilePage === 'CHART' ? 'flex' : 'hidden'
-                  } lg:flex flex-col bg-[#0b0e14] px-2 sm:px-3 py-1.5 sm:py-2 gap-1.5 sm:gap-2 border-b border-[#1e2433]`}
-                >
-                  {/* Desktop FloatingLevels Row (On mobile, rendered inside QuantChart toggleable HUD overlay) */}
-                  <div className="hidden lg:block">
-                    <FloatingLevels
-                      vp={volumeProfile}
-                      bullOB={bullOB}
-                      bearOB={bearOB}
-                      options={optionsData}
-                      liquidity={liquidity}
-                      symbol={activePair.symbol}
-                      currentPrice={activePair.price}
-                      onHoverLevel={setHighlightedLevel}
-                      highlightedLevel={highlightedLevel}
-                      activeLayers={chartLayers}
-                    />
-                  </div>
-
                   {isInitialLoading || klines.length === 0 ? (
-                    <div className="w-full h-[calc(100dvh-14.5rem)] min-h-[360px] sm:h-[440px] lg:h-[460px] rounded-none bg-[#0b0e14] border border-[#1e2433] flex flex-col items-center justify-center gap-3">
-                      <div className="w-9 h-9 border-2 border-[#00f0ff] border-t-transparent rounded-full animate-spin"></div>
-                      <div className="font-mono text-[13px] text-[#00f0ff] font-bold tracking-wider">
-                        ● INITIALIZING {activePair.symbol} QUANT ENGINE ({selectedTf.toUpperCase()})...
+                    <div className="w-full h-[calc(100dvh-14.5rem)] min-h-[360px] sm:h-[440px] lg:h-[460px] rounded-lg bg-[#0b0e14] border border-white/[0.07] flex flex-col items-center justify-center gap-3">
+                      <div className="w-8 h-8 border-2 border-[#3b82f6] border-t-transparent rounded-full animate-spin"></div>
+                      <div className="font-mono text-[12px] text-[#f8fafc] font-semibold tracking-wide">
+                        Loading {activePair.symbol} ({selectedTf.toUpperCase()})...
                       </div>
-                      <div className="font-mono text-[10px] text-[#849495]">
-                        Fetching {candleDepth} klines &amp; computing Volume Profile, Order Blocks &amp; 14 Strategy Models
+                      <div className="font-mono text-[10px] text-[#64748b]">
+                        Fetching {candleDepth} klines, Volume Profile, Order Blocks &amp; 14 Strategy Models
                       </div>
                     </div>
                   ) : (
@@ -1274,19 +1217,19 @@ export default function App() {
                     />
                   )}
 
-                  {/* Compact 1-Line Mobile Verdict Bar on Chart Page (Jumps to RADAR or LENSES) */}
-                  <div className="flex lg:hidden items-center justify-between gap-2 px-2.5 py-2 rounded-lg bg-[#141821] border border-[#272a31] font-mono text-[10px]">
+                  {/* Compact 1-Line Mobile Verdict Bar on Chart Page (Jumps to PLAYBOOKS or LENSES) */}
+                  <div className="flex lg:hidden items-center justify-between gap-2 px-3 py-2 rounded-lg bg-[#12161f] border border-white/[0.07] font-mono text-[10px]">
                     <div className="flex items-center gap-1.5 min-w-0 truncate">
                       <span
                         className={`w-2 h-2 rounded-full shrink-0 ${
                           confluence.score >= 65
-                            ? 'bg-[#4edea3]'
+                            ? 'bg-[#10b981]'
                             : confluence.score <= 35
                             ? 'bg-[#f43f5e]'
                             : 'bg-[#f59e0b]'
                         }`}
                       />
-                      <span className="text-[#dbfcff] font-bold truncate">
+                      <span className="text-[#f8fafc] font-semibold truncate">
                         {confluence.score}% {confluence.bias}
                       </span>
                     </div>
@@ -1294,16 +1237,16 @@ export default function App() {
                       <button
                         type="button"
                         onClick={() => handleNavigateMobilePage('PLAYBOOKS')}
-                        className="px-2.5 py-1 rounded-lg bg-[#f59e0b]/15 text-[#fcd34d] border border-[#f59e0b]/40 font-bold text-[10px] cursor-pointer"
+                        className="px-2.5 py-1 rounded-md bg-white/[0.05] hover:bg-white/[0.1] text-[#f8fafc] border border-white/10 font-semibold text-[10px] cursor-pointer"
                       >
-                        🏆 PLAYBOOKS →
+                        Playbooks →
                       </button>
                       <button
                         type="button"
                         onClick={() => handleNavigateMobilePage('LENSES')}
-                        className="px-2.5 py-1 rounded-lg bg-[#4edea3]/15 text-[#4edea3] border border-[#4edea3]/40 font-bold text-[10px] cursor-pointer"
+                        className="px-2.5 py-1 rounded-md bg-[#3b82f6]/15 text-[#60a5fa] border border-[#3b82f6]/35 font-semibold text-[10px] cursor-pointer"
                       >
-                        📊 6 STAGES →
+                        Analysis →
                       </button>
                     </div>
                   </div>
@@ -1334,7 +1277,7 @@ export default function App() {
                       setActiveStrategyTab(6);
                       setExternalDeckRequest({ deck: 'REVERSE_ACADEMY', ts: Date.now() });
                       setMobilePage('ACADEMY');
-                      showToast(`🔬 REVERSE SIGNAL X-RAY OPENED FOR ${activePair.symbol} (STAGE 06)`);
+                      showToast(`SIGNAL X-RAY OPENED FOR ${activePair.symbol}`);
                     }}
                   />
                 </div>
@@ -1410,7 +1353,7 @@ export default function App() {
                     setHighlightedLevel(lvl);
                     if (lvl) {
                       setIsRightWorkspaceExpanded(false);
-                      showToast(`🎯 TRACKING ON CHART: ${lvl.label} ($${lvl.price.toLocaleString()})`);
+                      showToast(`HIGHLIGHTED ON CHART: ${lvl.label} ($${lvl.price.toLocaleString()})`);
                     }
                   }}
                   highlightedLevel={highlightedLevel}
@@ -1449,7 +1392,7 @@ export default function App() {
                     });
                     setPaperTradesList(loadPaperTrades());
                     showToast(
-                      `📝 ${orderType === 'MAKER_LIMIT' ? 'LIMIT' : 'MARKET'} TRADE LOGGED (${logged.status}): ${logged.symbol} ${logged.direction} @ $${logged.entryPrice}`
+                      `${orderType === 'MAKER_LIMIT' ? 'LIMIT' : 'MARKET'} TRADE LOGGED (${logged.status}): ${logged.symbol} ${logged.direction} @ $${logged.entryPrice}`
                     );
                   }}
                   onRemovePaperTrade={(id) => {
@@ -1463,41 +1406,40 @@ export default function App() {
           </main>
 
           {/* Bottom-Left Floating Collapsible Command Pill & Fan-Out Menu (< 1024px) */}
-          {/* Anchored on bottom-left (left-3 bottom-4) so bottom-right badges (Netlify, etc.) never overlap */}
           {(() => {
             const mobileNavItems = [
               {
                 id: 'CHART' as const,
-                label: '📈 CHART',
-                sub: 'Live Chart + 1-Tap Layers',
+                label: 'Chart',
+                sub: 'Live Chart & Layers',
                 icon: 'candlestick_chart',
                 badge: selectedTf.toUpperCase(),
               },
               {
                 id: 'LENSES' as const,
-                label: '📊 6 STAGES',
+                label: 'Analysis Flow',
                 sub: '6-Stage Market Flow',
                 icon: 'layers',
                 badge: `S0${activeStrategyTab}`,
               },
               {
                 id: 'PLAYBOOKS' as const,
-                label: '🏆 PLAYBOOKS',
-                sub: '14 Pro & Gann Playbooks',
+                label: 'Playbooks (14)',
+                sub: 'Gann, Lunar & SSRN Models',
                 icon: 'emoji_events',
-                badge: '14 PRO',
+                badge: '14',
               },
               {
                 id: 'EXECUTE' as const,
-                label: '🎯 EXECUTE',
+                label: 'Execute & Size',
                 sub: 'Pre-Flight & Position Sizer',
                 icon: 'calculate',
                 badge: 'S06',
               },
               {
                 id: 'ACADEMY' as const,
-                label: '📚 CODEX',
-                sub: 'Inferno Codex & X-Ray Hub',
+                label: 'Learn & X-Ray',
+                sub: 'Codex & Signal X-Ray',
                 icon: 'school',
                 badge: 'LEARN',
               },
@@ -1520,14 +1462,14 @@ export default function App() {
                   aria-label="Mobile Terminal Pages"
                   className="lg:hidden fixed bottom-3 left-3 z-[9999] flex flex-col items-start gap-2 pb-[env(safe-area-inset-bottom,4px)]"
                 >
-                  {/* Expanded Fan-Out Vertical Command Stack (Frosted Obsidian Glass) */}
+                  {/* Expanded Fan-Out Vertical Command Stack */}
                   {isMobileNavOpen && (
-                    <div className="w-68 rounded-2xl bg-[#0b101b]/92 backdrop-blur-xl border border-white/12 shadow-[0_16px_40px_rgba(0,0,0,0.85)] p-1.5 flex flex-col gap-1 overflow-hidden">
-                      <div className="px-3 py-1.5 rounded-xl bg-white/[0.04] flex items-center justify-between">
-                        <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-[#00f0ff]">
-                          ⚡ TERMINAL NAVIGATION
+                    <div className="w-64 rounded-xl bg-[#12161f]/95 backdrop-blur-xl border border-white/10 shadow-[0_16px_40px_rgba(0,0,0,0.85)] p-1.5 flex flex-col gap-1 overflow-hidden">
+                      <div className="px-3 py-1.5 rounded-lg bg-white/[0.04] flex items-center justify-between">
+                        <span className="font-mono text-[9.5px] font-semibold uppercase tracking-wider text-[#94a3b8]">
+                          Navigation
                         </span>
-                        <span className="font-mono text-[8.5px] text-[#849495]">
+                        <span className="font-mono text-[9px] text-[#64748b]">
                           {activePair.symbol}
                         </span>
                       </div>
@@ -1539,31 +1481,31 @@ export default function App() {
                             key={item.id}
                             type="button"
                             onClick={() => handleNavigateMobilePage(item.id)}
-                            className={`relative w-full px-3 py-2.5 rounded-xl flex items-center justify-between gap-2 text-left font-mono transition-all cursor-pointer ${
+                            className={`relative w-full px-3 py-2 rounded-lg flex items-center justify-between gap-2 text-left transition-all cursor-pointer ${
                               isActive
-                                ? 'bg-[#00f0ff]/15 text-[#00f0ff] border border-[#00f0ff]/35'
-                                : 'text-[#e1e2eb] hover:bg-white/[0.05] border border-transparent'
+                                ? 'bg-[#3b82f6]/15 text-[#f8fafc] border border-[#3b82f6]/35'
+                                : 'text-[#cbd5e1] hover:bg-white/[0.05] border border-transparent'
                             }`}
                           >
                             <div className="flex items-center gap-2.5 min-w-0">
-                              <span className="material-symbols-outlined text-[18px] shrink-0">
+                              <span className="material-symbols-outlined text-[17px] text-[#94a3b8] shrink-0">
                                 {item.icon}
                               </span>
                               <div className="flex flex-col min-w-0">
-                                <span className="text-[10.5px] font-bold tracking-tight leading-tight">
+                                <span className="text-[11px] font-semibold tracking-tight leading-tight">
                                   {item.label}
                                 </span>
-                                <span className="font-sans text-[9.5px] text-[#849495] truncate">
+                                <span className="text-[9.5px] text-[#64748b] truncate">
                                   {item.sub}
                                 </span>
                               </div>
                             </div>
 
                             <span
-                              className={`px-1.5 py-0.5 rounded-md text-[8.5px] font-bold tabular-nums border shrink-0 ${
+                              className={`px-1.5 py-0.5 rounded text-[8.5px] font-mono font-semibold tabular-nums border shrink-0 ${
                                 isActive
-                                  ? 'bg-[#00f0ff]/20 text-[#00f0ff] border-[#00f0ff]/50'
-                                  : 'bg-[#141821] text-[#849495] border-white/10'
+                                  ? 'bg-[#3b82f6]/20 text-[#60a5fa] border-[#3b82f6]/40'
+                                  : 'bg-[#0d1017] text-[#64748b] border-white/[0.07]'
                               }`}
                             >
                               {item.badge}
@@ -1574,50 +1516,50 @@ export default function App() {
                     </div>
                   )}
 
-                  {/* Compact Bottom-Left Frosted-Glass Command Pill + 1-Tap Quick-Flip Button */}
-                  <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-[#0b101b]/90 backdrop-blur-xl border border-white/12 shadow-[0_16px_40px_rgba(0,0,0,0.85)]">
+                  {/* Compact Bottom-Left Command Pill + 1-Tap Quick-Flip Button */}
+                  <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#12161f]/95 backdrop-blur-xl border border-white/10 shadow-[0_12px_30px_rgba(0,0,0,0.75)]">
                     <button
                       type="button"
                       onClick={() => setIsMobileNavOpen((prev) => !prev)}
-                      className={`h-11 px-3 rounded-xl flex items-center gap-2 font-mono transition-all cursor-pointer ${
+                      className={`h-10 px-3 rounded-lg flex items-center gap-2 transition-all cursor-pointer ${
                         isMobileNavOpen
-                          ? 'bg-[#00f0ff]/20 text-[#00f0ff] border border-[#00f0ff]/50'
-                          : 'bg-[#00f0ff]/15 text-[#00f0ff] border border-[#00f0ff]/35'
+                          ? 'bg-[#3b82f6]/20 text-[#f8fafc] border border-[#3b82f6]/40'
+                          : 'bg-white/[0.05] text-[#f8fafc] border border-white/10'
                       }`}
                       title="Open Mobile Workspace Menu"
                     >
-                      <span className="material-symbols-outlined text-[18px] text-[#00f0ff]">
+                      <span className="material-symbols-outlined text-[17px] text-[#60a5fa]">
                         {isMobileNavOpen ? 'close' : 'widgets'}
                       </span>
                       <div className="flex flex-col items-start leading-none">
-                        <span className="text-[7.5px] text-[#849495] uppercase tracking-wider">
-                          VIEW MENU
+                        <span className="font-mono text-[7.5px] text-[#64748b] uppercase tracking-wider">
+                          Workspace
                         </span>
                         <div className="flex items-center gap-1 mt-0.5">
-                          <span className="text-[10px] font-bold tracking-tight">
+                          <span className="text-[10.5px] font-semibold tracking-tight">
                             {activeItem.label}
                           </span>
-                          <span className="px-1 py-0.2 rounded bg-[#00f0ff]/20 text-[#00f0ff] text-[8px] font-bold tabular-nums">
+                          <span className="px-1 py-0.2 rounded bg-white/[0.08] text-[#94a3b8] font-mono text-[8px] font-semibold tabular-nums">
                             {activeItem.badge}
                           </span>
                         </div>
                       </div>
-                      <span className="material-symbols-outlined text-[15px] text-[#849495]">
+                      <span className="material-symbols-outlined text-[14px] text-[#64748b]">
                         {isMobileNavOpen ? 'expand_more' : 'expand_less'}
                       </span>
                     </button>
 
-                    {/* 1-Tap Quick Flip between Chart and 6 Stages */}
+                    {/* 1-Tap Quick Flip between Chart and Analysis Flow */}
                     <button
                       type="button"
                       onClick={() => handleNavigateMobilePage(quickFlipTarget.id)}
-                      className="h-11 px-3 rounded-xl bg-white/[0.04] hover:bg-[#00f0ff]/15 border border-white/10 hover:border-[#00f0ff]/35 text-[#dbfcff] hover:text-[#00f0ff] flex items-center gap-1.5 font-mono cursor-pointer transition-all"
+                      className="h-10 px-3 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-[#cbd5e1] hover:text-white flex items-center gap-1.5 cursor-pointer transition-all"
                       title={`Quick switch to ${quickFlipTarget.label}`}
                     >
-                      <span className="material-symbols-outlined text-[16px] text-[#00f0ff]">
+                      <span className="material-symbols-outlined text-[15px] text-[#94a3b8]">
                         {quickFlipTarget.icon}
                       </span>
-                      <span className="text-[9.5px] font-bold uppercase">
+                      <span className="text-[10px] font-semibold">
                         {quickFlipTarget.label}
                       </span>
                     </button>

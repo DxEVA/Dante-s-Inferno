@@ -25,21 +25,21 @@ export const SignalBiasPill: React.FC<SignalBiasPillProps> = ({
 
   const colorClasses =
     bias === 'BULLISH'
-      ? 'bg-[#4edea3]/15 text-[#4edea3] border border-[#4edea3]/40 shadow-[0_0_10px_rgba(78,222,163,0.15)]'
+      ? 'bg-[#10b981]/10 text-[#10b981] border border-[#10b981]/25'
       : bias === 'BEARISH'
-      ? 'bg-[#ffb4ab]/15 text-[#ffb4ab] border border-[#ffb4ab]/40 shadow-[0_0_10px_rgba(255,180,171,0.15)]'
-      : 'bg-[#f59e0b]/12 text-[#fcd34d] border border-[#f59e0b]/35';
+      ? 'bg-[#f43f5e]/10 text-[#f43f5e] border border-[#f43f5e]/25'
+      : 'bg-[#f59e0b]/10 text-[#f59e0b] border border-[#f59e0b]/25';
 
   const sizeClasses =
     size === 'xs'
-      ? 'px-1.5 py-0.5 text-[8px] rounded'
+      ? 'px-1.5 py-0.5 text-[9px] rounded'
       : size === 'md'
-      ? 'px-2.5 py-1 text-[10px] rounded-md'
-      : 'px-2 py-0.5 text-[9px] rounded-md';
+      ? 'px-2.5 py-1 text-[10.5px] rounded-md'
+      : 'px-2 py-0.5 text-[9.5px] rounded';
 
   return (
     <span
-      className={`inline-flex items-center gap-1 font-mono font-bold uppercase tracking-wider shrink-0 tabular-nums ${colorClasses} ${sizeClasses} ${className}`}
+      className={`inline-flex items-center gap-1 font-mono font-semibold tracking-tight shrink-0 tabular-nums ${colorClasses} ${sizeClasses} ${className}`}
     >
       {displayText}
     </span>

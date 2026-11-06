@@ -69,94 +69,89 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
-      <header className="fixed top-0 w-full z-50 bg-[#0b0e14]/95 backdrop-blur-xl border-b border-[#1e2433] shadow-[0_2px_12px_rgba(0,0,0,0.6)]">
+      <header className="fixed top-0 w-full z-50 bg-[#09090b] border-b border-white/[0.07]">
         <div className="max-w-7xl mx-auto px-2.5 sm:px-4 h-12 sm:h-13 flex items-center justify-between gap-2">
           {/* Left: Brand & Live Ping Badge */}
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0">
             <button
               aria-label="Asset Launchpad"
-              className="w-8 h-8 rounded bg-[#141821] border border-[#272a31] flex items-center justify-center text-[#849495] hover:text-[#00f0ff] hover:border-[#00f0ff]/50 transition-colors cursor-pointer shrink-0"
+              className="w-8 h-8 rounded-lg bg-[#121215] border border-white/[0.07] flex items-center justify-center text-[#8e8e99] hover:text-[#fafafa] hover:border-white/[0.14] transition-colors cursor-pointer shrink-0"
               onClick={() => (onSwitchAsset ? onSwitchAsset() : onSelectPair('BTCUSDT'))}
               title="Open Top 50 Asset Launchpad"
             >
               <span className="material-symbols-outlined text-[17px] sm:text-[18px]">terminal</span>
             </button>
 
-            <div className="flex flex-col min-w-0">
-              <div className="flex items-center gap-1.5 truncate">
-                <span className="font-mono text-[10px] sm:text-[11px] text-[#00f0ff] tracking-wider uppercase font-bold truncate">
-                  ● INFERNO // QUANT RADAR
-                </span>
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-[#1d2026] border border-[#272a31] font-mono text-[8px] sm:text-[9px] text-[#4edea3] font-semibold shrink-0">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#4edea3] animate-pulse"></span>
-                  <span className="hidden xs:inline">LIVE</span> {pingMs}ms
-                </span>
-              </div>
+            <div className="flex items-center gap-2 min-w-0 truncate">
+              <span className="font-sans text-[13px] sm:text-[14px] text-[#fafafa] font-semibold tracking-tight truncate">
+                Inferno Terminal
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#121215] border border-white/[0.07] font-mono text-[10px] text-[#10b981] font-medium shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
+                <span>{pingMs}ms</span>
+              </span>
             </div>
           </div>
 
-          {/* Desktop Right: The Core Navigation Controls (Hidden on mobile to prevent crowding) */}
+          {/* Desktop Right: The Core Navigation Controls */}
           <div className="hidden lg:flex items-center gap-2 shrink-0">
-            {/* 0. Global Theme Toggle (Dark vs High-Contrast Light Mode) */}
+            {/* 0. Global Theme Toggle */}
             <button
               type="button"
               onClick={() => handleToggleTheme()}
-              className="px-2 py-1 rounded bg-[#191c22] hover:bg-[#272a31] text-[#b9cacb] hover:text-[#00f0ff] border border-[#272a31] hover:border-[#00f0ff]/40 font-mono text-[10px] font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
-              title={
-                theme === 'dark'
-                  ? 'Switch to High-Contrast Light Mode'
-                  : 'Switch to Cyber-Brutalist Dark Mode'
-              }
+              className="px-2.5 py-1.5 rounded-lg bg-[#121215] hover:bg-[#18181c] text-[#a1a1aa] hover:text-[#fafafa] border border-white/[0.07] font-sans text-[11.5px] font-medium transition-colors flex items-center gap-1.5 cursor-pointer"
+              title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Zinc Lumina Dark Mode'}
               aria-label="Toggle Theme"
             >
-              <span className="material-symbols-outlined text-[13px] text-[#00f0ff]">
+              <span className="material-symbols-outlined text-[14px] text-[#38bdf8]">
                 {theme === 'dark' ? 'light_mode' : 'dark_mode'}
               </span>
-              <span>{theme === 'dark' ? 'LIGHT' : 'DARK'}</span>
+              <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
             </button>
 
-            {/* 1. Global [ 🎓 ROOKIE | ⚡ PRO ] Toggle */}
+            {/* 1. Global [ Rookie | Pro ] Recessed Segmented Pill Track */}
             {onToggleExperienceMode && (
-              <div className="flex items-center p-0.5 rounded-lg bg-[#141821] border border-[#272a31] font-mono text-[10px]">
+              <div className="flex items-center bg-[#0c0c0f] p-1 rounded-xl border border-white/[0.06] font-sans text-[11.5px]">
                 <button
                   type="button"
                   onClick={() => onToggleExperienceMode('rookie')}
-                  className={`px-2 py-1 rounded-md font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                  className={`px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer flex items-center gap-1.5 border ${
                     experienceMode === 'rookie'
-                      ? 'bg-[#00f0ff]/20 text-[#00f0ff] border border-[#00f0ff]/50 shadow-[0_0_8px_rgba(0,240,255,0.25)]'
-                      : 'text-[#849495] hover:text-[#e1e2eb]'
+                      ? 'bg-[#1c1c22] text-white border-white/[0.1] shadow-sm'
+                      : 'border-transparent text-[#8e8e99] hover:text-white'
                   }`}
                   title="Rookie Guide Mode: Plain-English Takeaways & Workflow Guidance"
                 >
-                  <span>🎓 ROOKIE</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#38bdf8]" />
+                  <span>Rookie</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => onToggleExperienceMode('pro')}
-                  className={`px-2 py-1 rounded-md font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                  className={`px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer flex items-center gap-1.5 border ${
                     experienceMode === 'pro'
-                      ? 'bg-[#4edea3]/20 text-[#4edea3] border border-[#4edea3]/50 shadow-[0_0_8px_rgba(78,222,163,0.25)]'
-                      : 'text-[#849495] hover:text-[#e1e2eb]'
+                      ? 'bg-[#1c1c22] text-white border-white/[0.1] shadow-sm'
+                      : 'border-transparent text-[#8e8e99] hover:text-white'
                   }`}
                   title="Pro Terminal Mode: High-Density Institutional View"
                 >
-                  <span>⚡ PRO</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#6366f1]" />
+                  <span>Pro</span>
                 </button>
               </div>
             )}
 
-            {/* 2. Paper Trade Journal Button with Active Count Badge */}
+            {/* 2. Paper Trade Journal Button */}
             {onOpenJournal && (
               <button
                 type="button"
                 onClick={onOpenJournal}
-                className="px-2 py-1 rounded bg-[#191c22] hover:bg-[#272a31] text-[#b9cacb] hover:text-[#4edea3] border border-[#272a31] hover:border-[#4edea3]/40 font-mono text-[10px] font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
+                className="px-2.5 py-1.5 rounded-lg bg-[#121215] hover:bg-[#18181c] text-[#a1a1aa] hover:text-[#fafafa] border border-white/[0.07] font-sans text-[11.5px] font-medium transition-colors flex items-center gap-1.5 cursor-pointer"
                 title="Open Automated Paper Trade Journal & Strategy Tester"
               >
-                <span className="material-symbols-outlined text-[13px] text-[#4edea3]">history_edu</span>
-                <span>JOURNAL</span>
+                <span>Journal</span>
                 {activeJournalTradesCount > 0 && (
-                  <span className="px-1.5 py-0.2 rounded-full bg-[#4edea3]/20 text-[#4edea3] border border-[#4edea3]/50 text-[8px] font-bold">
+                  <span className="px-1.5 py-0.2 rounded-full bg-[#10b981]/15 text-[#10b981] border border-[#10b981]/30 font-mono text-[10px]">
                     {activeJournalTradesCount}
                   </span>
                 )}
@@ -168,24 +163,22 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={onOpenGlossary}
-                className="px-2 py-1 rounded bg-[#191c22] hover:bg-[#272a31] text-[#b9cacb] hover:text-[#00f0ff] border border-[#272a31] hover:border-[#00f0ff]/40 font-mono text-[10px] font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
+                className="px-2.5 py-1.5 rounded-lg bg-[#121215] hover:bg-[#18181c] text-[#a1a1aa] hover:text-[#fafafa] border border-white/[0.07] font-sans text-[11.5px] font-medium transition-colors flex items-center gap-1.5 cursor-pointer"
                 title="Open Interactive Institutional Jargon & Quant Glossary"
               >
-                <span className="material-symbols-outlined text-[13px] text-[#00f0ff]">menu_book</span>
-                <span>GLOSSARY</span>
+                <span>Glossary</span>
               </button>
             )}
 
-            {/* 4. Executive Briefing HUD Button */}
+            {/* 4. Executive Briefing Button */}
             {onOpenBriefing && (
               <button
                 type="button"
                 onClick={onOpenBriefing}
-                className="px-2.5 py-1 rounded bg-[#c084fc]/15 hover:bg-[#c084fc]/25 text-[#e9d5ff] border border-[#c084fc]/50 font-mono text-[10px] font-bold transition-all flex items-center gap-1 shadow-[0_0_10px_rgba(192,132,252,0.18)] cursor-pointer"
-                title="Open Executive Quant Mission Briefing HUD for Active Asset"
+                className="px-3 py-1.5 bg-[#6366f1]/15 hover:bg-[#6366f1]/25 text-[#a5b4fc] border border-[#6366f1]/30 rounded-lg font-sans text-[11.5px] font-medium transition-colors flex items-center gap-1.5 cursor-pointer"
+                title="Open Executive Quant Mission Briefing for Active Asset"
               >
-                <span className="material-symbols-outlined text-[13px] text-[#c084fc]">radar</span>
-                <span>📡 BRIEFING HUD</span>
+                <span>Briefing</span>
               </button>
             )}
 
@@ -193,11 +186,10 @@ export const Header: React.FC<HeaderProps> = ({
             {onSwitchAsset && (
               <button
                 onClick={onSwitchAsset}
-                className="px-2.5 py-1 rounded bg-[#00f0ff]/15 hover:bg-[#00f0ff]/25 text-[#00f0ff] border border-[#00f0ff]/50 font-mono text-[10px] font-bold transition-all flex items-center gap-1 shadow-[0_0_10px_rgba(0,240,255,0.2)] cursor-pointer"
+                className="px-3 py-1.5 bg-[#6366f1]/15 hover:bg-[#6366f1]/25 text-[#a5b4fc] border border-[#6366f1]/30 rounded-lg font-sans text-[11.5px] font-medium transition-colors flex items-center gap-1.5 cursor-pointer"
                 title="Switch Target Crypto Asset from Top 50 Binance Perpetuals"
               >
-                <span className="material-symbols-outlined text-[14px]">swap_horiz</span>
-                <span>⇄ TOP 50 ASSETS</span>
+                <span>Top 50 Assets</span>
               </button>
             )}
 
@@ -205,11 +197,10 @@ export const Header: React.FC<HeaderProps> = ({
             {installPrompt && (
               <button
                 onClick={onInstallPwa}
-                className="px-2 py-1 rounded bg-[#191c22] hover:bg-[#272a31] text-[#00f0ff] border border-[#272a31] font-mono text-[9px] transition-colors flex items-center gap-1"
+                className="px-2.5 py-1.5 rounded-lg bg-[#121215] hover:bg-[#18181c] text-[#a1a1aa] border border-white/[0.07] font-sans text-[11.5px] font-medium transition-colors"
                 title="Install Web App"
               >
-                <span className="material-symbols-outlined text-[13px]">download</span>
-                <span>INSTALL</span>
+                <span>Install</span>
               </button>
             )}
           </div>
