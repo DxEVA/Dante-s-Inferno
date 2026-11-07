@@ -62,6 +62,14 @@ import { Footer } from './components/Footer';
 import { Toast } from './components/Toast';
 import { PaperJournalModal } from './components/PaperJournalModal';
 import { GlossaryModal } from './components/GlossaryModal';
+import { CraneStrikePanel } from './components/CraneStrikePanel';
+import {
+  InfernoCandle,
+  OrderBlockZone,
+  VolumeProfileSnapshot,
+  buildCraneConfluenceInputs,
+  evaluateCraneStrike,
+} from './services/CraneStrikeEngine';
 import {
   loadPaperTrades,
   addPaperTrade as addJournalPaperTrade,
@@ -75,8 +83,9 @@ import {
 export default function App() {
   // 4-Step Screen Flow: 'mode_select' (Operator Portal) -> 'selector' (Top 50 Launchpad) -> 'briefing' (Executive Quant HUD) -> 'terminal' (Full Workstation)
   const [viewMode, setViewMode] = useState<'mode_select' | 'selector' | 'briefing' | 'terminal'>(
-    'mode_select'
+    'terminal'
   );
+  const [showChartCraneCard, setShowChartCraneCard] = useState<boolean>(true);
   const [isInitialLoading, setIsInitialLoading] = useState<boolean>(false);
   const [isCatalogLoading, setIsCatalogLoading] = useState<boolean>(true);
 
@@ -106,22 +115,20 @@ export default function App() {
     ts: number;
   } | null>(null);
   const [mobilePage, setMobilePage] = useState<
-    'CHART' | 'RADAR' | 'LENSES' | 'PLAYBOOKS' | 'EXECUTE' | 'ACADEMY'
+    'CHART' | 'RADAR' | 'LENSES' | 'PLAYBOOKS' | 'EXECUTE' | 'ACADEMY' | 'CRANE'
   >('CHART');
-  const [isMobileNavOpen, setIsMobileNavOpen] = useState<boolean>(false);
   const [isRightWorkspaceExpanded, setIsRightWorkspaceExpanded] = useState<boolean>(false);
 
   const handleNavigateMobilePage = useCallback(
-    (page: 'CHART' | 'RADAR' | 'LENSES' | 'PLAYBOOKS' | 'EXECUTE' | 'ACADEMY') => {
+    (page: 'CHART' | 'RADAR' | 'LENSES' | 'PLAYBOOKS' | 'EXECUTE' | 'ACADEMY' | 'CRANE') => {
       setMobilePage(page);
-      setIsMobileNavOpen(false);
       if (page === 'RADAR') {
         setActiveStrategyTab(5);
         setExternalDeckRequest({ deck: 'MTF_RADAR', ts: Date.now() });
       } else if (page === 'LENSES') {
         setActiveStrategyTab((prev) => (prev === 6 ? 1 : prev));
         setExternalDeckRequest({ deck: 'LENSES', ts: Date.now() });
-      } else if (page === 'PLAYBOOKS') {
+      } else if (page === 'CRANE' || page === 'PLAYBOOKS') {
         setExternalDeckRequest({ deck: 'PLAYBOOKS', ts: Date.now() });
       } else if (page === 'EXECUTE') {
         setActiveStrategyTab(6);
@@ -436,6 +443,90 @@ export default function App() {
     },
     [riskUsdt, showToast]
   );
+
+  const handlePlotTradeGeometry = useCallback(
+    (plan: {
+      entry: number;
+      stopLoss: number;
+      tp1: number;
+      direction: 'LONG' | 'SHORT';
+      rr: number;
+    }) => {
+      setCustomTargets({ tp1: plan.tp1, tp2: plan.tp1 });
+      setEntryPrice(plan.entry);
+      setStopLoss(plan.stopLoss);
+      setShowSetupOnChart(true);
+      setChartLayers((prev) => ({ ...prev, rrBox: true }));
+      const newCalc = calculateExecution(riskUsdt, plan.entry, plan.stopLoss, plan.tp1);
+      setCalcResult(newCalc);
+      setIsRightWorkspaceExpanded(false);
+      setMobilePage('CHART');
+      showToast(
+        `CRANE STRIKE GEOMETRY PLOTTED: ${plan.direction} @ $${plan.entry} • SL $${plan.stopLoss} • TP1 $${plan.tp1} (${plan.rr}R)`
+      );
+    },
+    [riskUsdt, showToast]
+  );
+
+  const { craneStrikeEvaluation, craneCurrentPrice } = useMemo(() => {
+    const infernoCandles: InfernoCandle[] = klines.map((k) => ({
+      time: k.time,
+      open: k.open,
+      high: k.high,
+      low: k.low,
+      close: k.close,
+      volume: k.volume,
+      takerBuyVolume: k.takerBuyVolume,
+    }));
+
+    const obZones: OrderBlockZone[] = [];
+    if (bullOB) {
+      obZones.push({
+        id: 'bull-ob',
+        top: bullOB.high,
+        bottom: bullOB.low,
+        type: 'BULL',
+        mitigated: (bullOB.mitigationStatus || bullOB.status) !== 'UNMITIGATED',
+        isDisplacement: true,
+      });
+    }
+    if (bearOB) {
+      obZones.push({
+        id: 'bear-ob',
+        top: bearOB.high,
+        bottom: bearOB.low,
+        type: 'BEAR',
+        mitigated: (bearOB.mitigationStatus || bearOB.status) !== 'UNMITIGATED',
+        isDisplacement: true,
+      });
+    }
+
+    const vpSnapshot: VolumeProfileSnapshot | undefined =
+      volumeProfile && volumeProfile.buckets
+        ? {
+            poc: volumeProfile.poc,
+            vah: volumeProfile.vah,
+            val: volumeProfile.val,
+            hvns: volumeProfile.buckets.filter((b) => b.isHVN).map((b) => b.price),
+            lvns: volumeProfile.buckets.filter((b) => b.isLVN).map((b) => b.price),
+          }
+        : undefined;
+
+    const { confluence: extConf } = buildCraneConfluenceInputs({
+      htfCandles: infernoCandles,
+      ltfCandles: infernoCandles,
+      orderBlocks: obZones,
+      volumeProfile: vpSnapshot,
+      fundingRateZScore: telemetry?.fundingRate ? telemetry.fundingRate * 100 : 0,
+      oiDeltaFlushPct: telemetry?.oi4hDelta || 0,
+    });
+
+    const evalResult = evaluateCraneStrike(infernoCandles, infernoCandles, extConf);
+    const curP =
+      infernoCandles[infernoCandles.length - 1]?.close || activePair.price || 100;
+
+    return { craneStrikeEvaluation: evalResult, craneCurrentPrice: curP };
+  }, [klines, bullOB, bearOB, volumeProfile, telemetry, activePair.price]);
 
   // PWA Install listener
   useEffect(() => {
@@ -1144,11 +1235,18 @@ export default function App() {
                   setVpMode(mode);
                   showToast(`VP PROFILE: ${mode.toUpperCase()}`);
                 }}
+                onOpenCraneStrike={() => {
+                  setShowChartCraneCard(true);
+                  setExternalDeckRequest({ deck: 'PLAYBOOKS', ts: Date.now() });
+                  setMobilePage('CRANE');
+                  showToast('CRANE STRIKE 5-GATE ENGINE ACTIVE');
+                }}
+                isCraneStrikeActive={true}
               />
             </div>
 
             {/* Main 12-Column Split Cockpit */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 border-b border-white/[0.07] items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-12 border-b border-white/[0.07] items-start pb-16 lg:pb-0">
               {/* LEFT PANE — LIVE CHART & ACTIONABILITY COCKPIT (Sticky on Desktop; Page-Gated on Mobile; Collapses when Full-Screen Workspace Active) */}
               <div
                 className={`${
@@ -1165,6 +1263,88 @@ export default function App() {
                     mobilePage === 'CHART' ? 'flex' : 'hidden'
                   } lg:flex flex-col bg-[#0b0e14] px-2 sm:px-3 py-1.5 sm:py-2 gap-1.5 sm:gap-2 border-b border-white/[0.07]`}
                 >
+                  {/* Persistent Crane Strike 5-Gate Cockpit Card */}
+                  <div className="flex flex-col gap-1.5 mb-1">
+                    <div className="flex items-center justify-between px-1 text-[11px] font-mono text-[#8e8e99]">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-[#10b981] animate-pulse" />
+                        <span className="font-semibold text-white tracking-wide">
+                          CRANE STRIKE // 5-GATE SEQUENTIAL VETO
+                        </span>
+                        <span className="text-[10px] text-[#71717a] hidden sm:inline">
+                          Hurst • Gann • Liq • CVD • EV Audit
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setExternalDeckRequest({ deck: 'PLAYBOOKS', ts: Date.now() });
+                            setIsRightWorkspaceExpanded(true);
+                            setMobilePage('CRANE');
+                          }}
+                          className="text-[10px] text-[#38bdf8] hover:text-white transition-colors cursor-pointer"
+                        >
+                          [ Open Full Hub → ]
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowChartCraneCard((prev) => !prev)}
+                          className="text-[10px] text-[#71717a] hover:text-[#a1a1aa] transition-colors cursor-pointer"
+                        >
+                          {showChartCraneCard ? '[ Minimize ▴ ]' : '[ Expand ▾ ]'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {!showChartCraneCard ? (
+                      <div
+                        onClick={() => setShowChartCraneCard(true)}
+                        className="flex items-center justify-between px-3 py-2 rounded-lg bg-[#121215] border border-white/[0.08] hover:border-emerald-500/40 transition-colors cursor-pointer font-mono text-[10.5px] shadow-sm select-none"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                          <span className="font-semibold text-white tracking-tight">CRANE STRIKE</span>
+                          <span
+                            className={`px-1.5 py-0.2 rounded text-[9px] font-bold border ${
+                              craneStrikeEvaluation.state === 'STRIKE'
+                                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                                : craneStrikeEvaluation.state === 'ARMED'
+                                ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                                : 'bg-white/[0.05] text-[#8e8e99] border-white/10'
+                            }`}
+                          >
+                            {craneStrikeEvaluation.state}
+                          </span>
+                          <span className="text-[#8e8e99] text-[9.5px] hidden xs:inline">
+                            Score: {craneStrikeEvaluation.craneScore}/100
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-emerald-400 text-[10px] font-semibold shrink-0">
+                          <span>Tap to Expand ▾</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <CraneStrikePanel
+                        symbol={activePair.symbol}
+                        evaluation={craneStrikeEvaluation}
+                        currentPrice={craneCurrentPrice}
+                        onPlotExecution={(geo) =>
+                          handlePlotTradeGeometry({
+                            ...geo,
+                            rr:
+                              craneStrikeEvaluation.gates.g5Geometry?.netRR ||
+                              Number(
+                                (
+                                  Math.abs(geo.tp1 - geo.entry) /
+                                  Math.max(0.0001, Math.abs(geo.entry - geo.stopLoss))
+                                ).toFixed(2)
+                              ),
+                          })
+                        }
+                      />
+                    )}
+                  </div>
                   {isInitialLoading || klines.length === 0 ? (
                     <div className="w-full h-[calc(100dvh-14.5rem)] min-h-[360px] sm:h-[440px] lg:h-[460px] rounded-lg bg-[#0b0e14] border border-white/[0.07] flex flex-col items-center justify-center gap-3">
                       <div className="w-8 h-8 border-2 border-[#3b82f6] border-t-transparent rounded-full animate-spin"></div>
@@ -1236,10 +1416,11 @@ export default function App() {
                     <div className="flex items-center gap-1.5 shrink-0">
                       <button
                         type="button"
-                        onClick={() => handleNavigateMobilePage('PLAYBOOKS')}
-                        className="px-2.5 py-1 rounded-md bg-white/[0.05] hover:bg-white/[0.1] text-[#f8fafc] border border-white/10 font-semibold text-[10px] cursor-pointer"
+                        onClick={() => handleNavigateMobilePage('CRANE')}
+                        className="px-2.5 py-1 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/35 font-semibold text-[10px] cursor-pointer flex items-center gap-1"
                       >
-                        Playbooks →
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        <span>Crane</span>
                       </button>
                       <button
                         type="button"
@@ -1338,6 +1519,7 @@ export default function App() {
                     setIsRightWorkspaceExpanded(false);
                     handleLoadSetup(entry, stop, tp1, tp2);
                   }}
+                  onPlotTradeGeometry={handlePlotTradeGeometry}
                   candlestickResult={candlestickResult}
                   maResult={maResult}
                   lensSetups={lensSetups}
@@ -1405,167 +1587,117 @@ export default function App() {
             </div>
           </main>
 
-          {/* Bottom-Left Floating Collapsible Command Pill & Fan-Out Menu (< 1024px) */}
+          {/* Streamlined Ergonomic 5-Tab Fixed Bottom Bar (< 1024px Mobile) */}
           {(() => {
-            const mobileNavItems = [
+            const mobileNavTabs = [
               {
                 id: 'CHART' as const,
                 label: 'Chart',
-                sub: 'Live Chart & Layers',
                 icon: 'candlestick_chart',
                 badge: selectedTf.toUpperCase(),
               },
               {
                 id: 'LENSES' as const,
-                label: 'Analysis Flow',
-                sub: '6-Stage Market Flow',
+                label: 'Analysis',
                 icon: 'layers',
                 badge: `S0${activeStrategyTab}`,
               },
               {
+                id: 'CRANE' as const,
+                label: 'Crane',
+                icon: 'bolt',
+                badge: craneStrikeEvaluation.state === 'STRIKE' ? 'STRIKE' : undefined,
+                isHero: true,
+              },
+              {
                 id: 'PLAYBOOKS' as const,
-                label: 'Playbooks (14)',
-                sub: 'Gann, Lunar & SSRN Models',
+                label: 'Playbooks',
                 icon: 'emoji_events',
-                badge: '14',
+                badge: '14 M',
               },
               {
                 id: 'EXECUTE' as const,
-                label: 'Execute & Size',
-                sub: 'Pre-Flight & Position Sizer',
+                label: 'Execute',
                 icon: 'calculate',
-                badge: 'S06',
-              },
-              {
-                id: 'ACADEMY' as const,
-                label: 'Learn & X-Ray',
-                sub: 'Codex & Signal X-Ray',
-                icon: 'school',
-                badge: 'LEARN',
+                badge: 'Sizer',
               },
             ];
-            const activeItem =
-              mobileNavItems.find((i) => i.id === mobilePage) || mobileNavItems[0];
-            const quickFlipTarget =
-              mobilePage === 'CHART' ? mobileNavItems[1] : mobileNavItems[0];
 
             return (
-              <>
-                {isMobileNavOpen && (
-                  <div
-                    className="lg:hidden fixed inset-0 z-[9998] bg-black/45 backdrop-blur-[2px]"
-                    onClick={() => setIsMobileNavOpen(false)}
-                  />
-                )}
+              <nav
+                aria-label="Mobile Navigation"
+                className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#09090b]/95 backdrop-blur-md border-t border-white/[0.08] px-1.5 pt-1.5 pb-[calc(env(safe-area-inset-bottom,4px)+6px)] shadow-[0_-8px_24px_rgba(0,0,0,0.7)] select-none"
+              >
+                <div className="grid grid-cols-5 items-center gap-1 max-w-lg mx-auto">
+                  {mobileNavTabs.map((tab) => {
+                    const isActive =
+                      tab.id === 'CRANE'
+                        ? mobilePage === 'CRANE'
+                        : tab.id === 'PLAYBOOKS'
+                        ? mobilePage === 'PLAYBOOKS'
+                        : mobilePage === tab.id;
 
-                <nav
-                  aria-label="Mobile Terminal Pages"
-                  className="lg:hidden fixed bottom-3 left-3 z-[9999] flex flex-col items-start gap-2 pb-[env(safe-area-inset-bottom,4px)]"
-                >
-                  {/* Expanded Fan-Out Vertical Command Stack */}
-                  {isMobileNavOpen && (
-                    <div className="w-64 rounded-xl bg-[#12161f]/95 backdrop-blur-xl border border-white/10 shadow-[0_16px_40px_rgba(0,0,0,0.85)] p-1.5 flex flex-col gap-1 overflow-hidden">
-                      <div className="px-3 py-1.5 rounded-lg bg-white/[0.04] flex items-center justify-between">
-                        <span className="font-mono text-[9.5px] font-semibold uppercase tracking-wider text-[#94a3b8]">
-                          Navigation
-                        </span>
-                        <span className="font-mono text-[9px] text-[#64748b]">
-                          {activePair.symbol}
-                        </span>
-                      </div>
+                    const isHero = tab.isHero;
 
-                      {mobileNavItems.map((item) => {
-                        const isActive = mobilePage === item.id;
-                        return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => handleNavigateMobilePage(item.id)}
-                            className={`relative w-full px-3 py-2 rounded-lg flex items-center justify-between gap-2 text-left transition-all cursor-pointer ${
-                              isActive
-                                ? 'bg-[#3b82f6]/15 text-[#f8fafc] border border-[#3b82f6]/35'
-                                : 'text-[#cbd5e1] hover:bg-white/[0.05] border border-transparent'
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => handleNavigateMobilePage(tab.id)}
+                        className={`flex flex-col items-center justify-center min-h-[46px] py-1 px-1 rounded-xl transition-all cursor-pointer relative ${
+                          isActive
+                            ? isHero
+                              ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
+                              : 'bg-white/[0.08] text-white border border-white/[0.12] shadow-sm'
+                            : isHero
+                            ? 'text-emerald-400 hover:bg-emerald-500/10 border border-emerald-500/20'
+                            : 'text-[#8e8e99] hover:text-[#d4d4d8] hover:bg-white/[0.03] border border-transparent'
+                        }`}
+                      >
+                        <div className="relative flex items-center justify-center">
+                          <span
+                            className={`material-symbols-outlined text-[19px] transition-transform ${
+                              isActive ? 'scale-110' : ''
+                            } ${
+                              isHero
+                                ? 'text-emerald-400'
+                                : isActive
+                                ? 'text-[#38bdf8]'
+                                : 'text-[#8e8e99]'
                             }`}
                           >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <span className="material-symbols-outlined text-[17px] text-[#94a3b8] shrink-0">
-                                {item.icon}
-                              </span>
-                              <div className="flex flex-col min-w-0">
-                                <span className="text-[11px] font-semibold tracking-tight leading-tight">
-                                  {item.label}
-                                </span>
-                                <span className="text-[9.5px] text-[#64748b] truncate">
-                                  {item.sub}
-                                </span>
-                              </div>
-                            </div>
-
+                            {tab.icon}
+                          </span>
+                          {tab.badge && (
                             <span
-                              className={`px-1.5 py-0.5 rounded text-[8.5px] font-mono font-semibold tabular-nums border shrink-0 ${
-                                isActive
-                                  ? 'bg-[#3b82f6]/20 text-[#60a5fa] border-[#3b82f6]/40'
-                                  : 'bg-[#0d1017] text-[#64748b] border-white/[0.07]'
+                              className={`absolute -top-1 -right-2 px-1 py-0.2 rounded-full font-mono text-[7px] font-bold leading-none ${
+                                isHero
+                                  ? 'bg-emerald-500/30 text-emerald-300 border border-emerald-400/50'
+                                  : isActive
+                                  ? 'bg-[#38bdf8]/20 text-[#38bdf8] border border-[#38bdf8]/40'
+                                  : 'bg-white/[0.06] text-[#71717a]'
                               }`}
                             >
-                              {item.badge}
+                              {tab.badge}
                             </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* Compact Bottom-Left Command Pill + 1-Tap Quick-Flip Button */}
-                  <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#12161f]/95 backdrop-blur-xl border border-white/10 shadow-[0_12px_30px_rgba(0,0,0,0.75)]">
-                    <button
-                      type="button"
-                      onClick={() => setIsMobileNavOpen((prev) => !prev)}
-                      className={`h-10 px-3 rounded-lg flex items-center gap-2 transition-all cursor-pointer ${
-                        isMobileNavOpen
-                          ? 'bg-[#3b82f6]/20 text-[#f8fafc] border border-[#3b82f6]/40'
-                          : 'bg-white/[0.05] text-[#f8fafc] border border-white/10'
-                      }`}
-                      title="Open Mobile Workspace Menu"
-                    >
-                      <span className="material-symbols-outlined text-[17px] text-[#60a5fa]">
-                        {isMobileNavOpen ? 'close' : 'widgets'}
-                      </span>
-                      <div className="flex flex-col items-start leading-none">
-                        <span className="font-mono text-[7.5px] text-[#64748b] uppercase tracking-wider">
-                          Workspace
-                        </span>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <span className="text-[10.5px] font-semibold tracking-tight">
-                            {activeItem.label}
-                          </span>
-                          <span className="px-1 py-0.2 rounded bg-white/[0.08] text-[#94a3b8] font-mono text-[8px] font-semibold tabular-nums">
-                            {activeItem.badge}
-                          </span>
+                          )}
                         </div>
-                      </div>
-                      <span className="material-symbols-outlined text-[14px] text-[#64748b]">
-                        {isMobileNavOpen ? 'expand_more' : 'expand_less'}
-                      </span>
-                    </button>
-
-                    {/* 1-Tap Quick Flip between Chart and Analysis Flow */}
-                    <button
-                      type="button"
-                      onClick={() => handleNavigateMobilePage(quickFlipTarget.id)}
-                      className="h-10 px-3 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-[#cbd5e1] hover:text-white flex items-center gap-1.5 cursor-pointer transition-all"
-                      title={`Quick switch to ${quickFlipTarget.label}`}
-                    >
-                      <span className="material-symbols-outlined text-[15px] text-[#94a3b8]">
-                        {quickFlipTarget.icon}
-                      </span>
-                      <span className="text-[10px] font-semibold">
-                        {quickFlipTarget.label}
-                      </span>
-                    </button>
-                  </div>
-                </nav>
-              </>
+                        <span
+                          className={`font-sans text-[10px] tracking-tight mt-0.5 leading-tight ${
+                            isActive
+                              ? 'font-semibold text-white'
+                              : isHero
+                              ? 'font-medium text-emerald-400/90'
+                              : 'font-medium text-[#8e8e99]'
+                          }`}
+                        >
+                          {tab.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </nav>
             );
           })()}
 

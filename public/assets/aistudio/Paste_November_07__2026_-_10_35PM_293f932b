@@ -1,0 +1,1191 @@
+# ROLE & OBJECTIVE
+You are the Lead Quantitative Architect for the "Inferno" crypto trading terminal (React, TypeScript, Tailwind CSS, HTML5 Canvas). 
+
+Your task is to add and wire the complete **Playbook Hub & Crane Strike 5-Gate Sequential Veto System** using the exact production code provided below, while preserving all existing chart rendering, 1000-candle buffers, Order Blocks, Fair Value Gaps (FVG), Volume Profile, and Cumulative Volume Delta (CVD) functionality.
+
+---
+
+# STRICT NON-REGRESSION RULES
+1. **Do NOT delete or truncate existing chart or indicator code.** Keep all 1000-candle WebSocket/REST fetching, multi-timeframe matrices, and HTML5 canvas `devicePixelRatio` rendering intact.
+2. **Use the exact 3 files below** (`CraneStrikeEngine.ts`, `CraneStrikePanel.tsx`, and `PlaybookHub.tsx`) and mount `<PlaybookHub />` into the main terminal layout, wiring its `onPlotTradeGeometry` callback to draw Entry, Stop-Loss, and TP1 lines on the existing chart overlay canvas.
+
+---
+
+# FILE 1: `src/services/CraneStrikeEngine.ts`
+Create this file with the complete quantitative math for:
+- **Gann Square of 9 Cardinal & Ordinal Price Harmonics** ($45^\circ, 90^\circ, 135^\circ, 180^\circ, 225^\circ, 270^\circ, 315^\circ, 360^\circ$)
+- **Gate 1:** Multi-Scale Rescaled Range ($R/S$) Rolling Hurst Exponent ($H_t$) & ATR Volatility Z-Score
+- **Gate 2:** HTF Order Block / FVG Killzone + Volume Profile LVN + Gann Confluence Bridge
+- **Gate 3:** Binance Derivatives Funding/OI Squeeze + Offline Candle Sweep Fallback
+- **Gate 4:** Microstructural CVD Absorption Index ($\sigma$) + LTF Displacement MSS & FVG
+- **Gate 5:** First-Obstacle HVN/POC Expected Value (Net R:R >= 3.0) Audit
+- **6-Setup Playbook Podium Ranking Evaluator**
+
+```typescript
+// src/services/CraneStrikeEngine.ts
+
+export interface InfernoCandle {
+  time: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+  /** Index 9 from Binance klines: Taker buy base asset volume (optional fallback included) */
+  takerBuyVolume?: number;
+}
+
+export interface OrderBlockZone {
+  id?: string;
+  top: number;
+  bottom: number;
+  type: 'BULL' | 'BEAR';
+  mitigated: boolean;
+  isDisplacement?: boolean;
+}
+
+export interface VolumeProfileSnapshot {
+  poc: number;
+  vah: number;
+  val: number;
+  hvns: number[]; // High Volume Node prices (obstacles/targets)
+  lvns: number[]; // Low Volume Node prices (rejection ledges)
+}
+
+export type CraneState = 'DORMANT' | 'STALKING' | 'ARMED' | 'STRIKE';
+export type MarketRegime = 'PERSISTENT_TREND' | 'MEAN_REVERTING' | 'RANDOM_WALK_NOISE';
+
+export interface GannHarmonicLevel {
+  degree: number;
+  type: 'CARDINAL' | 'ORDINAL';
+  supportPrice: number;
+  resistancePrice: number;
+}
+
+export interface GannSquareOf9Result {
+  anchorPrice: number;
+  currentPrice: number;
+  nearestLevel: number;
+  nearestDegree: number;
+  distancePct: number;
+  levels: GannHarmonicLevel[];
+}
+
+export interface Gate1RegimeResult {
+  hurst: number;
+  atr: number;
+  volatilityZScore: number;
+  regime: MarketRegime;
+  passed: boolean;
+}
+
+export interface Gate4MicrostructureResult {
+  absorptionIndex: number;
+  cvdScore: number;
+  isAbsorbing: boolean;
+  mssConfirmed: boolean;
+  fvgZone: { top: number; bottom: number; ce50: number; direction: 'BULL' | 'BEAR' } | null;
+}
+
+export interface ExternalConfluenceInputs {
+  inHtfKillzone: boolean;
+  lvnAligned: boolean;
+  gannDistancePct: number;
+  htfScore: number;
+  fundingRateZScore: number;
+  oiDeltaFlushPct: number;
+  firstObstaclePrice: number;
+  feeBufferPct?: number;
+}
+
+export interface CraneStrikeEvaluation {
+  state: CraneState;
+  craneScore: number;
+  vetoReason: string | null;
+  gates: {
+    g1Regime: Gate1RegimeResult;
+    g2Structure: { passed: boolean; gannScore: number; htfScore: number };
+    g3Derivatives: { passed: boolean; liqScore: number };
+    g4Microstructure: Gate4MicrostructureResult;
+    g5Geometry: {
+      passed: boolean;
+      netRR: number;
+      entry: number;
+      stopLoss: number;
+      tp1Poc: number;
+      direction: 'LONG' | 'SHORT';
+    } | null;
+  };
+}
+
+export interface PlaybookSetupRank {
+  id: string;
+  rank: number;
+  name: string;
+  mechanism: string;
+  score: number;
+  status: 'READY' | 'STALKING' | 'INACTIVE';
+  rrProfile: string;
+  triggerNote: string;
+}
+
+/**
+ * 1. GANN SQUARE OF 9 PRICE HARMONIC CALCULATOR
+ * Uses square-root spiral geometry: Price_deg = (sqrt(Anchor) +/- (deg / 180))^2
+ */
+export function calculateGannSquareOf9(
+  anchorPrice: number,
+  currentPrice: number
+): GannSquareOf9Result {
+  const safeAnchor = anchorPrice > 0 ? anchorPrice : currentPrice || 1;
+  // Scale factor keeps small-price tokens (e.g. $0.15) accurate on the root spiral
+  const scale = safeAnchor < 1 ? 10000 : safeAnchor < 10 ? 100 : 1;
+  const scaledRoot = Math.sqrt(safeAnchor * scale);
+
+  const degrees = [45, 90, 135, 180, 225, 270, 315, 360];
+  const levels: GannHarmonicLevel[] = [];
+
+  let nearestLevel = safeAnchor;
+  let nearestDegree = 0;
+  let minDistancePct = Infinity;
+
+  for (const deg of degrees) {
+    const step = deg / 180;
+    const resPrice = Number((Math.pow(scaledRoot + step, 2) / scale).toFixed(4));
+    const supPrice = Number((Math.pow(Math.max(0.0001, scaledRoot - step), 2) / scale).toFixed(4));
+    const type: 'CARDINAL' | 'ORDINAL' = deg % 90 === 0 ? 'CARDINAL' : 'ORDINAL';
+
+    levels.push({
+      degree: deg,
+      type,
+      supportPrice: supPrice,
+      resistancePrice: resPrice,
+    });
+
+    for (const candidate of [resPrice, supPrice]) {
+      const distPct = Math.abs((currentPrice - candidate) / currentPrice) * 100;
+      if (distPct < minDistancePct) {
+        minDistancePct = distPct;
+        nearestLevel = candidate;
+        nearestDegree = deg;
+      }
+    }
+  }
+
+  return {
+    anchorPrice: safeAnchor,
+    currentPrice,
+    nearestLevel,
+    nearestDegree,
+    distancePct: Number(minDistancePct.toFixed(3)),
+    levels,
+  };
+}
+
+/**
+ * 2. HELPER: 14-Period Average True Range (ATR)
+ */
+export function calculateATR(candles: InfernoCandle[], period = 14): number {
+  if (candles.length < period + 1) return 0;
+  let sumTR = 0;
+  for (let i = candles.length - period; i < candles.length; i++) {
+    const cur = candles[i];
+    const prevClose = candles[i - 1].close;
+    const tr = Math.max(
+      cur.high - cur.low,
+      Math.abs(cur.high - prevClose),
+      Math.abs(cur.low - prevClose)
+    );
+    sumTR += tr;
+  }
+  return sumTR / period;
+}
+
+/**
+ * 3. GATE 1: Multi-Scale Rescaled Range (R/S) Rolling Hurst Exponent
+ */
+export function evaluateGate1Regime(candles: InfernoCandle[]): Gate1RegimeResult {
+  const windowSize = 96;
+  if (candles.length < windowSize + 1) {
+    return { hurst: 0.5, atr: 0, volatilityZScore: 0, regime: 'RANDOM_WALK_NOISE', passed: false };
+  }
+
+  const slice = candles.slice(-(windowSize + 1));
+  const logReturns: number[] = [];
+  for (let i = 1; i < slice.length; i++) {
+    logReturns.push(Math.log(slice[i].close / slice[i - 1].close));
+  }
+
+  const scales = [12, 24, 48, 96];
+  const logN: number[] = [];
+  const logRS: number[] = [];
+
+  for (const n of scales) {
+    const numBlocks = Math.floor(windowSize / n);
+    let rsSum = 0;
+    let validBlocks = 0;
+
+    for (let b = 0; b < numBlocks; b++) {
+      const sub = logReturns.slice(b * n, (b + 1) * n);
+      const mean = sub.reduce((acc, v) => acc + v, 0) / n;
+
+      let cumDev = 0;
+      let maxDev = -Infinity;
+      let minDev = Infinity;
+      let varianceSum = 0;
+
+      for (let k = 0; k < n; k++) {
+        const dev = sub[k] - mean;
+        cumDev += dev;
+        if (cumDev > maxDev) maxDev = cumDev;
+        if (cumDev < minDev) minDev = cumDev;
+        varianceSum += dev * dev;
+      }
+
+      const range = maxDev - minDev;
+      const stdDev = Math.sqrt(varianceSum / n);
+
+      if (stdDev > 1e-10 && range > 0) {
+        rsSum += range / stdDev;
+        validBlocks++;
+      }
+    }
+
+    if (validBlocks > 0) {
+      logN.push(Math.log(n));
+      logRS.push(Math.log(rsSum / validBlocks));
+    }
+  }
+
+  const kCount = logN.length;
+  const meanX = logN.reduce((a, b) => a + b, 0) / kCount;
+  const meanY = logRS.reduce((a, b) => a + b, 0) / kCount;
+
+  let num = 0;
+  let den = 0;
+  for (let i = 0; i < kCount; i++) {
+    num += (logN[i] - meanX) * (logRS[i] - meanY);
+    den += (logN[i] - meanX) ** 2;
+  }
+
+  const rawHurst = den > 0 ? num / den : 0.5;
+  const hurst = Math.max(0.1, Math.min(0.9, Number(rawHurst.toFixed(3))));
+
+  const atr = calculateATR(candles, 14);
+  const historicalATRs: number[] = [];
+  for (let i = Math.max(15, candles.length - 60); i <= candles.length; i++) {
+    historicalATRs.push(calculateATR(candles.slice(0, i), 14));
+  }
+  const atrMean = historicalATRs.reduce((a, b) => a + b, 0) / Math.max(1, historicalATRs.length);
+  const atrStd = Math.sqrt(
+    historicalATRs.reduce((acc, v) => acc + (v - atrMean) ** 2, 0) / Math.max(1, historicalATRs.length)
+  );
+  const volatilityZScore = atrStd > 0 ? Number(((atr - atrMean) / atrStd).toFixed(2)) : 0;
+
+  let regime: MarketRegime = 'RANDOM_WALK_NOISE';
+  if (hurst > 0.55) regime = 'PERSISTENT_TREND';
+  else if (hurst < 0.45) regime = 'MEAN_REVERTING';
+
+  return {
+    hurst,
+    atr,
+    volatilityZScore,
+    regime,
+    passed: regime !== 'RANDOM_WALK_NOISE',
+  };
+}
+
+/**
+ * 4. HELPER: Single-Candle Volume Delta Extraction
+ */
+function getCandleDelta(c: InfernoCandle): number {
+  if (typeof c.takerBuyVolume === 'number') {
+    const buyVol = c.takerBuyVolume;
+    const sellVol = Math.max(0, c.volume - buyVol);
+    return buyVol - sellVol;
+  }
+  const range = c.high - c.low;
+  if (range <= 0) return 0;
+  const clv = (c.close - c.low - (c.high - c.close)) / range;
+  return c.volume * clv;
+}
+
+/**
+ * 5. GATE 4: Microstructural CVD Absorption Index + LTF Displacement FVG
+ */
+export function evaluateGate4Microstructure(
+  candles: InfernoCandle[],
+  atr: number
+): Gate4MicrostructureResult {
+  if (candles.length < 50 || atr <= 0) {
+    return {
+      absorptionIndex: 0,
+      cvdScore: 0,
+      isAbsorbing: false,
+      mssConfirmed: false,
+      fvgZone: null,
+    };
+  }
+
+  const lookback = 3;
+  const rollingDeltas: number[] = [];
+  for (let i = candles.length - 45; i <= candles.length - lookback; i++) {
+    let sumD = 0;
+    for (let j = i; j < i + lookback; j++) {
+      sumD += Math.abs(getCandleDelta(candles[j]));
+    }
+    rollingDeltas.push(sumD);
+  }
+
+  const meanDelta = rollingDeltas.reduce((a, b) => a + b, 0) / rollingDeltas.length;
+  const stdDelta = Math.sqrt(
+    rollingDeltas.reduce((acc, v) => acc + (v - meanDelta) ** 2, 0) / rollingDeltas.length
+  );
+
+  const recentWindow = candles.slice(-4, -1);
+  const recentAbsDelta = recentWindow.reduce((acc, c) => acc + Math.abs(getCandleDelta(c)), 0);
+  const deltaZ = stdDelta > 0 ? Math.max(0, (recentAbsDelta - meanDelta) / stdDelta) : 0;
+
+  const netPriceMove = Math.abs(
+    recentWindow[recentWindow.length - 1].close - recentWindow[0].open
+  );
+  const normalizedPriceProgress = Math.max(0.2, netPriceMove / atr);
+
+  const absorptionIndex = Number((deltaZ / normalizedPriceProgress).toFixed(2));
+  const isAbsorbing = absorptionIndex >= 2.0;
+  const cvdScore = Math.min(100, Math.round((absorptionIndex / 3.5) * 100));
+
+  const c0 = candles[candles.length - 3];
+  const c1 = candles[candles.length - 2];
+  const c2 = candles[candles.length - 1];
+
+  const impulseBody = Math.abs(c1.close - c1.open);
+  const isDisplacement = impulseBody >= 1.25 * atr;
+
+  const priorSwingSlice = candles.slice(-14, -3);
+  const microSwingHigh = Math.max(...priorSwingSlice.map((c) => c.high));
+  const microSwingLow = Math.min(...priorSwingSlice.map((c) => c.low));
+
+  let fvgZone: Gate4MicrostructureResult['fvgZone'] = null;
+  let mssConfirmed = false;
+
+  if (isDisplacement && c1.close > c1.open && c2.low > c0.high && c2.close > microSwingHigh) {
+    mssConfirmed = true;
+    fvgZone = {
+      bottom: c0.high,
+      top: c2.low,
+      ce50: Number(((c0.high + c2.low) / 2).toFixed(4)),
+      direction: 'BULL',
+    };
+  } else if (isDisplacement && c1.close < c1.open && c2.high < c0.low && c2.close < microSwingLow) {
+    mssConfirmed = true;
+    fvgZone = {
+      bottom: c2.high,
+      top: c0.low,
+      ce50: Number(((c2.high + c0.low) / 2).toFixed(4)),
+      direction: 'BEAR',
+    };
+  }
+
+  return {
+    absorptionIndex,
+    cvdScore,
+    isAbsorbing,
+    mssConfirmed,
+    fvgZone,
+  };
+}
+
+/**
+ * 6. AUTOMATIC INDICATOR BRIDGE HELPER
+ * Connects Inferno's existing candles, Order Blocks, and Volume Profile into Gate 2, 3, and 5.
+ */
+export function buildCraneConfluenceInputs(params: {
+  htfCandles: InfernoCandle[];
+  ltfCandles: InfernoCandle[];
+  orderBlocks?: OrderBlockZone[];
+  volumeProfile?: VolumeProfileSnapshot;
+  fundingRateZScore?: number;
+  oiDeltaFlushPct?: number;
+}): { confluence: ExternalConfluenceInputs; gann: GannSquareOf9Result } {
+  const { htfCandles, ltfCandles, orderBlocks = [], volumeProfile } = params;
+  const currentPrice = ltfCandles[ltfCandles.length - 1]?.close ?? 100;
+  const htfAtr = calculateATR(htfCandles, 14) || currentPrice * 0.01;
+
+  // Macro swing anchor for Gann Square of 9 (last 120 HTF bars)
+  const macroSlice = htfCandles.slice(-120);
+  const macroLow = macroSlice.length > 0 ? Math.min(...macroSlice.map((c) => c.low)) : currentPrice * 0.9;
+  const gann = calculateGannSquareOf9(macroLow, currentPrice);
+
+  // Check if price is inside or within 0.5 ATR of an unmitigated Order Block
+  const unmitigatedOBs = orderBlocks.filter((ob) => !ob.mitigated);
+  let inHtfKillzone = false;
+  for (const ob of unmitigatedOBs) {
+    if (currentPrice >= ob.bottom - 0.5 * htfAtr && currentPrice <= ob.top + 0.5 * htfAtr) {
+      inHtfKillzone = true;
+      break;
+    }
+  }
+  // Fallback if OrderBlock array is not passed: check 4H/HTF swing extreme proximity
+  if (unmitigatedOBs.length === 0 && macroSlice.length >= 20) {
+    const recentLow = Math.min(...macroSlice.slice(-25).map((c) => c.low));
+    const recentHigh = Math.max(...macroSlice.slice(-25).map((c) => c.high));
+    inHtfKillzone =
+      Math.abs(currentPrice - recentLow) <= 1.2 * htfAtr ||
+      Math.abs(currentPrice - recentHigh) <= 1.2 * htfAtr;
+  }
+
+  // Volume Profile LVN / Value Area alignment
+  let lvnAligned = true;
+  let firstObstaclePrice = currentPrice + 3.8 * calculateATR(ltfCandles, 14);
+  if (volumeProfile) {
+    const nearLvn = volumeProfile.lvns.some(
+      (lvn) => Math.abs(currentPrice - lvn) / currentPrice <= 0.004
+    );
+    const outsideValueArea =
+      currentPrice <= volumeProfile.val * 1.002 || currentPrice >= volumeProfile.vah * 0.998;
+    lvnAligned = nearLvn || outsideValueArea;
+    firstObstaclePrice = volumeProfile.poc;
+  }
+
+  // Offline liquidity sweep synthesis if live Binance derivatives aren't passed
+  let fundingZ = params.fundingRateZScore ?? 0;
+  let oiFlush = params.oiDeltaFlushPct ?? 0;
+  if (params.fundingRateZScore === undefined && ltfCandles.length >= 25) {
+    const prior20 = ltfCandles.slice(-25, -3);
+    const swingL = Math.min(...prior20.map((c) => c.low));
+    const swingH = Math.max(...prior20.map((c) => c.high));
+    const recent3 = ltfCandles.slice(-3);
+    const sweptLow = recent3.some((c) => c.low < swingL && c.close > swingL);
+    const sweptHigh = recent3.some((c) => c.high > swingH && c.close < swingH);
+    if (sweptLow || sweptHigh) {
+      fundingZ = sweptLow ? -2.2 : 2.2;
+      oiFlush = -3.5;
+    }
+  }
+
+  return {
+    gann,
+    confluence: {
+      inHtfKillzone,
+      lvnAligned,
+      gannDistancePct: gann.distancePct,
+      htfScore: inHtfKillzone ? 90 : 55,
+      fundingRateZScore: fundingZ,
+      oiDeltaFlushPct: oiFlush,
+      firstObstaclePrice: Number(firstObstaclePrice.toFixed(4)),
+      feeBufferPct: 0.0008,
+    },
+  };
+}
+
+/**
+ * 7. FULL 5-GATE SEQUENTIAL VETO CASCADE ORCHESTRATOR
+ */
+export function evaluateCraneStrike(
+  htfCandles: InfernoCandle[],
+  ltfCandles: InfernoCandle[],
+  ext: ExternalConfluenceInputs
+): CraneStrikeEvaluation {
+  const g1 = evaluateGate1Regime(htfCandles);
+  const ltfAtr = calculateATR(ltfCandles, 14);
+
+  const gannScore = Math.max(0, Math.min(100, Math.round((1 - ext.gannDistancePct / 0.5) * 100)));
+  const bStructure = ext.inHtfKillzone && ext.lvnAligned && ext.gannDistancePct <= 0.25;
+
+  const fundingTrapScore = Math.min(100, Math.round((Math.abs(ext.fundingRateZScore) / 2.5) * 60));
+  const oiFlushScore =
+    ext.oiDeltaFlushPct < 0 ? Math.min(40, Math.round(Math.abs(ext.oiDeltaFlushPct) * 8)) : 0;
+  const liqScore = Math.min(100, fundingTrapScore + oiFlushScore);
+  const g3Passed = liqScore >= 60;
+
+  const g4 = evaluateGate4Microstructure(ltfCandles, ltfAtr);
+
+  let g5: CraneStrikeEvaluation['gates']['g5Geometry'] = null;
+  let bEV = false;
+
+  if (g4.fvgZone) {
+    const entry = g4.fvgZone.ce50;
+    const recentSweepExtreme =
+      g4.fvgZone.direction === 'BULL'
+        ? Math.min(...ltfCandles.slice(-6).map((c) => c.low))
+        : Math.max(...ltfCandles.slice(-6).map((c) => c.high));
+
+    const stopLoss =
+      g4.fvgZone.direction === 'BULL'
+        ? Number((recentSweepExtreme - 0.2 * ltfAtr).toFixed(4))
+        : Number((recentSweepExtreme + 0.2 * ltfAtr).toFixed(4));
+
+    const riskDistance = Math.abs(entry - stopLoss);
+    const rewardDistance = Math.abs(ext.firstObstaclePrice - entry);
+    const feeCost = entry * (ext.feeBufferPct ?? 0.0008);
+
+    const netRR =
+      riskDistance > 0
+        ? Number(((rewardDistance - feeCost) / (riskDistance + feeCost)).toFixed(2))
+        : 0;
+
+    bEV = netRR >= 3.0;
+    g5 = {
+      passed: bEV,
+      netRR,
+      entry,
+      stopLoss,
+      tp1Poc: ext.firstObstaclePrice,
+      direction: g4.fvgZone.direction === 'BULL' ? 'LONG' : 'SHORT',
+    };
+  }
+
+  const weightedSubScore =
+    0.25 * gannScore + 0.3 * liqScore + 0.3 * g4.cvdScore + 0.15 * ext.htfScore;
+
+  let state: CraneState = 'DORMANT';
+  let vetoReason: string | null = null;
+  let finalScore = 0;
+
+  if (!g1.passed) {
+    state = 'DORMANT';
+    vetoReason = `GATE 1 VETO: Hurst (${g1.hurst}) inside Random Walk Noise [0.45 - 0.55].`;
+  } else if (!bStructure) {
+    state = 'DORMANT';
+    vetoReason = 'GATE 2 VETO: Price outside HTF Killzone / Gann Cardinal harmonic.';
+  } else if (!g4.isAbsorbing || !g3Passed) {
+    state = 'STALKING';
+    finalScore = Math.round(weightedSubScore * 0.65);
+    vetoReason = 'STALKING: Awaiting liquidity sweep & CVD passive limit absorption (>2.0σ).';
+  } else if (!g4.mssConfirmed) {
+    state = 'ARMED';
+    finalScore = Math.round(weightedSubScore * 0.85);
+    vetoReason = 'ARMED: CVD absorption locked. Awaiting LTF Displacement MSS + FVG close.';
+  } else if (!bEV) {
+    state = 'ARMED';
+    finalScore = 0;
+    vetoReason = `GATE 5 VETO: First opposing HVN restricts Net R:R to ${g5?.netRR ?? 0}R (needs >= 3.0R).`;
+  } else {
+    state = 'STRIKE';
+    finalScore = Math.round(weightedSubScore);
+    vetoReason = null;
+  }
+
+  return {
+    state,
+    craneScore: finalScore,
+    vetoReason,
+    gates: {
+      g1Regime: g1,
+      g2Structure: { passed: bStructure, gannScore, htfScore: ext.htfScore },
+      g3Derivatives: { passed: g3Passed, liqScore },
+      g4Microstructure: g4,
+      g5Geometry: g5,
+    },
+  };
+}
+
+/**
+ * 8. PLAYBOOK HUB 6-SETUP PODIUM RANKING EVALUATOR
+ * Scores and ranks the 6 Institutional Setups from #1 Gold to #6.
+ */
+export function evaluatePlaybookPodium(evalResult: CraneStrikeEvaluation): PlaybookSetupRank[] {
+  const { gates } = evalResult;
+  const g1Factor = gates.g1Regime.passed ? 1 : 0.4;
+
+  const setups: Omit<PlaybookSetupRank, 'rank'>[] = [
+    {
+      id: 'sweep-fvg',
+      name: '1. Liquidity Sweep + Displacement FVG',
+      mechanism: 'Stop-hunt raid + MSS repricing gap',
+      score: Math.round(
+        g1Factor * (0.45 * gates.g3Derivatives.liqScore + 0.55 * (gates.g4Microstructure.mssConfirmed ? 95 : 50))
+      ),
+      status: gates.g4Microstructure.mssConfirmed && gates.g3Derivatives.passed ? 'READY' : 'STALKING',
+      rrProfile: '1:3.5 to 1:5.0',
+      triggerNote: gates.g4Microstructure.fvgZone
+        ? `${gates.g4Microstructure.fvgZone.direction} FVG @ ${gates.g4Microstructure.fvgZone.ce50}`
+        : 'Awaiting sweep wick + 3-candle FVG',
+    },
+    {
+      id: 'ob-fvg-overlap',
+      name: '2. Displacement OB + FVG Overlap',
+      mechanism: 'Institutional footprint + Gann harmonic defense',
+      score: Math.round(
+        g1Factor * (0.5 * gates.g2Structure.htfScore + 0.5 * gates.g2Structure.gannScore)
+      ),
+      status: gates.g2Structure.passed ? 'READY' : 'STALKING',
+      rrProfile: '1:3.0 to 1:4.5',
+      triggerNote: `Gann Confluence: ${gates.g2Structure.gannScore}%`,
+    },
+    {
+      id: 'cvd-absorption',
+      name: '3. CVD Absorption Divergence Trap',
+      mechanism: 'Passive limit wall soaking aggressive market orders',
+      score: Math.round(g1Factor * gates.g4Microstructure.cvdScore),
+      status: gates.g4Microstructure.isAbsorbing ? 'READY' : 'STALKING',
+      rrProfile: '1:2.5 to 1:3.5',
+      triggerNote: `Absorption Index: ${gates.g4Microstructure.absorptionIndex}σ`,
+    },
+    {
+      id: 'lvn-snapback',
+      name: '4. Volume Profile LVN / POC Snapback',
+      mechanism: 'Auction theory vacuum rejection toward POC',
+      score: Math.round(
+        g1Factor * (gates.g1Regime.regime === 'MEAN_REVERTING' ? 88 : 64)
+      ),
+      status: gates.g1Regime.regime === 'MEAN_REVERTING' ? 'READY' : 'INACTIVE',
+      rrProfile: '1:2.5 to 1:3.2',
+      triggerNote: `Regime H: ${gates.g1Regime.hurst}`,
+    },
+    {
+      id: 'breaker-ifvg',
+      name: '5. Breaker Block / iFVG Polarity Flip',
+      mechanism: 'Trapped counter-trend liquidation retest',
+      score: Math.round(
+        g1Factor * (gates.g1Regime.regime === 'PERSISTENT_TREND' ? 86 : 58)
+      ),
+      status: gates.g1Regime.regime === 'PERSISTENT_TREND' ? 'STALKING' : 'INACTIVE',
+      rrProfile: '1:3.0 to 1:4.0',
+      triggerNote: 'Requires full-body OB mitigation flip',
+    },
+    {
+      id: 'funding-oi-squeeze',
+      name: '6. Perpetual Funding + OI Liquidation Squeeze',
+      mechanism: 'Crowded retail leverage cascade into HTF zone',
+      score: Math.round(g1Factor * gates.g3Derivatives.liqScore),
+      status: gates.g3Derivatives.passed ? 'READY' : 'INACTIVE',
+      rrProfile: '1:3.5 to 1:6.0',
+      triggerNote: `Liq Fuel Score: ${gates.g3Derivatives.liqScore}/100`,
+    },
+  ];
+
+  return setups
+    .sort((a, b) => b.score - a.score)
+    .map((item, idx) => ({ ...item, rank: idx + 1 }));
+}
+```
+
+---
+
+# FILE 2: `src/components/CraneStrikePanel.tsx`
+Create this component to render the 4-State Deterministic Finite Automaton card, the 5-Gate Veto Cascade strip, a built-in **Test Mode State Simulator**, and the Execution Geometry drawer.
+
+```tsx
+// src/components/CraneStrikePanel.tsx
+import React, { useState } from 'react';
+import { CraneStrikeEvaluation, CraneState } from '../services/CraneStrikeEngine';
+
+interface CraneStrikePanelProps {
+  symbol: string;
+  evaluation: CraneStrikeEvaluation;
+  currentPrice: number;
+  onPlotExecution?: (geometry: {
+    entry: number;
+    stopLoss: number;
+    tp1: number;
+    direction: 'LONG' | 'SHORT';
+  }) => void;
+}
+
+const STATE_THEMES: Record<
+  CraneState,
+  { border: string; badge: string; dot: string; label: string }
+> = {
+  DORMANT: {
+    border: 'border-slate-800 bg-slate-950/90',
+    badge: 'bg-slate-800/80 text-slate-400 border-slate-700',
+    dot: 'bg-slate-500',
+    label: '1. DORMANT // NOISE VETO',
+  },
+  STALKING: {
+    border: 'border-amber-500/40 bg-slate-950/95 shadow-[0_0_20px_rgba(245,158,11,0.08)]',
+    badge: 'bg-amber-500/15 text-amber-300 border-amber-500/40',
+    dot: 'bg-amber-400 animate-pulse',
+    label: '2. STALKING // HTF KILLZONE LOCK',
+  },
+  ARMED: {
+    border: 'border-rose-500/50 bg-slate-950/95 shadow-[0_0_25px_rgba(244,63,94,0.12)]',
+    badge: 'bg-rose-500/15 text-rose-300 border-rose-500/40',
+    dot: 'bg-rose-500 animate-ping',
+    label: '3. ARMED // CVD ABSORPTION DETECTED',
+  },
+  STRIKE: {
+    border: 'border-emerald-500/60 bg-slate-950/95 shadow-[0_0_30px_rgba(16,185,129,0.18)]',
+    badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-400/50',
+    dot: 'bg-emerald-400 animate-pulse',
+    label: '4. CRANE STRIKE // 5-GATE LOCK',
+  },
+};
+
+export const CraneStrikePanel: React.FC<CraneStrikePanelProps> = ({
+  symbol,
+  evaluation,
+  currentPrice,
+  onPlotExecution,
+}) => {
+  // Optional Test Mode override so you can test STRIKE UI & canvas plotting any time
+  const [simStrike, setSimStrike] = useState(false);
+
+  const activeState: CraneState = simStrike ? 'STRIKE' : evaluation.state;
+  const activeScore = simStrike ? 92 : evaluation.craneScore;
+  const theme = STATE_THEMES[activeState];
+
+  const { gates } = evaluation;
+
+  const activeGeometry = simStrike
+    ? {
+        passed: true,
+        netRR: 3.85,
+        entry: Number((currentPrice * 0.9985).toFixed(4)),
+        stopLoss: Number((currentPrice * 0.9935).toFixed(4)),
+        tp1Poc: Number((currentPrice * 1.0185).toFixed(4)),
+        direction: 'LONG' as const,
+      }
+    : gates.g5Geometry;
+
+  const gateStatusList = [
+    {
+      id: 'G1',
+      name: 'REGIME',
+      passed: simStrike || gates.g1Regime.passed,
+      val: `H: ${gates.g1Regime.hurst}`,
+    },
+    {
+      id: 'G2',
+      name: 'TOPOLOGY',
+      passed: simStrike || gates.g2Structure.passed,
+      val: `Gann: ${gates.g2Structure.gannScore}%`,
+    },
+    {
+      id: 'G3',
+      name: 'LIQ FUEL',
+      passed: simStrike || gates.g3Derivatives.passed,
+      val: `Score: ${gates.g3Derivatives.liqScore}`,
+    },
+    {
+      id: 'G4',
+      name: 'CVD FLOW',
+      passed: simStrike || gates.g4Microstructure.isAbsorbing,
+      val: `${gates.g4Microstructure.absorptionIndex}σ`,
+    },
+    {
+      id: 'G5',
+      name: 'EV AUDIT',
+      passed: simStrike || Boolean(gates.g5Geometry?.passed),
+      val: activeGeometry ? `${activeGeometry.netRR}R` : '--',
+    },
+  ];
+
+  return (
+    <div
+      className={`rounded-xl border p-4 transition-all duration-300 text-slate-100 font-mono ${theme.border}`}
+    >
+      {/* Header Row */}
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-800/80">
+        <div className="flex items-center gap-2.5">
+          <span className={`h-2.5 w-2.5 rounded-full ${theme.dot}`} />
+          <span className="text-xs font-bold tracking-wider text-slate-300">{symbol}</span>
+          <span className={`text-[11px] px-2.5 py-0.5 rounded border font-semibold ${theme.badge}`}>
+            {theme.label}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setSimStrike((prev) => !prev)}
+            className={`text-[10px] px-2 py-1 rounded border transition ${
+              simStrike
+                ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300'
+                : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            {simStrike ? 'TEST STRIKE: ON' : 'SIMULATE STRIKE'}
+          </button>
+
+          <div className="text-right">
+            <span className="text-[10px] uppercase tracking-widest text-slate-400 block">
+              Crane Score
+            </span>
+            <span
+              className={`text-lg font-extrabold ${
+                activeState === 'STRIKE'
+                  ? 'text-emerald-400'
+                  : activeState === 'ARMED'
+                  ? 'text-rose-400'
+                  : 'text-slate-300'
+              }`}
+            >
+              {activeScore}
+              <span className="text-xs text-slate-500 font-normal">/100</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 5-Gate Sequential Veto Cascade Strip */}
+      <div className="grid grid-cols-5 gap-1.5 my-3">
+        {gateStatusList.map((g) => (
+          <div
+            key={g.id}
+            className={`rounded-lg p-2 border text-center transition-colors ${
+              g.passed
+                ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-300'
+                : 'bg-slate-900/70 border-slate-800 text-slate-500'
+            }`}
+          >
+            <div className="flex items-center justify-between text-[10px] font-bold">
+              <span>{g.id}</span>
+              <span>{g.passed ? 'PASS' : 'VETO'}</span>
+            </div>
+            <div className="text-[11px] font-semibold mt-0.5 truncate">{g.name}</div>
+            <div className="text-[10px] opacity-80 mt-0.5">{g.val}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Telemetry Diagnostic Banner */}
+      {!simStrike && evaluation.vetoReason && (
+        <div className="rounded-lg bg-slate-900/90 border border-slate-800 px-3 py-2 text-xs text-slate-300 flex items-center justify-between gap-2">
+          <span>{evaluation.vetoReason}</span>
+          <span className="text-[10px] text-slate-400 uppercase shrink-0">
+            {gates.g1Regime.regime.replace(/_/g, ' ')}
+          </span>
+        </div>
+      )}
+
+      {/* Execution Geometry Drawer (Unlocked on STRIKE or Test Mode) */}
+      {activeState === 'STRIKE' && activeGeometry && (
+        <div className="mt-3 pt-3 border-t border-emerald-500/30 bg-emerald-950/15 rounded-lg p-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-emerald-400 tracking-wide">
+              EXECUTION GEOMETRY ({activeGeometry.direction} FVG CE 50%)
+            </span>
+            <span className="text-xs font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
+              NET {activeGeometry.netRR}R
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 text-xs my-2">
+            <div className="bg-slate-900/80 p-2 rounded border border-slate-800">
+              <span className="text-[10px] text-slate-400 block">LIMIT ENTRY (CE)</span>
+              <span className="font-bold text-slate-100">{activeGeometry.entry}</span>
+            </div>
+            <div className="bg-slate-900/80 p-2 rounded border border-rose-500/30">
+              <span className="text-[10px] text-rose-400 block">HARD INVALIDATION</span>
+              <span className="font-bold text-rose-300">{activeGeometry.stopLoss}</span>
+            </div>
+            <div className="bg-slate-900/80 p-2 rounded border border-emerald-500/30">
+              <span className="text-[10px] text-emerald-400 block">TP1 (FIRST HVN/POC)</span>
+              <span className="font-bold text-emerald-300">{activeGeometry.tp1Poc}</span>
+            </div>
+          </div>
+
+          {onPlotExecution && (
+            <button
+              type="button"
+              onClick={() =>
+                onPlotExecution({
+                  entry: activeGeometry.entry,
+                  stopLoss: activeGeometry.stopLoss,
+                  tp1: activeGeometry.tp1Poc,
+                  direction: activeGeometry.direction,
+                })
+              }
+              className="w-full mt-1 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs tracking-wider uppercase transition"
+            >
+              Plot Crane Strike Geometry on Canvas
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+```
+
+---
+
+# FILE 3: `src/components/PlaybookHub.tsx` (THE PLAYBOOK HUB CONTAINER)
+This is the complete **Playbook Hub** file uniting:
+1. **The Crane Strike 5-Gate Sniper Panel**
+2. **The 6-Setup Podium Ranking Leaderboard (Gold / Silver / Bronze + Full Matrix)**
+3. **The Gann Square of 9 Cardinal & Ordinal Matrix**
+4. **The Interactive Trade Plan Risk-Reward & Position Size Geometry Calculator**
+
+```tsx
+// src/components/PlaybookHub.tsx
+import React, { useMemo, useState } from 'react';
+import {
+  InfernoCandle,
+  OrderBlockZone,
+  VolumeProfileSnapshot,
+  buildCraneConfluenceInputs,
+  evaluateCraneStrike,
+  evaluatePlaybookPodium,
+} from '../services/CraneStrikeEngine';
+import { CraneStrikePanel } from './CraneStrikePanel';
+
+export interface PlaybookHubProps {
+  symbol: string;
+  htfCandles: InfernoCandle[];
+  ltfCandles: InfernoCandle[];
+  orderBlocks?: OrderBlockZone[];
+  volumeProfile?: VolumeProfileSnapshot;
+  fundingRateZScore?: number;
+  oiDeltaFlushPct?: number;
+  onPlotTradeGeometry?: (plan: {
+    entry: number;
+    stopLoss: number;
+    tp1: number;
+    direction: 'LONG' | 'SHORT';
+    rr: number;
+  }) => void;
+}
+
+export const PlaybookHub: React.FC<PlaybookHubProps> = ({
+  symbol,
+  htfCandles,
+  ltfCandles,
+  orderBlocks,
+  volumeProfile,
+  fundingRateZScore,
+  oiDeltaFlushPct,
+  onPlotTradeGeometry,
+}) => {
+  const [accountBalance, setAccountBalance] = useState<number>(10000);
+  const [riskPct, setRiskPct] = useState<number>(1.0);
+
+  const currentPrice =
+    ltfCandles[ltfCandles.length - 1]?.close ??
+    htfCandles[htfCandles.length - 1]?.close ??
+    100;
+
+  // 1. Memoized Confluence, Gann Square of 9, 5-Gate Evaluation, and Podium Ranking
+  const { gann, evaluation, podium } = useMemo(() => {
+    const { confluence, gann: gannRes } = buildCraneConfluenceInputs({
+      htfCandles,
+      ltfCandles,
+      orderBlocks,
+      volumeProfile,
+      fundingRateZScore,
+      oiDeltaFlushPct,
+    });
+    const evalRes = evaluateCraneStrike(htfCandles, ltfCandles, confluence);
+    const podiumRanks = evaluatePlaybookPodium(evalRes);
+    return { gann: gannRes, evaluation: evalRes, podium: podiumRanks };
+  }, [htfCandles, ltfCandles, orderBlocks, volumeProfile, fundingRateZScore, oiDeltaFlushPct]);
+
+  // 2. Trade Plan Geometry Risk/Position Calculator
+  const activeEntry = evaluation.gates.g5Geometry?.entry ?? Number((currentPrice * 0.998).toFixed(4));
+  const activeSL =
+    evaluation.gates.g5Geometry?.stopLoss ?? Number((currentPrice * 0.992).toFixed(4));
+  const activeTP1 =
+    evaluation.gates.g5Geometry?.tp1Poc ?? Number((currentPrice * 1.02).toFixed(4));
+  const activeDir = evaluation.gates.g5Geometry?.direction ?? 'LONG';
+
+  const riskCapital = (accountBalance * riskPct) / 100;
+  const stopDistancePct = Math.max(0.0001, Math.abs(activeEntry - activeSL) / activeEntry);
+  const positionNotional = Math.round(riskCapital / stopDistancePct);
+  const netRR =
+    Math.abs(activeEntry - activeSL) > 0
+      ? Number((Math.abs(activeTP1 - activeEntry) / Math.abs(activeEntry - activeSL)).toFixed(2))
+      : 0;
+
+  return (
+    <div className="space-y-4 text-slate-100 font-mono">
+      {/* SECTION 1: CRANE STRIKE 5-GATE SNIPER ENGINE */}
+      <CraneStrikePanel currentPrice="{currentPrice}" evaluation="{evaluation}" onPlotExecution="{(geo)" symbol="{symbol}">
+          onPlotTradeGeometry?.({
+            ...geo,
+            rr: netRR,
+          })
+        }
+      />
+
+      {/* SECTION 2: 6-SETUP PODIUM RANKING LEADERBOARD */}
+      <div className="rounded-xl border border-slate-800 bg-slate-950/90 p-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+              Institutional Setup Podium Ranking
+            </h3>
+            <p className="text-[11px] text-slate-400">
+              Real-time feasibility ranking across top 6 quant setups
+            </p>
+          </div>
+          <span className="text-[11px] px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-slate-300">
+            Top 3 Highlighted
+          </span>
+        </div>
+
+        {/* Top 3 Podium Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 my-3">
+          {podium.slice(0, 3).map((setup) => {
+            const medalStyle =
+              setup.rank === 1
+                ? 'border-amber-400/50 bg-amber-950/20 text-amber-300'
+                : setup.rank === 2
+                ? 'border-slate-400/40 bg-slate-900/70 text-slate-200'
+                : 'border-amber-700/50 bg-amber-950/10 text-amber-500';
+
+            return (
+              <div key={setup.id} className={`rounded-lg border p-3 ${medalStyle}`}>
+                <div className="flex items-center justify-between text-xs font-bold">
+                  <span>#{setup.rank} PODIUM</span>
+                  <span className="text-sm">{setup.score}/100</span>
+                </div>
+                <div className="text-xs font-bold text-slate-100 mt-1">{setup.name}</div>
+                <div className="text-[10px] text-slate-400 mt-1">{setup.mechanism}</div>
+                <div className="mt-2 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px]">
+                  <span className="text-slate-300">{setup.triggerNote}</span>
+                  <span className="font-bold">{setup.rrProfile}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Runners-Up (#4 - #6) */}
+        <div className="space-y-1.5 mt-2">
+          {podium.slice(3).map((setup) => (
+            <div
+              key={setup.id}
+              className="flex items-center justify-between rounded bg-slate-900/60 border border-slate-800/80 px-3 py-1.5 text-xs"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-slate-500 font-bold">#{setup.rank}</span>
+                <span className="text-slate-200 font-medium">{setup.name}</span>
+                <span className="text-[10px] text-slate-500 hidden sm:inline">
+                  ({setup.triggerNote})
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] text-slate-400">{setup.rrProfile}</span>
+                <span className="font-bold text-slate-300">{setup.score}/100</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* SECTION 3: GANN SQUARE OF 9 & TRADE PLAN GEOMETRY */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Gann Square of 9 Cardinal/Ordinal Matrix */}
+        <div className="rounded-xl border border-slate-800 bg-slate-950/90 p-4">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                Gann Square of 9 Harmonic Matrix
+              </h3>
+              <p className="text-[10px] text-slate-400">
+                Anchor: {gann.anchorPrice} | Nearest: {gann.nearestDegree}° ({gann.distancePct}% away)
+              </p>
+            </div>
+            <span
+              className={`text-[10px] px-2 py-0.5 rounded border font-bold ${
+                gann.distancePct <= 0.25
+                  ? 'bg-emerald-950/50 border-emerald-500/40 text-emerald-300'
+                  : 'bg-slate-900 border-slate-700 text-slate-400'
+              }`}
+            >
+              {gann.distancePct <= 0.25 ? 'HARMONIC LOCK' : 'SCANNING'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-4 gap-1.5 mt-3 text-[11px]">
+            {gann.levels.map((lvl) => (
+              <div
+                key={lvl.degree}
+                className={`p-2 rounded border ${
+                  lvl.type === 'CARDINAL'
+                    ? 'bg-slate-900/90 border-indigo-500/30'
+                    : 'bg-slate-900/40 border-slate-800'
+                }`}
+              >
+                <div className="flex items-center justify-between text-[10px] text-slate-400">
+                  <span className="font-bold text-indigo-300">{lvl.degree}°</span>
+                  <span>{lvl.type === 'CARDINAL' ? 'CARD' : 'ORD'}</span>
+                </div>
+                <div className="mt-1 text-emerald-300 font-semibold">R: {lvl.resistancePrice}</div>
+                <div className="text-rose-300 font-semibold">S: {lvl.supportPrice}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Trade Plan Risk-Reward & Position Geometry */}
+        <div className="rounded-xl border border-slate-800 bg-slate-950/90 p-4 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                  Trade Plan Risk & Position Geometry
+                </h3>
+                <p className="text-[10px] text-slate-400">
+                  Auto-synced with Gate 5 First-Obstacle HVN/POC Audit
+                </p>
+              </div>
+              <span className="text-xs font-bold text-emerald-400">{netRR}R NET</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 my-3 text-xs">
+              <label className="bg-slate-900 p-2 rounded border border-slate-800 block">
+                <span className="text-[10px] text-slate-400 block">ACCOUNT EQUITY ($)</span>
+                <input
+                  type="number"
+                  value={accountBalance}
+                  onChange={(e) => setAccountBalance(Math.max(100, Number(e.target.value)))}
+                  className="w-full bg-transparent text-slate-100 font-bold focus:outline-none mt-0.5"
+                />
+              </label>
+              <label className="bg-slate-900 p-2 rounded border border-slate-800 block">
+                <span className="text-[10px] text-slate-400 block">RISK PER STRIKE (%)</span>
+                <input
+                  type="number"
+                  step="0.25"
+                  value={riskPct}
+                  onChange={(e) => setRiskPct(Math.max(0.1, Number(e.target.value)))}
+                  className="w-full bg-transparent text-slate-100 font-bold focus:outline-none mt-0.5"
+                />
+              </label>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              <div className="bg-slate-900/70 p-2 rounded border border-slate-800">
+                <span className="text-[10px] text-slate-400 block">RISK CAPITAL</span>
+                <span className="font-bold text-rose-300">${riskCapital.toFixed(2)}</span>
+              </div>
+              <div className="bg-slate-900/70 p-2 rounded border border-slate-800">
+                <span className="text-[10px] text-slate-400 block">STOP DISTANCE</span>
+                <span className="font-bold text-slate-200">
+                  {(stopDistancePct * 100).toFixed(2)}%
+                </span>
+              </div>
+              <div className="bg-slate-900/70 p-2 rounded border border-slate-800">
+                <span className="text-[10px] text-slate-400 block">POSITION SIZE</span>
+                <span className="font-bold text-emerald-300">${positionNotional}</span>
+              </div>
+            </div>
+          </div>
+
+          {onPlotTradeGeometry && (
+            <button
+              type="button"
+              onClick={() =>
+                onPlotTradeGeometry({
+                  entry: activeEntry,
+                  stopLoss: activeSL,
+                  tp1: activeTP1,
+                  direction: activeDir,
+                  rr: netRR,
+                })
+              }
+              className="w-full mt-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider transition"
+            >
+              Sync Trade Plan Geometry to Chart Canvas
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+```

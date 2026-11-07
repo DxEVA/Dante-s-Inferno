@@ -37,6 +37,12 @@ import {
 } from '../utils/famousStrategiesEngine';
 import { InfernoCodexHub } from './InfernoCodexHub';
 import { SignalBiasPill } from './SignalBiasPill';
+import { PlaybookHub } from './PlaybookHub';
+import {
+  InfernoCandle,
+  OrderBlockZone,
+  VolumeProfileSnapshot,
+} from '../services/CraneStrikeEngine';
 
 export type TacticalDeckMode =
   | 'LENSES'
@@ -71,6 +77,13 @@ interface StrategyTabsProps {
   onStopChange: (val: number) => void;
   onCopyText: (text: string, label: string) => void;
   onLoadSetup: (entry: number, stop: number, tp1: number, tp2: number) => void;
+  onPlotTradeGeometry?: (plan: {
+    entry: number;
+    stopLoss: number;
+    tp1: number;
+    direction: 'LONG' | 'SHORT';
+    rr: number;
+  }) => void;
   candlestickResult: CandlestickAnalysisResult;
   maResult: MovingAverageAnalysisResult;
   lensSetups: Record<number, PotentialSetupSpeculation>;
@@ -287,6 +300,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
   onStopChange,
   onCopyText,
   onLoadSetup,
+  onPlotTradeGeometry,
   candlestickResult,
   maResult,
   lensSetups,
@@ -340,6 +354,54 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
   };
 
   const symbol = activeSymbol || (baseAsset ? `${baseAsset}USDT` : 'BTCUSDT');
+
+  const infernoCandles: InfernoCandle[] = useMemo(() => {
+    return klines.map((k) => ({
+      time: k.time,
+      open: k.open,
+      high: k.high,
+      low: k.low,
+      close: k.close,
+      volume: k.volume,
+      takerBuyVolume: k.takerBuyVolume,
+    }));
+  }, [klines]);
+
+  const orderBlockZones: OrderBlockZone[] = useMemo(() => {
+    const zones: OrderBlockZone[] = [];
+    if (bullOB) {
+      zones.push({
+        id: 'bull-ob',
+        top: bullOB.high,
+        bottom: bullOB.low,
+        type: 'BULL',
+        mitigated: (bullOB.mitigationStatus || bullOB.status) !== 'UNMITIGATED',
+        isDisplacement: true,
+      });
+    }
+    if (bearOB) {
+      zones.push({
+        id: 'bear-ob',
+        top: bearOB.high,
+        bottom: bearOB.low,
+        type: 'BEAR',
+        mitigated: (bearOB.mitigationStatus || bearOB.status) !== 'UNMITIGATED',
+        isDisplacement: true,
+      });
+    }
+    return zones;
+  }, [bullOB, bearOB]);
+
+  const vpSnapshot: VolumeProfileSnapshot | undefined = useMemo(() => {
+    if (!volumeProfile || !volumeProfile.buckets) return undefined;
+    return {
+      poc: volumeProfile.poc,
+      vah: volumeProfile.vah,
+      val: volumeProfile.val,
+      hvns: volumeProfile.buckets.filter((b) => b.isHVN).map((b) => b.price),
+      lvns: volumeProfile.buckets.filter((b) => b.isLVN).map((b) => b.price),
+    };
+  }, [volumeProfile]);
 
   const stageToLensMap: Record<number, 1 | 2 | 3 | 4 | 5> = {
     1: 1,
@@ -2141,6 +2203,24 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
 
     return (
       <div className="flex flex-col p-4 gap-4">
+        {/* Playbook Hub & Crane Strike 5-Gate Sequential Veto System */}
+        <PlaybookHub
+          symbol={symbol}
+          htfCandles={infernoCandles}
+          ltfCandles={infernoCandles}
+          orderBlocks={orderBlockZones}
+          volumeProfile={vpSnapshot}
+          fundingRateZScore={telemetry?.fundingRate ? telemetry.fundingRate * 100 : 0}
+          oiDeltaFlushPct={telemetry?.oi4hDelta || 0}
+          onPlotTradeGeometry={(plan) => {
+            if (onPlotTradeGeometry) {
+              onPlotTradeGeometry(plan);
+            } else {
+              onLoadSetup(plan.entry, plan.stopLoss, plan.tp1, plan.tp1);
+            }
+          }}
+        />
+
         {/* 1. Sleek 4-Column Compact Cyclical Context Bar */}
         <div className="flex flex-col gap-2">
           <div className="py-2.5 px-3 bg-[#12161f] rounded-lg border border-white/[0.07] grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-[11px] tabular-nums">
@@ -2802,7 +2882,7 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
             </span>
           </button>
 
-          {/* 2. Playbooks (14) */}
+          {/* 2. Playbooks */}
           <button
             type="button"
             onClick={() => {
@@ -2818,14 +2898,14 @@ export const StrategyTabs: React.FC<StrategyTabsProps> = ({
             <div className="relative z-10 flex items-center justify-between w-full gap-1">
               <span className="flex items-center gap-1.5 font-sans text-[12.5px] font-semibold">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#6366f1]" />
-                <span>Playbooks (14)</span>
+                <span>Playbook Hub &amp; Crane Strike</span>
               </span>
               <span className="font-mono text-[10px] text-[#10b981]">
                 {readyPlaybooksCount} Ready
               </span>
             </div>
             <span className="relative z-10 font-sans text-[11px] text-[#71717a] truncate w-full">
-              Famous, Gann &amp; SSRN Models
+              5-Gate Veto • 6-Setup Podium • 14 Models
             </span>
           </button>
 

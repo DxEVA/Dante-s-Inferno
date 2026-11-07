@@ -19,6 +19,8 @@ interface TickerBarProps {
   onToggleObMode: (mode: 'strict' | 'loose') => void;
   onToggleVpMode: (mode: 'vrvp' | 'session') => void;
   sharpeSortino?: SharpeSortinoMetrics;
+  onOpenCraneStrike?: () => void;
+  isCraneStrikeActive?: boolean;
 }
 
 export const TickerBar: React.FC<TickerBarProps> = ({
@@ -37,6 +39,8 @@ export const TickerBar: React.FC<TickerBarProps> = ({
   onSelectCandleDepth,
   onToggleObMode,
   onToggleVpMode,
+  onOpenCraneStrike,
+  isCraneStrikeActive,
 }) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
@@ -344,6 +348,22 @@ export const TickerBar: React.FC<TickerBarProps> = ({
               Session
             </button>
           </div>
+
+          {onOpenCraneStrike && (
+            <button
+              type="button"
+              onClick={onOpenCraneStrike}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-mono text-[11px] font-semibold border transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                isCraneStrikeActive
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/50 shadow-[0_0_15px_rgba(16,185,129,0.25)]'
+                  : 'bg-[#6366f1]/15 hover:bg-[#6366f1]/25 text-[#a5b4fc] border-[#6366f1]/30'
+              }`}
+              title="Toggle Crane Strike 5-Gate Sequential Veto & Playbook Hub"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>CRANE STRIKE</span>
+            </button>
+          )}
         </div>
       </div>
 
