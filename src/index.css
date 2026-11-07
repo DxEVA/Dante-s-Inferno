@@ -183,15 +183,24 @@
   scrollbar-width: none;
 }
 
-/* Prevent Netlify floating preview widget from overlapping bottom mobile tabs */
+/* Prevent Netlify floating badges, logos, and preview widgets from covering mobile content */
 #netlify-cdp-loader,
 div[data-netlify-deploy-preview],
-iframe[id^="netlify"],
+div[id*="netlify"],
+iframe[id*="netlify"],
 iframe[src*="netlify.app"],
-iframe[src*="netlify.com"] {
+iframe[src*="netlify.com"],
+.netlify-badge,
+a[href*="netlify.com"],
+a[href*="netlify.app"],
+[data-netlify-badge],
+div[class*="netlify"] {
   display: none !important;
   pointer-events: none !important;
   visibility: hidden !important;
+  opacity: 0 !important;
+  max-height: 0 !important;
+  overflow: hidden !important;
 }
 
 /* ============================================================================

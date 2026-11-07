@@ -117,11 +117,13 @@ export default function App() {
   const [mobilePage, setMobilePage] = useState<
     'CHART' | 'RADAR' | 'LENSES' | 'PLAYBOOKS' | 'EXECUTE' | 'ACADEMY' | 'CRANE'
   >('CHART');
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState<boolean>(false);
   const [isRightWorkspaceExpanded, setIsRightWorkspaceExpanded] = useState<boolean>(false);
 
   const handleNavigateMobilePage = useCallback(
     (page: 'CHART' | 'RADAR' | 'LENSES' | 'PLAYBOOKS' | 'EXECUTE' | 'ACADEMY' | 'CRANE') => {
       setMobilePage(page);
+      setIsMobileNavOpen(false);
       if (page === 'RADAR') {
         setActiveStrategyTab(5);
         setExternalDeckRequest({ deck: 'MTF_RADAR', ts: Date.now() });
@@ -1587,117 +1589,176 @@ export default function App() {
             </div>
           </main>
 
-          {/* Streamlined Ergonomic 5-Tab Fixed Bottom Bar (< 1024px Mobile) */}
+          {/* Single Collapsing Navigation Button on Bottom-Left (< 1024px Mobile) */}
           {(() => {
-            const mobileNavTabs = [
+            const navItems = [
               {
                 id: 'CHART' as const,
                 label: 'Chart',
+                sub: 'Candlestick & Layers',
                 icon: 'candlestick_chart',
                 badge: selectedTf.toUpperCase(),
               },
               {
                 id: 'LENSES' as const,
-                label: 'Analysis',
+                label: 'Analysis Flow',
+                sub: '6-Stage Quantitative Flow',
                 icon: 'layers',
                 badge: `S0${activeStrategyTab}`,
               },
               {
                 id: 'CRANE' as const,
-                label: 'Crane',
+                label: 'Crane Strike',
+                sub: '5-Gate Veto & EV Audit',
                 icon: 'bolt',
-                badge: craneStrikeEvaluation.state === 'STRIKE' ? 'STRIKE' : undefined,
+                badge: craneStrikeEvaluation.state === 'STRIKE' ? 'STRIKE' : `${craneStrikeEvaluation.craneScore} pts`,
                 isHero: true,
               },
               {
                 id: 'PLAYBOOKS' as const,
-                label: 'Playbooks',
+                label: 'Playbook Hub',
+                sub: '6-Setup Podium & 14 Models',
                 icon: 'emoji_events',
                 badge: '14 M',
               },
               {
                 id: 'EXECUTE' as const,
-                label: 'Execute',
+                label: 'Execute & Size',
+                sub: 'Pre-Flight & Position Sizer',
                 icon: 'calculate',
-                badge: 'Sizer',
+                badge: 'S06',
               },
             ];
 
+            const currentActiveItem =
+              navItems.find((item) =>
+                item.id === 'CRANE'
+                  ? mobilePage === 'CRANE'
+                  : item.id === 'PLAYBOOKS'
+                  ? mobilePage === 'PLAYBOOKS'
+                  : mobilePage === item.id
+              ) || navItems[0];
+
             return (
-              <nav
-                aria-label="Mobile Navigation"
-                className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#09090b]/95 backdrop-blur-md border-t border-white/[0.08] px-1.5 pt-1.5 pb-[calc(env(safe-area-inset-bottom,4px)+6px)] shadow-[0_-8px_24px_rgba(0,0,0,0.7)] select-none"
-              >
-                <div className="grid grid-cols-5 items-center gap-1 max-w-lg mx-auto">
-                  {mobileNavTabs.map((tab) => {
-                    const isActive =
-                      tab.id === 'CRANE'
-                        ? mobilePage === 'CRANE'
-                        : tab.id === 'PLAYBOOKS'
-                        ? mobilePage === 'PLAYBOOKS'
-                        : mobilePage === tab.id;
+              <>
+                {/* Backdrop overlay to close when tapping outside */}
+                {isMobileNavOpen && (
+                  <div
+                    className="lg:hidden fixed inset-0 z-[99990] bg-black/50 backdrop-blur-[2px] transition-opacity"
+                    onClick={() => setIsMobileNavOpen(false)}
+                    aria-hidden="true"
+                  />
+                )}
 
-                    const isHero = tab.isHero;
+                {/* Bottom-Left Anchored Collapsing Button & Drawer (Elevated safely to clear Netlify badge) */}
+                <div
+                  aria-label="Mobile Navigation"
+                  className="lg:hidden fixed bottom-6 left-3 z-[99999] flex flex-col items-start gap-2 select-none"
+                >
+                  {/* Expanded Vertical Menu (Appears above the single button) */}
+                  {isMobileNavOpen && (
+                    <div className="w-64 max-w-[calc(100vw-1.5rem)] rounded-2xl bg-[#121215]/98 backdrop-blur-2xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.9)] p-1.5 flex flex-col gap-1 overflow-hidden">
+                      <div className="px-3 py-1.5 rounded-lg bg-white/[0.04] flex items-center justify-between border-b border-white/[0.06] mb-0.5">
+                        <span className="font-mono text-[9px] font-semibold uppercase tracking-wider text-[#94a3b8]">
+                          Terminal Views
+                        </span>
+                        <span className="font-mono text-[9px] text-emerald-400 font-bold">
+                          {activePair.symbol}
+                        </span>
+                      </div>
 
-                    return (
-                      <button
-                        key={tab.id}
-                        type="button"
-                        onClick={() => handleNavigateMobilePage(tab.id)}
-                        className={`flex flex-col items-center justify-center min-h-[46px] py-1 px-1 rounded-xl transition-all cursor-pointer relative ${
-                          isActive
-                            ? isHero
-                              ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
-                              : 'bg-white/[0.08] text-white border border-white/[0.12] shadow-sm'
-                            : isHero
-                            ? 'text-emerald-400 hover:bg-emerald-500/10 border border-emerald-500/20'
-                            : 'text-[#8e8e99] hover:text-[#d4d4d8] hover:bg-white/[0.03] border border-transparent'
-                        }`}
-                      >
-                        <div className="relative flex items-center justify-center">
-                          <span
-                            className={`material-symbols-outlined text-[19px] transition-transform ${
-                              isActive ? 'scale-110' : ''
-                            } ${
-                              isHero
-                                ? 'text-emerald-400'
-                                : isActive
-                                ? 'text-[#38bdf8]'
-                                : 'text-[#8e8e99]'
+                      {navItems.map((item) => {
+                        const isActive =
+                          item.id === 'CRANE'
+                            ? mobilePage === 'CRANE'
+                            : item.id === 'PLAYBOOKS'
+                            ? mobilePage === 'PLAYBOOKS'
+                            : mobilePage === item.id;
+
+                        const isHero = item.isHero;
+
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => handleNavigateMobilePage(item.id)}
+                            className={`w-full px-3 py-2.5 rounded-xl flex items-center justify-between gap-2.5 text-left transition-all cursor-pointer ${
+                              isActive
+                                ? isHero
+                                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                                  : 'bg-white/[0.1] text-white border border-white/[0.15] shadow-sm'
+                                : isHero
+                                ? 'text-emerald-400 hover:bg-emerald-500/10 border border-emerald-500/20'
+                                : 'text-[#cbd5e1] hover:bg-white/[0.05] border border-transparent'
                             }`}
                           >
-                            {tab.icon}
-                          </span>
-                          {tab.badge && (
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span
+                                className={`material-symbols-outlined text-[18px] shrink-0 ${
+                                  isHero
+                                    ? 'text-emerald-400'
+                                    : isActive
+                                    ? 'text-[#38bdf8]'
+                                    : 'text-[#94a3b8]'
+                                }`}
+                              >
+                                {item.icon}
+                              </span>
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-[11.5px] font-semibold tracking-tight leading-tight text-white">
+                                  {item.label}
+                                </span>
+                                <span className="text-[9px] text-[#71717a] truncate">
+                                  {item.sub}
+                                </span>
+                              </div>
+                            </div>
+
                             <span
-                              className={`absolute -top-1 -right-2 px-1 py-0.2 rounded-full font-mono text-[7px] font-bold leading-none ${
-                                isHero
-                                  ? 'bg-emerald-500/30 text-emerald-300 border border-emerald-400/50'
-                                  : isActive
-                                  ? 'bg-[#38bdf8]/20 text-[#38bdf8] border border-[#38bdf8]/40'
-                                  : 'bg-white/[0.06] text-[#71717a]'
+                              className={`px-1.5 py-0.5 rounded text-[8.5px] font-mono font-semibold tabular-nums border shrink-0 ${
+                                isActive
+                                  ? isHero
+                                    ? 'bg-emerald-500/30 text-emerald-300 border-emerald-400/50'
+                                    : 'bg-[#38bdf8]/20 text-[#38bdf8] border-[#38bdf8]/40'
+                                  : 'bg-[#18181c] text-[#71717a] border-white/[0.08]'
                               }`}
                             >
-                              {tab.badge}
+                              {item.badge}
                             </span>
-                          )}
-                        </div>
-                        <span
-                          className={`font-sans text-[10px] tracking-tight mt-0.5 leading-tight ${
-                            isActive
-                              ? 'font-semibold text-white'
-                              : isHero
-                              ? 'font-medium text-emerald-400/90'
-                              : 'font-medium text-[#8e8e99]'
-                          }`}
-                        >
-                          {tab.label}
-                        </span>
-                      </button>
-                    );
-                  })}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* The Single Collapsing Button on Bottom-Left */}
+                  <button
+                    type="button"
+                    onClick={() => setIsMobileNavOpen((prev) => !prev)}
+                    className={`h-11 px-3.5 rounded-full flex items-center gap-2 transition-all cursor-pointer shadow-[0_8px_24px_rgba(0,0,0,0.85)] border active:scale-95 ${
+                      isMobileNavOpen
+                        ? 'bg-[#1c1c22] text-white border-white/20'
+                        : 'bg-[#121215]/95 hover:bg-[#18181c] text-white border-white/15 backdrop-blur-xl'
+                    }`}
+                    title="Toggle Workspace Navigation"
+                    aria-expanded={isMobileNavOpen}
+                  >
+                    <span
+                      className={`material-symbols-outlined text-[18px] ${
+                        isMobileNavOpen ? 'text-white' : 'text-[#38bdf8]'
+                      }`}
+                    >
+                      {isMobileNavOpen ? 'close' : currentActiveItem.icon}
+                    </span>
+                    <span className="text-[11.5px] font-semibold tracking-tight text-white">
+                      {isMobileNavOpen ? 'Close Menu' : currentActiveItem.label}
+                    </span>
+                    <span className="material-symbols-outlined text-[15px] text-[#8e8e99]">
+                      {isMobileNavOpen ? 'expand_more' : 'unfold_more'}
+                    </span>
+                  </button>
                 </div>
-              </nav>
+              </>
             );
           })()}
 
